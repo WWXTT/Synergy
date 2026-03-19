@@ -1,0 +1,175 @@
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
+using cfg;
+using CardCore.Data;
+
+namespace CardCore
+{
+    /// <summary>
+    /// 效果表数据结构
+    /// 用于 ScriptableObject 配置效果数据
+    /// </summary>
+    [Serializable]
+    public class Effect_table
+    {
+        /// <summary>
+        /// 效果缩写/ID
+        /// </summary>
+        [Tooltip("效果缩写，用于唯一标识效果")]
+        public string Effect_Abbreviation;
+
+        /// <summary>
+        /// 是否为主动效果
+        /// </summary>
+        [Tooltip("是否为主动效果")]
+        public bool Initiative;
+
+        /// <summary>
+        /// 效果参数
+        /// </summary>
+        [Tooltip("效果参数值")]
+        public float Parameters;
+
+        /// <summary>
+        /// 效果速度
+        /// </summary>
+        [Tooltip("效果速度")]
+        public EffectSpeed EffctSpeed;
+
+        /// <summary>
+        /// 法力类型
+        /// </summary>
+        [Tooltip("对应的法力类型")]
+        public ManaType Mana_type;
+
+        /// <summary>
+        /// 效果描述
+        /// </summary>
+        [Tooltip("效果的详细描述")]
+        [TextArea(3, 10)]
+        public string Effect_Description;
+    }
+
+    // ============================================ 效果相关接口 ============================================
+
+    /// <summary>
+    /// 具有效果列表的接口（编辑器配置用）
+    /// </summary>
+    public interface IHasEffects
+    {
+        List<Effect_table> Effects { get; set; }
+    }
+
+    /// <summary>
+    /// 具有运行时效果列表的接口（游戏逻辑用）
+    /// </summary>
+    public interface IHasRuntimeEffects
+    {
+        List<IEffect> RuntimeEffects { get; set; }
+    }
+
+    // ============================================ 卡牌属性接口 ============================================
+
+    /// <summary>
+    /// 具有卡牌类型的接口
+    /// </summary>
+    public interface IHasCardType
+    {
+        CardType CardType { get; set; }
+    }
+
+    /// <summary>
+    /// 具有立绘的接口
+    /// </summary>
+    public interface IHasIllustration
+    {
+        string Illustration { get; set; }
+    }
+
+    /// <summary>
+    /// 具有名称的接口
+    /// </summary>
+    public interface IHasName
+    {
+        string CardName { get; set; }
+    }
+
+    // ============================================ 战斗属性接口 ============================================
+
+    /// <summary>
+    /// 具有生命值的接口
+    /// </summary>
+    public interface IHasLife
+    {
+        int Life { get; set; }
+    }
+
+    /// <summary>
+    /// 具有攻击力的接口
+    /// </summary>
+    public interface IHasPower
+    {
+        int Power { get; set; }
+    }
+
+    /// <summary>
+    /// 具有费用的接口
+    /// </summary>
+    public interface IHasCost
+    {
+        Dictionary<int, float> Cost { get; set; }
+    }
+
+    /// <summary>
+    /// 具有关键词的接口
+    /// </summary>
+    public interface IHasKeywords
+    {
+        HashSet<string> Keywords { get; set; }
+
+        void AddKeyword(string keywordId);
+        void RemoveKeyword(string keywordId);
+        bool HasKeyword(string keywordId);
+    }
+
+    /// <summary>
+    /// 具有横置状态的接口
+    /// </summary>
+    public interface ITappable
+    {
+        bool IsTapped { get; set; }
+    }
+
+    // ============================================ 效果接口 ============================================
+
+    /// <summary>
+    /// 组合效果接口
+    /// </summary>
+    public interface IEffect { }
+
+    /// <summary>
+    /// 原子效果接口
+    /// </summary>
+    public interface IAtomicEffect : IEffect { }
+
+    /// <summary>
+    /// 造成伤害效果
+    /// </summary>
+    [Serializable]
+    public class EDamage : IAtomicEffect
+    {
+        public int Amount { get; }
+        public EDamage(int amount) { Amount = amount; }
+    }
+
+    /// <summary>
+    /// 回复生命效果
+    /// </summary>
+    [Serializable]
+    public class EHeal : IAtomicEffect
+    {
+        public int Amount { get; }
+        public EHeal(int amount) { Amount = amount; }
+    }
+}

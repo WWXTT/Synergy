@@ -1,0 +1,240 @@
+{
+  "version": "1.0",
+  "description": "HTML element to UXML element mapping configuration",
+  "mappings": {
+    "div": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "description": "通用容器元素"
+    },
+    "span": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "description": "行内容器（需配合flex布局）"
+    },
+    "button": {
+      "uxmlElement": "Button",
+      "namespace": "UnityEngine.UIElements",
+      "description": "按钮元素",
+      "textAttribute": "text"
+    },
+    "input": {
+      "typeMappings": {
+        "text": {
+          "uxmlElement": "TextField",
+          "namespace": "UnityEngine.UIElements",
+          "description": "文本输入框"
+        },
+        "password": {
+          "uxmlElement": "TextField",
+          "namespace": "UnityEngine.UIElements",
+          "attributes": {
+            "password": "true"
+          },
+          "description": "密码输入框"
+        },
+        "number": {
+          "uxmlElement": "FloatField",
+          "namespace": "UnityEngine.UIElements",
+          "description": "数字输入框"
+        },
+        "checkbox": {
+          "uxmlElement": "Toggle",
+          "namespace": "UnityEngine.UIElements",
+          "description": "复选框"
+        },
+        "radio": {
+          "uxmlElement": "RadioButton",
+          "namespace": "UnityEngine.UIElements",
+          "description": "单选按钮"
+        },
+        "range": {
+          "uxmlElement": "Slider",
+          "namespace": "UnityEngine.UIElements",
+          "description": "滑块"
+        }
+      },
+      "default": {
+        "uxmlElement": "TextField",
+        "namespace": "UnityEngine.UIElements"
+      }
+    },
+    "textarea": {
+      "uxmlElement": "TextField",
+      "namespace": "UnityEngine.UIElements",
+      "attributes": {
+        "multiline": "true"
+      },
+      "description": "多行文本输入"
+    },
+    "select": {
+      "uxmlElement": "DropdownField",
+      "namespace": "UnityEngine.UIElements",
+      "description": "下拉选择框"
+    },
+    "label": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "description": "文本标签"
+    },
+    "img": {
+      "uxmlElement": "Image",
+      "namespace": "UnityEngine.UIElements",
+      "description": "图片元素",
+      "attributeMappings": {
+        "src": "source"
+      }
+    },
+    "progress": {
+      "uxmlElement": "ProgressBar",
+      "namespace": "UnityEngine.UIElements",
+      "description": "进度条"
+    },
+    "h1": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "h1",
+      "description": "一级标题"
+    },
+    "h2": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "h2",
+      "description": "二级标题"
+    },
+    "h3": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "h3",
+      "description": "三级标题"
+    },
+    "h4": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "h4",
+      "description": "四级标题"
+    },
+    "h5": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "h5",
+      "description": "五级标题"
+    },
+    "h6": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "h6",
+      "description": "六级标题"
+    },
+    "p": {
+      "uxmlElement": "Label",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "paragraph",
+      "description": "段落文本"
+    },
+    "a": {
+      "uxmlElement": "Button",
+      "namespace": "UnityEngine.UIElements",
+      "textAttribute": "text",
+      "defaultClass": "link",
+      "description": "链接（转换为按钮样式）"
+    },
+    "ul": {
+      "uxmlElement": "ListView",
+      "namespace": "UnityEngine.UIElements",
+      "description": "无序列表"
+    },
+    "ol": {
+      "uxmlElement": "ListView",
+      "namespace": "UnityEngine.UIElements",
+      "description": "有序列表"
+    },
+    "li": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "defaultClass": "list-item",
+      "description": "列表项"
+    },
+    "section": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "description": "区块容器"
+    },
+    "header": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "defaultClass": "header",
+      "description": "页头容器"
+    },
+    "footer": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "defaultClass": "footer",
+      "description": "页脚容器"
+    },
+    "nav": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "defaultClass": "nav",
+      "description": "导航容器"
+    },
+    "article": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "description": "文章容器"
+    },
+    "aside": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "description": "侧边栏容器"
+    },
+    "main": {
+      "uxmlElement": "VisualElement",
+      "namespace": "UnityEngine.UIElements",
+      "defaultClass": "main",
+      "description": "主内容容器"
+    }
+  },
+  "unsupportedElements": [
+    "table",
+    "tr",
+    "td",
+    "th",
+    "thead",
+    "tbody",
+    "canvas",
+    "video",
+    "audio",
+    "iframe",
+    "form",
+    "svg",
+    "script",
+    "style"
+  ],
+  "attributeMappings": {
+    "id": "name",
+    "class": "class",
+    "disabled": {
+      "to": "enabled",
+      "value": "false"
+    },
+    "value": "value",
+    "placeholder": "placeholder",
+    "readonly": {
+      "to": "isReadOnly",
+      "value": "true"
+    },
+    "maxlength": "maxLength",
+    "min": "lowValue",
+    "max": "highValue",
+    "step": "pageSize"
+  }
+}

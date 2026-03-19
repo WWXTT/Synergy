@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(head:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "Bash(dotnet build:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(sed:*)",
+      "Bash(print -5)",
+      "Bash(mcs:*)",
+      "Bash(powershell:*)",
+      "Bash(echo using:*)",
+      "Bash(pip show:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(cd:*)",
+      "Bash(powershell -Command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; \\\\$excel = New-Object -ComObject Excel.Application; \\\\$excel.Visible = \\\\$false; \\\\$workbook = \\\\$excel.Workbooks.Open\\('C:\\\\Users\\\\Administrator\\\\Desktop\\\\ClaudeCode\\\\Synergy\\\\Config\\\\Tools\\\\Datas\\\\__enums__.xlsx'\\); \\\\$sheet = \\\\$workbook.Sheets.Item\\(1\\); \\\\$usedRange = \\\\$sheet.UsedRange; \\\\$rowCount = \\\\$usedRange.Rows.Count; Write-Host 'Sheet name:' \\\\$sheet.Name; Write-Host 'Total rows:' \\\\$rowCount; Write-Host ''; Write-Host 'First 100 rows \\(Column B, H, I\\):'; for \\(\\\\$i = 1; \\\\$i -le [Math]::Min\\(100, \\\\$rowCount\\); \\\\$i++\\) { \\\\$b = \\\\$sheet.Cells.Item\\(\\\\$i, 2\\).Text; \\\\$h = \\\\$sheet.Cells.Item\\(\\\\$i, 8\\).Text; \\\\$colI = \\\\$sheet.Cells.Item\\(\\\\$i, 9\\).Text; if \\(\\\\$b -or \\\\$h -or \\\\$colI\\) { Write-Host \\\\\"\\\\$i : B=[\\\\$b] H=[\\\\$h] I=[\\\\$colI]\\\\\" } }; \\\\$workbook.Close\\(\\\\$false\\); \\\\$excel.Quit\\(\\)\" 2>&1 | iconv -f UTF-16LE -t UTF-8)",
+      "Bash(git push:*)"
+    ]
+  }
+}

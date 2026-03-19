@@ -1,0 +1,204 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- 效果编辑器面板 - 三栏布局 -->
+    <ui:VisualElement name="panel-container" class="three-column-layout">
+
+        <!-- 左侧面板：效果列表 -->
+        <ui:VisualElement class="panel-left">
+            <ui:VisualElement class="panel-header">
+                <ui:Label text="效果列表" class="panel-title" />
+            </ui:VisualElement>
+
+            <!-- 搜索和筛选 -->
+            <ui:VisualElement class="list-header">
+                <ui:VisualElement class="search-container">
+                    <ui:TextField name="search-input" placeholder="搜索效果..." class="search-input" />
+                </ui:VisualElement>
+                <ui:DropdownField name="type-filter" class="dropdown" />
+            </ui:VisualElement>
+
+            <!-- 效果列表 -->
+            <ui:ScrollView name="effect-list" class="list-content">
+                <!-- 效果列表项将动态生成 -->
+            </ui:ScrollView>
+
+            <!-- 新建按钮 -->
+            <ui:VisualElement class="list-footer">
+                <ui:Button name="btn-new-effect" text="新建效果" class="btn btn-primary" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 中间面板：编辑区域 -->
+        <ui:VisualElement class="panel-center">
+            <ui:VisualElement class="panel-header">
+                <ui:Label text="效果编辑" class="panel-title" />
+            </ui:VisualElement>
+
+            <!-- Tab 导航 -->
+            <ui:VisualElement class="tabs">
+                <ui:Button name="tab-basic" text="基本信息" class="tab active" />
+                <ui:Button name="tab-target" text="目标" class="tab" />
+                <ui:Button name="tab-cost" text="代价" class="tab" />
+                <ui:Button name="tab-effects" text="效果" class="tab" />
+                <ui:Button name="tab-conditions" text="条件" class="tab" />
+            </ui:VisualElement>
+
+            <!-- Tab 内容区域 -->
+            <ui:VisualElement name="tab-content-container" class="edit-content">
+
+                <!-- 基本信息 Tab -->
+                <ui:VisualElement name="tab-basic-content" class="tab-content active">
+                    <ui:VisualElement class="section">
+                        <ui:VisualElement class="form-group">
+                            <ui:Label text="效果名称" class="form-label" />
+                            <ui:TextField name="effect-name-input" class="input-field" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-group">
+                            <ui:Label text="效果描述" class="form-label" />
+                            <ui:TextField name="effect-desc-input" multiline="true" class="textarea" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="触发时点" class="form-label" />
+                            <ui:DropdownField name="trigger-timing-dropdown" class="dropdown form-control" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="发动类型" class="form-label" />
+                            <ui:DropdownField name="activation-type-dropdown" class="dropdown form-control" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="基础速度" class="form-label" />
+                            <ui:IntegerField name="speed-input" class="integer-field form-control" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 目标 Tab -->
+                <ui:VisualElement name="tab-target-content" class="tab-content">
+                    <ui:VisualElement class="section">
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="主目标类型" class="form-label" />
+                            <ui:DropdownField name="target-type-dropdown" class="dropdown form-control" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="子目标类型" class="form-label" />
+                            <ui:DropdownField name="sub-target-dropdown" class="dropdown form-control" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="最小目标数" class="form-label" />
+                            <ui:IntegerField name="min-targets-input" class="integer-field form-control" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Label text="最大目标数" class="form-label" />
+                            <ui:IntegerField name="max-targets-input" class="integer-field form-control" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="form-row">
+                            <ui:Toggle name="target-optional-toggle" class="toggle" />
+                            <ui:Label text="目标可选" class="toggle-label" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="section">
+                        <ui:VisualElement class="section-header">
+                            <ui:Label text="目标筛选条件" class="section-title" />
+                            <ui:Button name="btn-add-target-condition" text="添加" class="btn btn-sm btn-secondary" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="target-conditions-list" class="section-content">
+                            <!-- 条件列表动态生成 -->
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 代价 Tab -->
+                <ui:VisualElement name="tab-cost-content" class="tab-content">
+                    <ui:VisualElement class="section">
+                        <ui:VisualElement class="section-header">
+                            <ui:Label text="元素代价" class="section-title" />
+                            <ui:Button name="btn-add-mana-cost" text="添加" class="btn btn-sm btn-secondary" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="mana-cost-list" class="section-content">
+                            <!-- 元素代价列表动态生成 -->
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="section">
+                        <ui:VisualElement class="section-header">
+                            <ui:Label text="资源代价" class="section-title" />
+                            <ui:Button name="btn-add-resource-cost" text="添���" class="btn btn-sm btn-secondary" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="resource-cost-list" class="section-content">
+                            <!-- 资源代价列表动态生成 -->
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 原子效果 Tab -->
+                <ui:VisualElement name="tab-effects-content" class="tab-content">
+                    <ui:VisualElement class="section">
+                        <ui:VisualElement class="section-header">
+                            <ui:Label text="原子效果列表" class="section-title" />
+                            <ui:Button name="btn-add-atomic-effect" text="添加效果" class="btn btn-sm btn-secondary" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="atomic-effects-list" class="section-content">
+                            <!-- 原子效果列表动态生成 -->
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 条件 Tab -->
+                <ui:VisualElement name="tab-conditions-content" class="tab-content">
+                    <ui:VisualElement class="section">
+                        <ui:VisualElement class="section-header">
+                            <ui:Label text="触发条件" class="section-title" />
+                            <ui:Button name="btn-add-condition" text="添加条件" class="btn btn-sm btn-secondary" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="conditions-list" class="section-content">
+                            <!-- 条件列表动态生成 -->
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+            <!-- 操作按钮 -->
+            <ui:VisualElement class="edit-footer">
+                <ui:Button name="btn-reset" text="重置" class="btn btn-secondary" />
+                <ui:Button name="btn-save" text="保存" class="btn btn-primary" />
+                <ui:Button name="btn-save-as" text="另存为" class="btn btn-secondary" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 右侧面板：预览区域 -->
+        <ui:VisualElement class="panel-right">
+            <ui:VisualElement class="panel-header">
+                <ui:Label text="效果预览" class="panel-title" />
+            </ui:VisualElement>
+            <ui:VisualElement class="preview-content">
+                <ui:VisualElement name="effect-preview" class="effect-preview-container">
+                    <ui:Label name="preview-name" text="效果名称" class="label-title" />
+                    <ui:Label name="preview-description" text="效果描述" class="preview-description" />
+                    <ui:VisualElement class="divider" />
+                    <ui:VisualElement class="preview-section">
+                        <ui:Label text="目标信息" class="label-subtitle" />
+                        <ui:Label name="preview-target" text="-" class="preview-detail" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="preview-section">
+                        <ui:Label text="代价" class="label-subtitle" />
+                        <ui:Label name="preview-cost" text="-" class="preview-detail" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="preview-section">
+                        <ui:Label text="原子效果" class="label-subtitle" />
+                        <ui:Label name="preview-effects" text="-" class="preview-detail" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="preview-section">
+                        <ui:Label text="触发条件" class="label-subtitle" />
+                        <ui:Label name="preview-conditions" text="-" class="preview-detail" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- JSON 预览 -->
+                <ui:VisualElement class="json-preview">
+                    <ui:Label text="JSON 预览" class="label-subtitle" />
+                    <ui:TextField name="json-preview" multiline="true" readonly="true" class="textarea json-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

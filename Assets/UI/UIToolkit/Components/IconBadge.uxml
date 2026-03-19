@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- 图标徽章组件 -->
+    <ui:VisualElement class="icon-badge">
+        <ui:VisualElement name="badge-icon" class="badge-icon" />
+        <ui:Label name="badge-text" text="" class="badge-text" />
+    </ui:VisualElement>
+</ui:UXML>

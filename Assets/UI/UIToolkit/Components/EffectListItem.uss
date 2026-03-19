@@ -1,0 +1,122 @@
+/* EffectListItem.uss - 效果列表项样式 */
+
+.effect-list-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background-color: var(--bg-medium);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-xs);
+    border-width: 1px;
+    border-color: transparent;
+    cursor: link;
+}
+
+.effect-list-item:hover {
+    background-color: var(--bg-light);
+    border-color: var(--border-color);
+}
+
+.effect-list-item.selected {
+    background-color: var(--bg-light);
+    border-color: var(--primary-color);
+}
+
+.effect-list-item.dragging {
+    opacity: 0.7;
+}
+
+.effect-icon-container {
+    width: 36px;
+    height: 36px;
+    margin-right: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.effect-icon {
+    width: 32px;
+    height: 32px;
+    background-color: var(--primary-color);
+    border-radius: var(--radius-sm);
+}
+
+/* 效果类型图标颜色 */
+.effect-icon.damage {
+    background-color: var(--mana-red);
+}
+
+.effect-icon.heal {
+    background-color: var(--mana-green);
+}
+
+.effect-icon.draw {
+    background-color: var(--mana-blue);
+}
+
+.effect-icon.buff {
+    background-color: var(--warning-color);
+}
+
+.effect-icon.control {
+    background-color: var(--mana-black);
+}
+
+.effect-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.effect-name {
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+    overflow: hidden;
+}
+
+.effect-brief {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+    overflow: hidden;
+}
+
+.effect-actions {
+    display: flex;
+    flex-direction: row;
+    opacity: 0;
+}
+
+.effect-list-item:hover .effect-actions {
+    opacity: 1;
+}
+
+.effect-actions .btn {
+    margin-left: var(--spacing-xs);
+}
+
+.drag-handle {
+    width: 20px;
+    height: 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: move;
+    opacity: 0.3;
+    margin-left: var(--spacing-xs);
+}
+
+.effect-list-item:hover .drag-handle {
+    opacity: 0.7;
+}
+
+.drag-handle-icon {
+    color: var(--text-muted);
+    font-size: 14px;
+}

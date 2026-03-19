@@ -1,0 +1,216 @@
+/* DeckEditorPanel.uss - 卡组编辑器面板样式 */
+
+/* 导入基础样式 */
+@import url("project://database/Assets/UI/UIToolkit/uss/Common.uss");
+@import url("project://database/Assets/UI/UIToolkit/uss/Components.uss");
+@import url("project://database/Assets/UI/UIToolkit/uss/Layouts.uss");
+@import url("project://database/Assets/UI/UIToolkit/Components/CardPreviewCard.uss");
+@import url("project://database/Assets/UI/UIToolkit/Components/ManaCostDisplay.uss");
+
+/* 卡组编辑内容 */
+.deck-edit-content {
+    flex: 1;
+    padding: var(--spacing-md);
+    overflow: auto;
+}
+
+/* 卡组名称显示 */
+.deck-name-display {
+    color: var(--text-secondary);
+    font-size: var(--font-md);
+    margin-left: var(--spacing-md);
+}
+
+/* 卡组数量标签 */
+.deck-count-label {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.deck-count-label.valid {
+    color: var(--success-color);
+}
+
+.deck-count-label.invalid {
+    color: var(--error-color);
+}
+
+/* 卡组区域提示 */
+.deck-area-hint {
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+}
+
+/* 卡组卡牌槽位 */
+.deck-card-slot {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-xs);
+    background-color: var(--bg-medium);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xs);
+    cursor: link;
+}
+
+.deck-card-slot:hover {
+    background-color: var(--bg-light);
+}
+
+.deck-card-slot.dragging {
+    opacity: 0.5;
+}
+
+.deck-card-slot-icon {
+    width: 32px;
+    height: 40px;
+    background-color: var(--bg-light);
+    border-radius: var(--radius-xs);
+    margin-right: var(--spacing-sm);
+}
+
+.deck-card-slot-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.deck-card-slot-name {
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    overflow: hidden;
+}
+
+.deck-card-slot-cost {
+    color: var(--text-secondary);
+    font-size: var(--font-xs);
+}
+
+.deck-card-slot-quantity {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.deck-card-slot-quantity .btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    font-size: var(--font-sm);
+}
+
+.deck-card-slot-count {
+    min-width: 24px;
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    -unity-text-align: middle-center;
+}
+
+/* 可用卡牌项 */
+.available-card-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background-color: var(--bg-medium);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xs);
+    cursor: grab;
+}
+
+.available-card-item:hover {
+    background-color: var(--bg-light);
+}
+
+.available-card-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.available-card-item-icon {
+    width: 36px;
+    height: 48px;
+    background-color: var(--bg-light);
+    border-radius: var(--radius-xs);
+    margin-right: var(--spacing-sm);
+}
+
+.available-card-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.available-card-item-name {
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    overflow: hidden;
+}
+
+.available-card-item-type {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.available-card-item-cost {
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    -unity-font-style: bold;
+}
+
+/* 颜色分布 */
+.color-distribution {
+    display: flex;
+    flex-direction: column;
+}
+
+.color-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 20px;
+    background-color: var(--bg-light);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xs);
+    overflow: hidden;
+}
+
+.color-fill {
+    height: 100%;
+    border-radius: var(--radius-sm);
+}
+
+.color-label {
+    position: absolute;
+    left: var(--spacing-sm);
+    color: var(--text-primary);
+    font-size: var(--font-xs);
+}
+
+/* 拖拽提示 */
+.drop-hint {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: var(--font-md);
+}
+
+/* 拖拽覆盖状态 */
+.deck-area.drag-over {
+    border-color: var(--primary-color);
+    background-color: rgba(233, 69, 96, 0.1);
+}
+
+.deck-area.drag-over .drop-hint {
+    color: var(--primary-color);
+}
+
+/* 按钮组 */
+.section .btn {
+    margin-top: var(--spacing-xs);
+}

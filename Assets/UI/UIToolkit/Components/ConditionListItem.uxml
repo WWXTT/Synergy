@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- 条件列表项组件 -->
+    <ui:VisualElement class="condition-list-item">
+        <ui:VisualElement class="condition-icon-container">
+            <ui:VisualElement name="condition-icon" class="condition-icon" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="condition-content">
+            <ui:VisualElement class="condition-header">
+                <ui:Label name="condition-name" text="条件名称" class="condition-name" />
+                <ui:Toggle name="negate-toggle" class="negate-toggle" />
+                <ui:Label text="取反" class="negate-label" />
+            </ui:VisualElement>
+            <ui:Label name="condition-params" text="参数值" class="condition-params" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="condition-actions">
+            <ui:Button name="btn-edit" text="编辑" class="btn btn-sm btn-secondary" />
+            <ui:Button name="btn-delete" text="删除" class="btn btn-sm btn-danger" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
