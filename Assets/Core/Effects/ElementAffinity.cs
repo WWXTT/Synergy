@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {
@@ -16,16 +15,16 @@ namespace CardCore
         public ManaType PrimaryColor { get; set; }
 
         /// <summary>是否可用任意颜色支付（灰色效果）</summary>
-        public bool IsGeneric => PrimaryColor == ManaType.灰色;
+        public bool IsGeneric => PrimaryColor == ManaType.Gray;
 
         /// <summary>是否为特殊颜色（黑/白不在本次实现）</summary>
-        public bool IsSpecialColor => PrimaryColor == ManaType.黑色 || PrimaryColor == ManaType.白色;
+        public bool IsSpecialColor => PrimaryColor == ManaType.Black || PrimaryColor == ManaType.White;
 
         /// <summary>创建单色倾向</summary>
         public static ElementAffinity Single(ManaType color) => new ElementAffinity { PrimaryColor = color };
 
         /// <summary>创建通用倾向（灰色，可用任意颜色支付）</summary>
-        public static ElementAffinity Generic => new ElementAffinity { PrimaryColor = ManaType.灰色 };
+        public static ElementAffinity Generic => new ElementAffinity { PrimaryColor = ManaType.Gray };
 
         /// <summary>
         /// 获取颜色显示名称
@@ -34,12 +33,12 @@ namespace CardCore
         {
             return PrimaryColor switch
             {
-                ManaType.红色 => "红",
-                ManaType.蓝色 => "蓝",
-                ManaType.绿色 => "绿",
-                ManaType.灰色 => "通用",
-                ManaType.白色 => "白",
-                ManaType.黑色 => "黑",
+                ManaType.Red => "红",
+                ManaType.Blue => "蓝",
+                ManaType.Green => "绿",
+                ManaType.Gray => "通用",
+                ManaType.White => "白",
+                ManaType.Black => "黑",
                 _ => PrimaryColor.ToString()
             };
         }
@@ -95,15 +94,15 @@ namespace CardCore
                 int remaining = amount;
 
                 // 优先使用灰色
-                if (availableMana.TryGetValue(ManaType.灰色, out int grayCount) && grayCount > 0)
+                if (availableMana.TryGetValue(ManaType.Gray, out int grayCount) && grayCount > 0)
                 {
                     int toUse = Math.Min(grayCount, remaining);
-                    availableMana[ManaType.灰色] -= toUse;
+                    availableMana[ManaType.Gray] -= toUse;
                     remaining -= toUse;
                 }
 
                 // 然后按顺序使用其他颜色
-                var colors = new[] { ManaType.红色, ManaType.蓝色, ManaType.绿色 };
+                var colors = new[] { ManaType.Red, ManaType.Blue, ManaType.Green };
                 foreach (var color in colors)
                 {
                     if (remaining <= 0) break;
@@ -146,15 +145,15 @@ namespace CardCore
                 int remaining = amount;
 
                 // 优先使用灰色
-                if (availableMana.TryGetValue(ManaType.灰色, out int grayCount) && grayCount > 0)
+                if (availableMana.TryGetValue(ManaType.Gray, out int grayCount) && grayCount > 0)
                 {
                     int toUse = Math.Min(grayCount, remaining);
-                    plan[ManaType.灰色] = toUse;
+                    plan[ManaType.Gray] = toUse;
                     remaining -= toUse;
                 }
 
                 // 然后按顺序使用其他颜色
-                var colors = new[] { ManaType.红色, ManaType.蓝色, ManaType.绿色 };
+                var colors = new[] { ManaType.Red, ManaType.Blue, ManaType.Green };
                 foreach (var color in colors)
                 {
                     if (remaining <= 0) break;
@@ -183,78 +182,78 @@ namespace CardCore
         #region 红色 - 伤害与破坏
 
         /// <summary>伤害效果</summary>
-        public static ElementAffinity Damage => ElementAffinity.Single(ManaType.红色);
+        public static ElementAffinity Damage => ElementAffinity.Single(ManaType.Red);
 
         /// <summary>燃烧效果</summary>
-        public static ElementAffinity Burn => ElementAffinity.Single(ManaType.红色);
+        public static ElementAffinity Burn => ElementAffinity.Single(ManaType.Red);
 
         /// <summary>破坏效果</summary>
-        public static ElementAffinity Destruction => ElementAffinity.Single(ManaType.红色);
+        public static ElementAffinity Destruction => ElementAffinity.Single(ManaType.Red);
 
         /// <summary>敏捷效果</summary>
-        public static ElementAffinity Haste => ElementAffinity.Single(ManaType.红色);
+        public static ElementAffinity Haste => ElementAffinity.Single(ManaType.Red);
 
         /// <summary>突袭效果</summary>
-        public static ElementAffinity Rush => ElementAffinity.Single(ManaType.红色);
+        public static ElementAffinity Rush => ElementAffinity.Single(ManaType.Red);
 
         /// <summary>双击效果</summary>
-        public static ElementAffinity DoubleStrike => ElementAffinity.Single(ManaType.红色);
+        public static ElementAffinity DoubleStrike => ElementAffinity.Single(ManaType.Red);
 
         /// <summary>多次攻击效果</summary>
-        public static ElementAffinity MultiAttack => ElementAffinity.Single(ManaType.红色);
+        public static ElementAffinity MultiAttack => ElementAffinity.Single(ManaType.Red);
 
         #endregion
 
         #region 蓝色 - 控制与知识
 
         /// <summary>抽卡效果</summary>
-        public static ElementAffinity Draw => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity Draw => ElementAffinity.Single(ManaType.Blue);
 
         /// <summary>弹回手牌效果</summary>
-        public static ElementAffinity Bounce => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity Bounce => ElementAffinity.Single(ManaType.Blue);
 
         /// <summary>反制效果</summary>
-        public static ElementAffinity Counter => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity Counter => ElementAffinity.Single(ManaType.Blue);
 
         /// <summary>横置效果</summary>
-        public static ElementAffinity Tap => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity Tap => ElementAffinity.Single(ManaType.Blue);
 
         /// <summary>冻结效果</summary>
-        public static ElementAffinity Freeze => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity Freeze => ElementAffinity.Single(ManaType.Blue);
 
         /// <summary>复制效果</summary>
-        public static ElementAffinity Copy => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity Copy => ElementAffinity.Single(ManaType.Blue);
 
         /// <summary>重定向效果</summary>
-        public static ElementAffinity Redirect => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity Redirect => ElementAffinity.Single(ManaType.Blue);
 
         /// <summary>偷取控制权效果</summary>
-        public static ElementAffinity StealControl => ElementAffinity.Single(ManaType.蓝色);
+        public static ElementAffinity StealControl => ElementAffinity.Single(ManaType.Blue);
 
         #endregion
 
         #region 绿色 - 成长与恢复
 
         /// <summary>法力加速效果</summary>
-        public static ElementAffinity Ramp => ElementAffinity.Single(ManaType.绿色);
+        public static ElementAffinity Ramp => ElementAffinity.Single(ManaType.Green);
 
         /// <summary>增益效果</summary>
-        public static ElementAffinity Buff => ElementAffinity.Single(ManaType.绿色);
+        public static ElementAffinity Buff => ElementAffinity.Single(ManaType.Green);
 
         /// <summary>召唤效果</summary>
-        public static ElementAffinity Summon => ElementAffinity.Single(ManaType.绿色);
+        public static ElementAffinity Summon => ElementAffinity.Single(ManaType.Green);
 
         /// <summary>治疗效果</summary>
-        public static ElementAffinity Heal => ElementAffinity.Single(ManaType.绿色);
+        public static ElementAffinity Heal => ElementAffinity.Single(ManaType.Green);
 
         /// <summary>重置效果</summary>
-        public static ElementAffinity Untap => ElementAffinity.Single(ManaType.绿色);
+        public static ElementAffinity Untap => ElementAffinity.Single(ManaType.Green);
 
         /// <summary>践踏效果</summary>
-        public static ElementAffinity Trample => ElementAffinity.Single(ManaType.绿色);
+        public static ElementAffinity Trample => ElementAffinity.Single(ManaType.Green);
 
         /// <summary>指示物效果</summary>
-        public static ElementAffinity Counters => ElementAffinity.Single(ManaType.绿色);
+        public static ElementAffinity Counters => ElementAffinity.Single(ManaType.Green);
 
         #endregion
 

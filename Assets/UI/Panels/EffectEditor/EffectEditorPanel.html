@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>EffectEditorPanel</title>
+<style>
+/* === Root Layout === */
+.effect-editor {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+}
+
+/* === Left Panel: Filter + Effect Library === */
+.effect-editor-left {
+    width: 260px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-medium);
+    border-right-width: 1px;
+    border-right-color: var(--border-color);
+}
+
+/* --- Filter Section --- */
+.filter-section {
+    display: flex;
+    flex-direction: column;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-color);
+}
+
+.filter-label {
+    color: var(--text-secondary);
+    font-size: var(--font-xs);
+    margin-bottom: var(--spacing-xs);
+}
+
+.color-filter-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-sm);
+}
+
+.color-filter-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    margin-right: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+    border-width: 2px;
+    border-color: transparent;
+}
+
+.color-filter-btn.active {
+    border-color: var(--text-primary);
+}
+
+.color-filter-btn.color-all {
+    background-color: var(--text-secondary);
+}
+
+.color-filter-btn.color-red {
+    background-color: var(--mana-red);
+}
+
+.color-filter-btn.color-blue {
+    background-color: var(--mana-blue);
+}
+
+.color-filter-btn.color-green {
+    background-color: var(--mana-green);
+}
+
+.color-filter-btn.color-white {
+    background-color: var(--mana-white);
+}
+
+.color-filter-btn.color-black {
+    background-color: var(--mana-black);
+}
+
+.color-filter-btn.color-gray {
+    background-color: var(--mana-gray);
+}
+
+.type-filter-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.type-filter-tag {
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    padding-top: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+    background-color: var(--bg-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-xs);
+    margin-right: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+}
+
+.type-filter-tag.active {
+    background-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+/* --- Search + Count --- */
+.effect-search-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+}
+
+.effect-search-bar .search-input {
+    flex: 1;
+    height: 30px;
+    background-color: var(--bg-dark);
+    border-width: 0;
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    padding-left: var(--spacing-sm);
+}
+
+.effect-list-count {
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+}
+
+/* --- Effect Library List --- */
+.effect-list-scroll {
+    flex: 1;
+    overflow: auto;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    padding-top: var(--spacing-xs);
+}
+
+/* === Center Panel: Assembly Area === */
+.effect-editor-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-dark);
+}
+
+.assembly-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-color);
+    background-color: var(--bg-medium);
+}
+
+.assembly-header .panel-title {
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: bold;
+}
+
+.assembly-header-actions {
+    display: flex;
+    flex-direction: row;
+}
+
+.assembly-header-actions .btn {
+    margin-left: var(--spacing-xs);
+}
+
+/* Assembly Content */
+.assembly-content {
+    flex: 1;
+    overflow: auto;
+    padding: var(--spacing-md);
+}
+
+/* Empty Drop Zone */
+.assembly-empty-zone {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    background-color: var(--bg-light);
+    border-radius: var(--radius-md);
+    border-width: 2px;
+    border-color: var(--border-color);
+    border-style: dashed;
+}
+
+.drop-zone-hint {
+    color: var(--text-muted);
+    font-size: var(--font-md);
+}
+
+/* Effect Node in Assembly */
+.effect-node {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-medium);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    border-width: 1px;
+    border-color: var(--border-color);
+}
+
+.effect-node.selected {
+    border-color: var(--primary-color);
+}
+
+.effect-node-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border-color);
+}
+
+.effect-node-title {
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    font-weight: bold;
+}
+
+.effect-node-index {
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+    margin-left: var(--spacing-sm);
+}
+
+.effect-node-actions {
+    display: flex;
+    flex-direction: row;
+}
+
+.effect-node-actions .btn {
+    margin-left: var(--spacing-xs);
+}
+
+.effect-node-body {
+    padding: var(--spacing-sm);
+}
+
+/* Node Condition Slot */
+.node-conditions-section {
+    border-top-width: 1px;
+    border-top-color: var(--border-color);
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+}
+
+.node-conditions-label {
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+    margin-bottom: var(--spacing-xs);
+}
+
+.node-condition-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    padding-top: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+    background-color: var(--bg-dark);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.node-condition-name {
+    flex: 1;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.node-condition-remove {
+    margin-left: var(--spacing-xs);
+}
+
+/* Drop Zone (small, in-node) */
+.drop-zone {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 40px;
+    background-color: var(--bg-light);
+    border-radius: var(--radius-sm);
+    border-width: 1px;
+    border-color: var(--border-color);
+    border-style: dashed;
+    padding: var(--spacing-xs);
+    margin-top: var(--spacing-xs);
+}
+
+.drop-zone.drag-over {
+    border-color: var(--primary-color);
+}
+
+.drop-zone-hint-sm {
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+}
+
+/* Chain Connector between nodes */
+.chain-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+}
+
+.chain-connector-line {
+    width: 2px;
+    height: 16px;
+    background-color: var(--border-color);
+}
+
+.chain-connector-label {
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+    margin-top: var(--spacing-xs);
+}
+
+/* Assembly Footer */
+.assembly-footer {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-top-width: 1px;
+    border-top-color: var(--border-color);
+    background-color: var(--bg-medium);
+}
+
+.assembly-footer .btn {
+    margin-left: var(--spacing-sm);
+}
+
+/* === Right Panel: Conditions + Preview === */
+.effect-editor-right {
+    width: 320px;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-medium);
+    border-left-width: 1px;
+    border-left-color: var(--border-color);
+}
+
+/* --- Condition Library --- */
+.condition-section {
+    display: flex;
+    flex-direction: column;
+    height: 50%;
+}
+
+.condition-search-bar {
+    display: flex;
+    flex-direction: row;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+}
+
+.condition-search-bar .search-input {
+    flex: 1;
+    height: 30px;
+    background-color: var(--bg-dark);
+    border-width: 0;
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    padding-left: var(--spacing-sm);
+}
+
+.condition-list-scroll {
+    flex: 1;
+    overflow: auto;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+}
+
+/* --- Preview Section --- */
+.preview-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    border-top-width: 1px;
+    border-top-color: var(--border-color);
+}
+
+.preview-content {
+    flex: 1;
+    overflow: auto;
+    padding: var(--spacing-md);
+}
+
+/* Preview empty state */
+.preview-empty {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: var(--font-md);
+}
+
+/* Preview effect block */
+.preview-effect-block {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-dark);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+}
+
+.preview-effect-name {
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    font-weight: bold;
+    margin-bottom: var(--spacing-xs);
+}
+
+.preview-effect-desc {
+    color: var(--text-secondary);
+    font-size: var(--font-xs);
+}
+
+.preview-condition-tag {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-top: var(--spacing-xs);
+}
+
+.preview-condition-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--mana-blue);
+    margin-right: var(--spacing-xs);
+}
+
+.preview-condition-text {
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+}
+
+/* Preview Stats */
+.preview-stats {
+    display: flex;
+    flex-direction: column;
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top-width: 1px;
+    border-top-color: var(--border-color);
+}
+
+.preview-stats-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+}
+
+.preview-stats-label {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.preview-stats-value {
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    font-weight: bold;
+}
+
+/* Hidden utility */
+.hidden {
+    display: none;
+}
+</style>
+</head>
+<body>
+
+<div id="panel-container" class="effect-editor">
+
+    <!-- ==================== LEFT PANEL ==================== -->
+    <div class="effect-editor-left">
+        <div class="panel-header">
+            <label class="panel-title">效果库</label>
+        </div>
+
+        <!-- Color Filter -->
+        <div class="filter-section">
+            <label class="filter-label">颜色筛选</label>
+            <div class="color-filter-row">
+                <div id="filter-color-all" class="color-filter-btn color-all active"></div>
+                <div id="filter-color-red" class="color-filter-btn color-red"></div>
+                <div id="filter-color-blue" class="color-filter-btn color-blue"></div>
+                <div id="filter-color-green" class="color-filter-btn color-green"></div>
+                <div id="filter-color-white" class="color-filter-btn color-white"></div>
+                <div id="filter-color-black" class="color-filter-btn color-black"></div>
+                <div id="filter-color-gray" class="color-filter-btn color-gray"></div>
+            </div>
+
+            <label class="filter-label">类型筛选</label>
+            <div class="type-filter-row">
+                <div id="filter-type-all" class="type-filter-tag active">全部</div>
+                <div id="filter-type-damage" class="type-filter-tag">伤害</div>
+                <div id="filter-type-healing" class="type-filter-tag">治疗</div>
+                <div id="filter-type-cardmove" class="type-filter-tag">卡牌移动</div>
+                <div id="filter-type-buff" class="type-filter-tag">增益</div>
+                <div id="filter-type-control" class="type-filter-tag">控制</div>
+                <div id="filter-type-protect" class="type-filter-tag">保护</div>
+                <div id="filter-type-special" class="type-filter-tag">特殊</div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="effect-search-bar">
+            <input id="effect-search-input" type="text" class="search-input" placeholder="搜索效果...">
+        </div>
+
+        <!-- Count -->
+        <label id="effect-list-count" class="effect-list-count">共 0 个效果</label>
+
+        <!-- Scrollable Effect List -->
+        <div id="effect-library-list" class="effect-list-scroll">
+            <!-- Populated at runtime with EffectListItem templates -->
+        </div>
+    </div>
+
+    <!-- ==================== CENTER PANEL ==================== -->
+    <div class="effect-editor-center">
+        <div class="assembly-header">
+            <label class="panel-title">效果组装</label>
+            <div class="assembly-header-actions">
+                <button id="btn-add-node" class="btn btn-sm btn-secondary">添加节点</button>
+                <button id="btn-clear-assembly" class="btn btn-sm btn-secondary">清空</button>
+            </div>
+        </div>
+
+        <div id="assembly-content" class="assembly-content">
+            <!-- Initial empty drop zone -->
+            <div id="assembly-empty-zone" class="assembly-empty-zone">
+                <label class="drop-zone-hint">从左侧拖拽效果到此处开始组装</label>
+            </div>
+        </div>
+
+        <div class="assembly-footer">
+            <button id="btn-reset" class="btn btn-secondary">重置</button>
+            <button id="btn-save" class="btn btn-primary">保存效果</button>
+        </div>
+    </div>
+
+    <!-- ==================== RIGHT PANEL ==================== -->
+    <div class="effect-editor-right">
+        <!-- Top: Condition Library -->
+        <div class="condition-section">
+            <div class="panel-header">
+                <label class="panel-title">发动条件</label>
+            </div>
+            <div class="condition-search-bar">
+                <input id="condition-search-input" type="text" class="search-input" placeholder="搜索条件...">
+            </div>
+            <div id="condition-library-list" class="condition-list-scroll">
+                <!-- Populated at runtime with ConditionListItem templates -->
+            </div>
+        </div>
+
+        <!-- Bottom: Preview -->
+        <div class="preview-section">
+            <div class="panel-header">
+                <label class="panel-title">效果预览</label>
+            </div>
+            <div id="preview-content" class="preview-content">
+                <div id="preview-empty" class="preview-empty">
+                    <label>尚未添加效果</label>
+                </div>
+                <div id="preview-tree" class="hidden">
+                    <!-- Populated at runtime -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,8 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {

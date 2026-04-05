@@ -1,8 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {
@@ -66,9 +65,6 @@ namespace CardCore
                 TriggerTiming.On_TurnEnd or
                 TriggerTiming.On_PhaseStart or
                 TriggerTiming.On_PhaseEnd or
-                TriggerTiming.On_StandbyPhase or
-                TriggerTiming.On_DrawPhase or
-                TriggerTiming.On_EndPhase or
                 TriggerTiming.On_AttackDeclare => TriggerControllability.PlayerControlled,
 
                 TriggerTiming.On_EnterBattlefield or
@@ -76,11 +72,8 @@ namespace CardCore
                 TriggerTiming.On_Death or
                 TriggerTiming.On_DamageDealt or
                 TriggerTiming.On_DamageTaken or
-                TriggerTiming.On_CombatDamage or
                 TriggerTiming.On_CardDraw or
-                TriggerTiming.On_CardPlay or
-                TriggerTiming.On_CardMove or
-                TriggerTiming.On_CardToGraveyard => TriggerControllability.PartialControl,
+                TriggerTiming.On_CardPlay  => TriggerControllability.PartialControl,
 
                 _ => TriggerControllability.Uncontrolled
             };

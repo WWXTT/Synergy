@@ -77,7 +77,7 @@ namespace CardCore
         );
     }
 
-    public class DealDamageLogic : EffectLogic, EffectSystemExtensions.IParameterizedEffect
+    public class DealDamageLogic : EffectLogic
     {
         public int Damage;
 

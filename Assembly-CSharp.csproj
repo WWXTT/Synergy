@@ -20,8 +20,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <NoWarn>0169;USG0001</NoWarn>
-    <DefineConstants>UNITY_6000_5_0;UNITY_6000_5;UNITY_6000;UNITY_5_3_OR_NEWER;UNITY_5_4_OR_NEWER;UNITY_5_5_OR_NEWER;UNITY_5_6_OR_NEWER;UNITY_2017_1_OR_NEWER;UNITY_2017_2_OR_NEWER;UNITY_2017_3_OR_NEWER;UNITY_2017_4_OR_NEWER;UNITY_2018_1_OR_NEWER;UNITY_2018_2_OR_NEWER;UNITY_2018_3_OR_NEWER;UNITY_2018_4_OR_NEWER;UNITY_2019_1_OR_NEWER;UNITY_2019_2_OR_NEWER;UNITY_2019_3_OR_NEWER;UNITY_2019_4_OR_NEWER;UNITY_2020_1_OR_NEWER;UNITY_2020_2_OR_NEWER;UNITY_2020_3_OR_NEWER;UNITY_2021_1_OR_NEWER;UNITY_2021_2_OR_NEWER;UNITY_2021_3_OR_NEWER;UNITY_2022_1_OR_NEWER;UNITY_2022_2_OR_NEWER;UNITY_2022_3_OR_NEWER;UNITY_2023_1_OR_NEWER;UNITY_2023_2_OR_NEWER;UNITY_2023_3_OR_NEWER;UNITY_6000_0_OR_NEWER;UNITY_6000_1_OR_NEWER;UNITY_6000_2_OR_NEWER;UNITY_6000_3_OR_NEWER;UNITY_6000_4_OR_NEWER;UNITY_6000_5_OR_NEWER;UNITY_INCLUDE_TESTS;ENABLE_AR;ENABLE_AUDIO;ENABLE_AUDIO_SCRIPTABLE_PIPELINE;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_EVENT_QUEUE;ENABLE_MICROPHONE;ENABLE_MULTIPLE_DISPLAYS;ENABLE_PHYSICS;ENABLE_TEXTURE_STREAMING;ENABLE_LZMA;ENABLE_UNITYEVENTS;ENABLE_VR;ENABLE_WEBCAM;ENABLE_UNITYWEBREQUEST;ENABLE_WWW;ENABLE_CLOUD_SERVICES;ENABLE_CLOUD_SERVICES_ADS;ENABLE_CLOUD_SERVICES_USE_WEBREQUEST;ENABLE_UNITY_CONSENT;ENABLE_UNITY_CLOUD_IDENTIFIERS;ENABLE_CLOUD_SERVICES_CRASH_REPORTING;ENABLE_CLOUD_SERVICES_NATIVE_CRASH_REPORTING;ENABLE_CLOUD_SERVICES_PURCHASING;ENABLE_CLOUD_SERVICES_ANALYTICS;ENABLE_CLOUD_SERVICES_BUILD;ENABLE_EDITOR_GAME_SERVICES;ENABLE_UNITY_GAME_SERVICES_ANALYTICS_SUPPORT;ENABLE_CLOUD_LICENSE;ENABLE_EDITOR_HUB_LICENSE;ENABLE_WEBSOCKET_CLIENT;ENABLE_GENERATE_NATIVE_PLUGINS_FOR_ASSEMBLIES_API;ENABLE_DIRECTOR_AUDIO;ENABLE_DIRECTOR_TEXTURE;ENABLE_MANAGED_JOBS;ENABLE_MANAGED_TRANSFORM_JOBS;ENABLE_MANAGED_ANIMATION_JOBS;ENABLE_MANAGED_AUDIO_JOBS;ENABLE_ENGINE_CODE_STRIPPING;ENABLE_ONSCREEN_KEYBOARD;ENABLE_MANAGED_UNITYTLS;INCLUDE_DYNAMIC_GI;ENABLE_SCRIPTING_GC_WBARRIERS;PLATFORM_SUPPORTS_MONO;ENABLE_MARSHALLING_TESTS;ENABLE_VIDEO;ENABLE_NAVIGATION_OFFMESHLINK_TO_NAVMESHLINK;ENABLE_ACCELERATOR_CLIENT_DEBUGGING;ENABLE_ACCESSIBILITY_SCREEN_READER;ENABLE_ACCESSIBILITY_SETTINGS;TEXTCORE_1_0_OR_NEWER;EDITOR_ONLY_NAVMESH_BUILDER_DEPRECATED;PLATFORM_ANDROID;UNITY_ANDROID;UNITY_ANDROID_API;ENABLE_EGL;ENABLE_NETWORK;ENABLE_RUNTIME_GI;ENABLE_CRUNCH_TEXTURE_COMPRESSION;ENABLE_CLOUD_SERVICES_ENGINE_DIAGNOSTICS;ENABLE_FIREBASE_IDENTIFIERS;UNITY_CAN_SHOW_SPLASH_SCREEN;UNITY_HAS_GOOGLEVR;UNITY_HAS_TANGO;ENABLE_SPATIALTRACKING;ENABLE_ETC_COMPRESSION;PLATFORM_EXTENDS_VULKAN_DEVICE;PLATFORM_HAS_MULTIPLE_SWAPCHAINS;UNITY_ANDROID_SUPPORTS_SHADOWFILES;PLATFORM_UPDATES_TIME_OUTSIDE_OF_PLAYER_LOOP;PLATFORM_EXTENDS_VULKAN_PIPELINE_CACHE;PLATFORM_SUPPORTS_SPLIT_GRAPHICS_JOBS;PLATFORM_HAS_ADDITIONAL_API_CHECKS;PLATFORM_HAS_GRAPHICS_JOBS_SUPPORT_CHECK_OVERRIDE;PLATFORM_IMPLEMENTS_INSIGHTS_ANR;PLATFORM_SUPPORTS_INSIGHTS_DEVICE_INFO;ENABLE_ANDROID_ADVERTISING_IDS;PLATFORM_HAS_BUGGY_MSAA_RESOLVE;ENABLE_ANDROID_APP_SET_ID;ENABLE_INSIGHTS_PLATFORM_SPECIFIC_RESOURCES;ENABLE_UNITYADS_RUNTIME;UNITY_UNITYADS_API;ENABLE_MONO;NET_STANDARD_2_0;NET_STANDARD;NET_STANDARD_2_1;NETSTANDARD;NETSTANDARD2_1;ENABLE_PROFILER;DEBUG;TRACE;UNITY_ASSERTIONS;UNITY_EDITOR;UNITY_EDITOR_64;UNITY_EDITOR_WIN;ENABLE_UNITY_COLLECTIONS_CHECKS;ENABLE_BURST_AOT;UNITY_TEAM_LICENSE;ENABLE_CUSTOM_RENDER_TEXTURE;ENABLE_DIRECTOR;ENABLE_LOCALIZATION;ENABLE_SPRITES;ENABLE_TERRAIN;ENABLE_TILEMAP;ENABLE_TIMELINE;ENABLE_INPUT_SYSTEM;TEXTCORE_FONT_ENGINE_1_5_OR_NEWER;TEXTCORE_TEXT_ENGINE_1_5_OR_NEWER;TEXTCORE_FONT_ENGINE_1_6_OR_NEWER;CSHARP_7_OR_LATER;CSHARP_7_3_OR_NEWER</DefineConstants>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <DefineConstants>UNITY_6000_5_0;UNITY_6000_5;UNITY_6000;UNITY_5_3_OR_NEWER;UNITY_5_4_OR_NEWER;UNITY_5_5_OR_NEWER;UNITY_5_6_OR_NEWER;UNITY_2017_1_OR_NEWER;UNITY_2017_2_OR_NEWER;UNITY_2017_3_OR_NEWER;UNITY_2017_4_OR_NEWER;UNITY_2018_1_OR_NEWER;UNITY_2018_2_OR_NEWER;UNITY_2018_3_OR_NEWER;UNITY_2018_4_OR_NEWER;UNITY_2019_1_OR_NEWER;UNITY_2019_2_OR_NEWER;UNITY_2019_3_OR_NEWER;UNITY_2019_4_OR_NEWER;UNITY_2020_1_OR_NEWER;UNITY_2020_2_OR_NEWER;UNITY_2020_3_OR_NEWER;UNITY_2021_1_OR_NEWER;UNITY_2021_2_OR_NEWER;UNITY_2021_3_OR_NEWER;UNITY_2022_1_OR_NEWER;UNITY_2022_2_OR_NEWER;UNITY_2022_3_OR_NEWER;UNITY_2023_1_OR_NEWER;UNITY_2023_2_OR_NEWER;UNITY_2023_3_OR_NEWER;UNITY_6000_0_OR_NEWER;UNITY_6000_1_OR_NEWER;UNITY_6000_2_OR_NEWER;UNITY_6000_3_OR_NEWER;UNITY_6000_4_OR_NEWER;UNITY_6000_5_OR_NEWER;UNITY_INCLUDE_TESTS;ENABLE_AR;ENABLE_AUDIO;ENABLE_AUDIO_SCRIPTABLE_PIPELINE;ENABLE_CACHING;ENABLE_CLOTH;ENABLE_EVENT_QUEUE;ENABLE_MICROPHONE;ENABLE_MULTIPLE_DISPLAYS;ENABLE_PHYSICS;ENABLE_TEXTURE_STREAMING;ENABLE_LZMA;ENABLE_UNITYEVENTS;ENABLE_VR;ENABLE_WEBCAM;ENABLE_UNITYWEBREQUEST;ENABLE_WWW;ENABLE_CLOUD_SERVICES;ENABLE_CLOUD_SERVICES_ADS;ENABLE_CLOUD_SERVICES_USE_WEBREQUEST;ENABLE_UNITY_CONSENT;ENABLE_UNITY_CLOUD_IDENTIFIERS;ENABLE_CLOUD_SERVICES_CRASH_REPORTING;ENABLE_CLOUD_SERVICES_NATIVE_CRASH_REPORTING;ENABLE_CLOUD_SERVICES_PURCHASING;ENABLE_CLOUD_SERVICES_ANALYTICS;ENABLE_CLOUD_SERVICES_BUILD;ENABLE_EDITOR_GAME_SERVICES;ENABLE_UNITY_GAME_SERVICES_ANALYTICS_SUPPORT;ENABLE_CLOUD_LICENSE;ENABLE_EDITOR_HUB_LICENSE;ENABLE_WEBSOCKET_CLIENT;ENABLE_GENERATE_NATIVE_PLUGINS_FOR_ASSEMBLIES_API;ENABLE_DIRECTOR_AUDIO;ENABLE_DIRECTOR_TEXTURE;ENABLE_MANAGED_JOBS;ENABLE_MANAGED_TRANSFORM_JOBS;ENABLE_MANAGED_ANIMATION_JOBS;ENABLE_MANAGED_AUDIO_JOBS;ENABLE_ENGINE_CODE_STRIPPING;ENABLE_ONSCREEN_KEYBOARD;ENABLE_MANAGED_UNITYTLS;INCLUDE_DYNAMIC_GI;ENABLE_SCRIPTING_GC_WBARRIERS;PLATFORM_SUPPORTS_MONO;ENABLE_MARSHALLING_TESTS;ENABLE_VIDEO;ENABLE_NAVIGATION_OFFMESHLINK_TO_NAVMESHLINK;ENABLE_ACCELERATOR_CLIENT_DEBUGGING;ENABLE_ACCESSIBILITY_SCREEN_READER;ENABLE_ACCESSIBILITY_SETTINGS;TEXTCORE_1_0_OR_NEWER;EDITOR_ONLY_NAVMESH_BUILDER_DEPRECATED;PLATFORM_ANDROID;UNITY_ANDROID;UNITY_ANDROID_API;ENABLE_EGL;ENABLE_NETWORK;ENABLE_RUNTIME_GI;ENABLE_CRUNCH_TEXTURE_COMPRESSION;ENABLE_CLOUD_SERVICES_ENGINE_DIAGNOSTICS;ENABLE_FIREBASE_IDENTIFIERS;UNITY_CAN_SHOW_SPLASH_SCREEN;UNITY_HAS_GOOGLEVR;UNITY_HAS_TANGO;ENABLE_SPATIALTRACKING;ENABLE_ETC_COMPRESSION;PLATFORM_EXTENDS_VULKAN_DEVICE;PLATFORM_HAS_MULTIPLE_SWAPCHAINS;UNITY_ANDROID_SUPPORTS_SHADOWFILES;PLATFORM_UPDATES_TIME_OUTSIDE_OF_PLAYER_LOOP;PLATFORM_EXTENDS_VULKAN_PIPELINE_CACHE;PLATFORM_SUPPORTS_SPLIT_GRAPHICS_JOBS;PLATFORM_HAS_ADDITIONAL_API_CHECKS;PLATFORM_HAS_GRAPHICS_JOBS_SUPPORT_CHECK_OVERRIDE;PLATFORM_IMPLEMENTS_INSIGHTS_ANR;PLATFORM_SUPPORTS_INSIGHTS_DEVICE_INFO;ENABLE_ANDROID_ADVERTISING_IDS;PLATFORM_HAS_BUGGY_MSAA_RESOLVE;ENABLE_ANDROID_APP_SET_ID;ENABLE_INSIGHTS_PLATFORM_SPECIFIC_RESOURCES;ENABLE_UNITYADS_RUNTIME;UNITY_UNITYADS_API;ENABLE_MONO;NET_STANDARD_2_0;NET_STANDARD;NET_STANDARD_2_1;NETSTANDARD;NETSTANDARD2_1;ENABLE_PROFILER;DEBUG;TRACE;UNITY_ASSERTIONS;UNITY_EDITOR;UNITY_EDITOR_64;UNITY_EDITOR_WIN;ENABLE_UNITY_COLLECTIONS_CHECKS;ENABLE_BURST_AOT;UNITY_TEAM_LICENSE;ENABLE_CUSTOM_RENDER_TEXTURE;ENABLE_DIRECTOR;ENABLE_LOCALIZATION;ENABLE_SPRITES;ENABLE_TERRAIN;ENABLE_TILEMAP;ENABLE_TIMELINE;ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER;TEXTCORE_FONT_ENGINE_1_5_OR_NEWER;TEXTCORE_TEXT_ENGINE_1_5_OR_NEWER;TEXTCORE_FONT_ENGINE_1_6_OR_NEWER;DOTWEEN;MIRROR;MIRROR_89_OR_NEWER;MIRROR_90_OR_NEWER;MIRROR_93_OR_NEWER;MIRROR_96_OR_NEWER;EDGEGAP_PLUGIN_SERVERS;CSHARP_7_OR_LATER;CSHARP_7_3_OR_NEWER</DefineConstants>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -64,186 +64,82 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.5.0a8\Editor\Data\BCLExtensions\TargetingPacks\netstandard2.1\analyzers\dotnet\roslyn4.0\cs\System.Text.Json.SourceGeneration.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Configs\Generated\Code\CopyType.cs" />
     <Compile Include="Assets\Core\Events\EventManager.cs" />
-    <Compile Include="Assets\UI\CardParameterPanelUI.cs" />
-    <Compile Include="Assets\UI\CardEditorUI.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\AtomicEffectType.cs" />
-    <Compile Include="Assets\UI\CardListUI.cs" />
     <Compile Include="Assets\Core\Effects\CostSystem.cs" />
-    <Compile Include="Assets\Scripts\Data\TempData\TempEnums.cs" />
-    <Compile Include="Assets\Core\Combat\CombatSystem.cs" />
-    <Compile Include="Assets\Core\Enums.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\SearchDestination.cs" />
+    <Compile Include="Assets\Core\BaseSystems\TurnEngine.cs" />
+    <Compile Include="Assets\UI\Scripts\BaseUIToolkitPanel.cs" />
+    <Compile Include="Assets\Core\Cards\CardData.cs" />
     <Compile Include="Assets\Core\Effects\ReplacementEngine.cs" />
-    <Compile Include="Assets\Core\Effects\TargetSystem.cs" />
-    <Compile Include="Assets\Core\Events\IGameObserver.cs" />
-    <Compile Include="Assets\UI\UIExtensions.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\DurationCondition.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\EffectRange.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\Attribute.cs" />
-    <Compile Include="Assets\UI\UIManager.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\DestinationZone.cs" />
-    <Compile Include="Assets\UI\EffectSelectionItemUI.cs" />
-    <Compile Include="Assets\UI\EffectBuilderUI.cs" />
-    <Compile Include="Assets\Core\Systems\TimestampSystem.cs" />
+    <Compile Include="Assets\Core\BaseSystems\TimestampSystem.cs" />
     <Compile Include="Assets\Core\Cards\Card.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\GameState.cs" />
     <Compile Include="Assets\Core\Effects\EffectDefinition.cs" />
-    <Compile Include="Assets\UI\EffectEditorUI.cs" />
-    <Compile Include="Assets\Core\Zones\Zones.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\TargetCategory.cs" />
-    <Compile Include="Assets\UI\ConditionItemUI.cs" />
+    <Compile Include="Assets\Core\Enums\Zones.cs" />
+    <Compile Include="Assets\UI\Panels\EffectEditor\EffectEditorPanel.cs" />
+    <Compile Include="Assets\Core\Attribute\AttributeEvents.cs" />
     <Compile Include="Assets\Core\Entity.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\Tables.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\GameOverReason.cs" />
     <Compile Include="Assets\Core\Effects\EffectResolutionContext.cs" />
-    <Compile Include="Assets\Core\Zones\ElementPool.cs" />
-    <Compile Include="Assets\UI\EffectListPanelUI.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\EffectFunction.cs" />
-    <Compile Include="Assets\Core\Effects\CostReductionCategory.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\StackObjectType.cs" />
-    <Compile Include="Assets\Core\Systems\ElementUnlockManager.cs" />
+    <Compile Include="Assets\Core\Attribute\Handlers\BuiltinEffectHandlers.cs" />
     <Compile Include="Assets\Core\ValueSystem\TriggerValueConfig.cs" />
     <Compile Include="Assets\Core\Layers\CharacteristicDefiningAbilities.cs" />
     <Compile Include="Assets\Core\Layers\LayerEngine.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\TbAttribute.cs" />
-    <Compile Include="Assets\UI\ConditionEditorPopup.cs" />
-    <Compile Include="Assets\Configs\Runtime\AtomicEffectRuntimeConfig.cs" />
-    <Compile Include="Assets\Scripts\Data\TempData\TempEffectDataSO.cs" />
-    <Compile Include="Assets\Core\Effects\EffectBuilder.cs" />
     <Compile Include="Assets\Core\GameCore.cs" />
-    <Compile Include="Assets\Core\StateBasedActions\SBACheckers.cs" />
-    <Compile Include="Assets\Core\Data\PresetEffectLibrary.cs" />
+    <Compile Include="Assets\Core\Attribute\AtomicEffectTable.cs" />
     <Compile Include="Assets\Core\Cards\CardExtensions.cs" />
-    <Compile Include="Assets\UI\UIToolkit\Base\BaseUIToolkitPanel.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\DestroyReason.cs" />
-    <Compile Include="Assets\Core\TurnSystem\TurnEngine.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\CharacteristicDefiningType.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\CostSeverity.cs" />
-    <Compile Include="Assets\UI\UIToolkit\Panels\EffectEditor\EffectEditorPanel.cs" />
+    <Compile Include="Assets\Core\Attribute\EntityEffectExtensions.cs" />
     <Compile Include="Assets\Core\Layers\ControlChangeLayer.cs" />
     <Compile Include="Assets\Core\Layers\TextChangeLayer.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\LayerType.cs" />
+    <Compile Include="Assets\Core\BaseSystems\StateBasedActions\StateBasedActions.cs" />
     <Compile Include="Assets\Core\Events\GameEvents.cs" />
-    <Compile Include="Assets\Configs\Runtime\TimingModifierRuntimeConfig.cs" />
-    <Compile Include="Assets\Core\StateBasedActions\StateBasedActions.cs" />
-    <Compile Include="Assets\Configs\Runtime\ValueSystemRuntimeConfig.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\Zone.cs" />
     <Compile Include="Assets\Core\Cards\CardTypes.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\NullifyType.cs" />
-    <Compile Include="Assets\Core\ValueSystem\ValueCalculator.cs" />
-    <Compile Include="Assets\UI\UIToolkit\Panels\CardEditor\CardEditorPanel.cs" />
-    <Compile Include="Assets\Core\Data\CardParameterConfig.cs" />
-    <Compile Include="Assets\Core\Data\EffectSystemExtensions.cs" />
-    <Compile Include="Assets\Core\Data\CardDataRegistry.cs" />
-    <Compile Include="Assets\Scripts\Data\TempData\TempCardDataSO.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\TriggerTiming.cs" />
-    <Compile Include="Assets\Configs\Runtime\TargetModifierRuntimeConfig.cs" />
+    <Compile Include="Assets\Core\BaseSystems\ElementPool.cs" />
+    <Compile Include="Assets\Core\Effects\TriggerTiming.cs" />
     <Compile Include="Assets\Core\Effects\SpeedSystem.cs" />
-    <Compile Include="Assets\Core\Data\EffectDefinitionStorage.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\ResourceZone.cs" />
-    <Compile Include="Assets\Scripts\Data\TempData\TempDeckDataSO.cs" />
-    <Compile Include="Assets\Core\Utility\DuplicateChecker.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\ComparisonOperator.cs" />
-    <Compile Include="Assets\UI\ManaCostEditorUI.cs" />
-    <Compile Include="Assets\UI\EffectCostItemUI.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\vector2.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\DurationType.cs" />
+    <Compile Include="Assets\Core\ValueSystem\ValueSystemRuntimeConfig.cs" />
+    <Compile Include="Assets\Core\BaseSystems\StateBasedActions\SBACheckers.cs" />
     <Compile Include="Assets\Core\Effects\Effect.cs" />
     <Compile Include="Assets\Core\Utility\MonoSingleton.cs" />
-    <Compile Include="Assets\UI\UIToolkit\Panels\DeckEditor\DeckEditorPanel.cs" />
     <Compile Include="Assets\Core\Events\GameEvent.cs" />
-    <Compile Include="Assets\Configs\Runtime\CardTypeValueRuntimeConfig.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\TimingPoint.cs" />
-    <Compile Include="Assets\UI\CardPreviewUI.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\PrepayType.cs" />
-    <Compile Include="Assets\Configs\Runtime\CostValueRuntimeConfig.cs" />
+    <Compile Include="Assets\Core\Attribute\EffectHandlerRegistry.cs" />
+    <Compile Include="Assets\Core\Enums\ColorIdentity.cs" />
     <Compile Include="Assets\Core\Effects\ElementAffinity.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\vector3.cs" />
-    <Compile Include="Assets\UI\DeckLibraryUI.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\CombatPhase.cs" />
-    <Compile Include="Assets\UI\AtomicEffectEditorPopup.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\SBAActionType.cs" />
-    <Compile Include="Assets\Core\Data\EffectFilterData.cs" />
+    <Compile Include="Assets\Core\Summon\SummonEngine.cs" />
+    <Compile Include="Assets\Core\Attribute\IAtomicEffectHandler.cs" />
     <Compile Include="Assets\Core\ValueSystem\SynergyConfig.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\CostCategory.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\EffectType.cs" />
-    <Compile Include="Assets\UI\EffectFilterPanelUI.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\StateChangeType.cs" />
-    <Compile Include="Assets\Core\Rules\CardRuleValidator.cs" />
-    <Compile Include="Assets\Core\Data\CardData.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\DeckPosition.cs" />
-    <Compile Include="Assets\UI\EffectPreviewItemUI.cs" />
+    <Compile Include="Assets\Core\BaseSystems\CombatSystem.cs" />
+    <Compile Include="Assets\Core\Effects\AtomicEffectPhaseEvents.cs" />
     <Compile Include="Assets\Core\Effects\EffectExecutionEngine.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\SubTargetType.cs" />
-    <Compile Include="Assets\Configs\Runtime\EffectValueRuntimeConfig.cs" />
-    <Compile Include="Assets\Core\Systems\AttributeSystem.cs" />
     <Compile Include="Assets\Core\Layers\ContinuousEffectDurationTracker.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\EffectColor.cs" />
+    <Compile Include="Assets\Core\Attribute\AtomicEffectConfig.cs" />
     <Compile Include="Assets\Core\Layers\CopyEffects.cs" />
     <Compile Include="Assets\Core\Effects\ActivationConditions.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\PlayLocation.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\PhaseType.cs" />
-    <Compile Include="Assets\Core\Data\CardTemplateBuilder.cs" />
+    <Compile Include="Assets\Core\Enums\CardEnums.cs" />
     <Compile Include="Assets\Core\Utility\MurmurHash3.cs" />
-    <Compile Include="Assets\Core\Data\CardBuilderExtensions.cs" />
-    <Compile Include="Assets\Core\Data\EffectDefinitionData.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\ConditionType.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\CharacteristicType.cs" />
-    <Compile Include="Assets\Core\Effects\EffectClassification.cs" />
+    <Compile Include="Assets\Core\BaseSystems\AttributeSystem.cs" />
     <Compile Include="Assets\Core\Effects\AtomicEffects.cs" />
-    <Compile Include="Assets\UI\BaseUI.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\vector4.cs" />
     <Compile Include="Assets\Core\Effects\EffectTargeting.cs" />
-    <Compile Include="Assets\Core\Events\GameEventBus.cs" />
-    <Compile Include="Assets\Configs\Runtime\AttributeValueRuntimeConfig.cs" />
-    <Compile Include="Assets\Configs\Generated\Code\TargetType.cs" />
+    <Compile Include="Assets\Core\BaseSystems\ElementUnlockManager.cs" />
+    <Compile Include="Assets\Core\Effects\TargetFilterSystem.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Overlay.shader" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile-2-Pass.shader" />
-    <None Include="Assets\UI\UIToolkit\Panels\EffectEditor\EffectEditorPanel.uxml" />
-    <None Include="Assets\UI\UIToolkit\Components\ManaCostDisplay.uss" />
-    <None Include="Assets\UI\UIToolkit\Components\CardPreviewCard.uxml" />
-    <None Include="Assets\UI\UIToolkit\Components\ConditionListItem.uxml" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap.shader" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMPro_Mobile.cginc" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF SSD.shader" />
-    <None Include="Assets\UI\UIToolkit\Panels\EffectEditor\EffectEditorPanel.uss" />
-    <None Include="Assets\TextMesh Pro\Fonts\txt.txt" />
-    <None Include="Assets\UI\UIToolkit\Components\EffectListItem.uxml" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Surface-Mobile.shader" />
-    <None Include="Assets\UI\UIToolkit\uss\Components.uss" />
-    <None Include="Assets\TextMesh Pro\Shaders\SDFFunctions.hlsl" />
-    <None Include="Assets\UI\UIToolkit\Panels\DeckEditor\DeckEditorPanel.uss" />
-    <None Include="Assets\UI\UIToolkit\Panels\CardEditor\CardEditorPanel.uss" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Surface.shader" />
-    <None Include="Assets\TextMesh Pro\Sprites\EmojiOne Attribution.txt" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Custom-Atlas.shader" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF.shader" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile SSD.shader" />
-    <None Include="Assets\TextMesh Pro\Resources\LineBreaking Leading Characters.txt" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMPro_Properties.cginc" />
-    <None Include="Assets\UI\UIToolkit\Panels\CardEditor\CardEditorPanel.uxml" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMPro_Surface.cginc" />
-    <None Include="Assets\UI\UIToolkit\uss\Common.uss" />
-    <None Include="Assets\TextMesh Pro\Resources\LineBreaking Following Characters.txt" />
-    <None Include="Assets\UI\UIToolkit\Components\IconBadge.uxml" />
-    <None Include="Assets\UI\UIToolkit\Components\ConditionListItem.uss" />
-    <None Include="Assets\UI\UIToolkit\uss\Layouts.uss" />
-    <None Include="Assets\UI\UIToolkit\Components\CardPreviewCard.uss" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Masking.shader" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF Overlay.shader" />
-    <None Include="Assets\UI\UIToolkit\Components\EffectListItem.uss" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Mobile.shader" />
-    <None Include="Assets\TextMesh Pro\Fonts\LiberationSans - OFL.txt" />
-    <None Include="Assets\UI\UIToolkit\Panels\DeckEditor\DeckEditorPanel.uxml" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile.shader" />
-    <None Include="Assets\TextMesh Pro\Shaders\TMP_Sprite.shader" />
-    <None Include="Assets\UI\UIToolkit\Components\ManaCostDisplay.uxml" />
-    <None Include="Assets\UI\UIToolkit\Components\IconBadge.uss" />
+    <None Include="Assets\UI\Components\ManaCostDisplay.uss" />
+    <None Include="Assets\UI\Components\CardPreviewCard.uxml" />
+    <None Include="Assets\UI\Components\ConditionListItem.uxml" />
+    <None Include="Assets\UI\Panels\EffectEditor\EffectEditorPanel.uss" />
+    <None Include="Assets\UI\Components\EffectListItem.uxml" />
+    <None Include="Assets\UI\Panels\EffectEditor\EffectEditorPanel.uxml" />
+    <None Include="Assets\UI\Components\Components.uss" />
+    <None Include="Assets\UI\Panels\DeckEditor\DeckEditorPanel.uss" />
+    <None Include="Assets\UI\Panels\CardEditor\CardEditorPanel.uss" />
+    <None Include="Assets\UI\Panels\CardEditor\CardEditorPanel.uxml" />
+    <None Include="Assets\UI\Components\Common.uss" />
+    <None Include="Assets\UI\Components\IconBadge.uxml" />
+    <None Include="Assets\UI\Components\ConditionListItem.uss" />
+    <None Include="Assets\UI\Components\Layouts.uss" />
+    <None Include="Assets\UI\Components\CardPreviewCard.uss" />
+    <None Include="Assets\UI\Components\EffectListItem.uss" />
+    <None Include="Assets\UI\Panels\DeckEditor\DeckEditorPanel.uxml" />
+    <None Include="Assets\UI\Components\ManaCostDisplay.uxml" />
+    <None Include="Assets\UI\Components\IconBadge.uss" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -824,6 +720,10 @@
     </Reference>
     <Reference Include="Unity.VisualScripting.Antlr3.Runtime">
       <HintPath>Library\PackageCache\com.unity.visualscripting@eb6004dcc707\Runtime\VisualScripting.Flow\Dependencies\NCalc\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json@4dfd81071c64\Runtime\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Mono.Cecil">

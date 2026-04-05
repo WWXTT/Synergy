@@ -1,8 +1,8 @@
-﻿using System;
+﻿using CardCore.Attribute;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {
@@ -87,31 +87,27 @@ namespace CardCore
         public List<ActivationCondition> ActivationConditions = new List<ActivationCondition>();
         #endregion
 
-        #region 代价
-        /// <summary>发动代价</summary>
-        public ActivationCost Cost = new ActivationCost();
-        #endregion
-
-        #region 目标
-        /// <summary>目标选择器</summary>
-        public TargetSelector TargetSelector;
-        #endregion
-
         #region 元数据
         /// <summary>是否可选（对触发式效果）</summary>
         public bool IsOptional = false;
 
         /// <summary>持续时间类型</summary>
-        public DurationType Duration = DurationType.永久;
+        public DurationType Duration = DurationType.Permanent;
 
         /// <summary>原子效果列表</summary>
         public List<AtomicEffectInstance> Effects = new List<AtomicEffectInstance>();
+
+        /// <summary>代价列表（发动前需全部支付）</summary>
+        public List<CostInstance> Costs = new List<CostInstance>();
 
         /// <summary>效果标签（用于效果分类）</summary>
         public List<string> Tags = new List<string>();
 
         /// <summary>关联卡牌ID</summary>
         public string SourceCardId;
+
+        /// <summary>目标可选范围</summary>
+        public EffectTargetType TargetType;
         #endregion
 
         #region 方法
@@ -132,8 +128,8 @@ namespace CardCore
             var parts = new List<string>();
 
             // 触发时点
-            if (TriggerTiming != TriggerTiming.激活式效果 &&
-                TriggerTiming != TriggerTiming.瞬间发动)
+            if (TriggerTiming != TriggerTiming.Activate_Active &&
+                TriggerTiming != TriggerTiming.Activate_Instant)
             {
                 parts.Add($"[{GetTriggerDescription()}]");
             }
@@ -142,13 +138,6 @@ namespace CardCore
             if (ActivationType == EffectActivationType.Mandatory)
                 parts.Add("[强制]");
 
-            // 代价
-            if (!Cost.IsEmpty)
-                parts.Add(Cost.GetDescription());
-
-            // 目标
-            if (TargetSelector != null)
-                parts.Add(TargetSelector.GetDescription());
 
             return string.Join("：", parts);
         }
@@ -160,21 +149,24 @@ namespace CardCore
         {
             return TriggerTiming switch
             {
-                TriggerTiming.瞬间发动 => "瞬间发动",
-                TriggerTiming.响应式发动 => "响应发动",
-                TriggerTiming.入场时 => "入场时",
-                TriggerTiming.离场时 => "离场时",
-                TriggerTiming.死亡时 => "死亡时",
-                TriggerTiming.回合开始 => "回合开始时",
-                TriggerTiming.回合结束 => "回合结束时",
-                TriggerTiming.阶段开始 => "阶段开始时",
-                TriggerTiming.阶段结束 => "阶段结束时",
-                TriggerTiming.攻击宣言时 => "攻击宣言时",
-                TriggerTiming.阻拦宣言时 => "阻拦时",
-                TriggerTiming.造成伤害时 => "造成伤害时",
-                TriggerTiming.受到伤害时 => "受到伤害时",
-                TriggerTiming.抽卡时 => "抽卡时",
-                TriggerTiming.使用卡牌时 => "使用卡牌时",
+                TriggerTiming.Activate_Instant => "瞬间发动",
+                TriggerTiming.Activate_Response => "响应发动",
+                TriggerTiming.On_EnterBattlefield => "入场时",
+                TriggerTiming.On_LeaveBattlefield => "离场时",
+                TriggerTiming.On_Death => "死亡时",
+                TriggerTiming.On_TurnStart => "回合开始时",
+                TriggerTiming.On_TurnEnd => "回合结束时",
+                TriggerTiming.On_PhaseStart => "阶段开始时",
+                TriggerTiming.On_PhaseEnd => "阶段结束时",
+                TriggerTiming.On_AttackDeclare => "攻击宣言时",
+                TriggerTiming.On_BlockDeclare => "阻拦时",
+                TriggerTiming.On_DamageDealt => "造成伤害时",
+                TriggerTiming.On_DamageTaken => "受到伤害时",
+                TriggerTiming.On_CardDraw => "抽卡时",
+                TriggerTiming.On_CardPlay => "使用卡牌时",
+                TriggerTiming.On_AtomicEffectActivation => "原子效果发动时",
+                TriggerTiming.On_AtomicEffectStartApplying => "原子效果开始作用时",
+                TriggerTiming.On_AtomicEffectResolution => "原子效果结算完成时",
                 _ => TriggerTiming.ToString()
             };
         }
@@ -183,17 +175,17 @@ namespace CardCore
         /// 检查是否为触发式效果
         /// </summary>
         public bool IsTriggeredEffect =>
-            TriggerTiming != TriggerTiming.激活式效果 &&
-            TriggerTiming != TriggerTiming.瞬间发动 &&
-            TriggerTiming != TriggerTiming.响应式发动;
+            TriggerTiming != TriggerTiming.Activate_Active &&
+            TriggerTiming != TriggerTiming.Activate_Instant &&
+            TriggerTiming != TriggerTiming.Activate_Response;
 
         /// <summary>
         /// 检查是否为主动式效果
         /// </summary>
         public bool IsActivatedEffect =>
-            TriggerTiming == TriggerTiming.激活式效果 ||
-            TriggerTiming == TriggerTiming.瞬间发动 ||
-            TriggerTiming == TriggerTiming.响应式发动;
+            TriggerTiming == TriggerTiming.Activate_Active ||
+            TriggerTiming == TriggerTiming.Activate_Instant ||
+            TriggerTiming == TriggerTiming.Activate_Response;
 
         #endregion
     }
@@ -237,9 +229,6 @@ namespace CardCore
 
         /// <summary>选中的目标</summary>
         public List<Entity> SelectedTargets { get; set; } = new List<Entity>();
-
-        /// <summary>选中的代价卡牌</summary>
-        public Dictionary<ResourceCost, List<Card>> SelectedCostCards { get; set; } = new Dictionary<ResourceCost, List<Card>>();
 
         /// <summary>支付的速度提升值</summary>
         public int PaidSpeedBoost { get; set; }
@@ -450,9 +439,12 @@ namespace CardCore
         {
             return timing switch
             {
-                TriggerTiming.激活式效果 => SpeedLevel.Base,        // 0
-                TriggerTiming.瞬间发动 => SpeedLevel.Normal,     // 1
-                TriggerTiming.响应式发动 => SpeedLevel.Quick,     // 2
+                TriggerTiming.Activate_Active => SpeedLevel.Base,        // 0
+                TriggerTiming.Activate_Instant => SpeedLevel.Normal,     // 1
+                TriggerTiming.Activate_Response => SpeedLevel.Quick,     // 2
+                TriggerTiming.On_AtomicEffectActivation => SpeedLevel.Normal,     // 1
+                TriggerTiming.On_AtomicEffectStartApplying => SpeedLevel.Normal,  // 1
+                TriggerTiming.On_AtomicEffectResolution => SpeedLevel.Normal,     // 1
                 _ => SpeedLevel.Normal                                     // 触发式默认1
             };
         }
@@ -464,9 +456,9 @@ namespace CardCore
         {
             return timing switch
             {
-                TriggerTiming.激活式效果 => EffectActivationType.Voluntary,
-                TriggerTiming.瞬间发动 => EffectActivationType.Voluntary,
-                TriggerTiming.响应式发动 => EffectActivationType.Voluntary,
+                TriggerTiming.Activate_Active => EffectActivationType.Voluntary,
+                TriggerTiming.Activate_Instant => EffectActivationType.Voluntary,
+                TriggerTiming.Activate_Response => EffectActivationType.Voluntary,
                 _ => EffectActivationType.Automatic  // 触发式默认自动
             };
         }
@@ -478,19 +470,22 @@ namespace CardCore
         {
             return timing switch
             {
-                TriggerTiming.入场时 => typeof(CardPutToBattlefieldEvent),
-                TriggerTiming.离场时 => typeof(CardLeaveBattlefieldEvent),
-                TriggerTiming.死亡时 => typeof(CardDestroyEvent),
-                TriggerTiming.回合开始 => typeof(TurnStartEvent),
-                TriggerTiming.回合结束 => typeof(TurnEndEvent),
-                TriggerTiming.阶段开始 => typeof(PhaseStartEvent),
-                TriggerTiming.阶段结束 => typeof(PhaseEndEvent),
-                TriggerTiming.攻击宣言时 => typeof(AttackDeclarationEvent),
-                TriggerTiming.造成伤害时 => typeof(DamageEvent),
-                TriggerTiming.受到伤害时 => typeof(DamageEvent),
-                TriggerTiming.抽卡时 => typeof(CardDrawEvent),
-                TriggerTiming.使用卡牌时 => typeof(CardPlayEvent),
-                TriggerTiming.游戏开始时 => typeof(GameStartEvent),
+                TriggerTiming.On_EnterBattlefield => typeof(CardPutToBattlefieldEvent),
+                TriggerTiming.On_LeaveBattlefield => typeof(CardLeaveBattlefieldEvent),
+                TriggerTiming.On_Death => typeof(CardDestroyEvent),
+                TriggerTiming.On_TurnStart => typeof(TurnStartEvent),
+                TriggerTiming.On_TurnEnd => typeof(TurnEndEvent),
+                TriggerTiming.On_PhaseStart => typeof(PhaseStartEvent),
+                TriggerTiming.On_PhaseEnd => typeof(PhaseEndEvent),
+                TriggerTiming.On_AttackDeclare => typeof(AttackDeclarationEvent),
+                TriggerTiming.On_DamageDealt => typeof(DamageEvent),
+                TriggerTiming.On_DamageTaken => typeof(DamageEvent),
+                TriggerTiming.On_CardDraw => typeof(CardDrawEvent),
+                TriggerTiming.On_CardPlay => typeof(CardPlayEvent),
+                TriggerTiming.On_GameStart => typeof(GameStartEvent),
+                TriggerTiming.On_AtomicEffectActivation => typeof(AtomicEffectPhaseEvent),
+                TriggerTiming.On_AtomicEffectStartApplying => typeof(AtomicEffectPhaseEvent),
+                TriggerTiming.On_AtomicEffectResolution => typeof(AtomicEffectPhaseEvent),
                 _ => null
             };
         }

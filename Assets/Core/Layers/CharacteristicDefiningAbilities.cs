@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -309,7 +309,7 @@ namespace CardCore
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
             // 通过事件总线发布
-            GameEventBus.Publish(e);
+            EventManager.Instance.Publish(e);
         }
     }
 

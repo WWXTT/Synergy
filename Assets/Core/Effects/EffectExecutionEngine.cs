@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CardCore.Attribute;
+using CardCore.Attribute.Handlers;
 
 namespace CardCore
 {
@@ -14,8 +16,6 @@ namespace CardCore
     {
         private ZoneManager _zoneManager;
         private ElementPoolSystem _elementPool;
-        private TargetResolver _targetResolver;
-        private CostPayer _costPayer;
         private ConditionChecker _conditionChecker;
         private EffectUsageTracker _usageTracker;
 
@@ -25,8 +25,6 @@ namespace CardCore
         {
             _zoneManager = zoneManager;
             _elementPool = elementPool;
-            _targetResolver = new TargetResolver(zoneManager);
-            _costPayer = new CostPayer(zoneManager, elementPool);
             _conditionChecker = new ConditionChecker(zoneManager);
             _usageTracker = new EffectUsageTracker();
         }
@@ -65,15 +63,10 @@ namespace CardCore
                 return false;
 
             // 4. 费用检查
-            if (!_costPayer.CanPay(activator, effect.Cost))
-                return false;
+    
 
             // 5. 目标有效性检查
-            if (effect.TargetSelector != null && effect.TargetSelector.RequiresPlayerSelection)
-            {
-                if (!_targetResolver.HasValidTargets(effect.TargetSelector, source, activator))
-                    return false;
-            }
+   
 
             return true;
         }
@@ -99,31 +92,69 @@ namespace CardCore
                 ElementPool = _elementPool
             };
 
-            // 执行每个原子效果
-            //foreach (var effectInstance in effect.Effects)
-            //{
-            //    var atomicEffect = effectInstance.CreateEffect();
-            //    if (atomicEffect != null)
-            //    {
-            //        // 设置覆盖目标
-            //        if (effectInstance.OverrideTarget != null)
-            //        {
-            //            var overrideTargets = _targetResolver.ResolveTargets(
-            //                effectInstance.OverrideTarget,
-            //                instance.Source,
-            //                instance.Controller,
-            //                instance.TriggeringEvent
-            //            );
-            //            context.Targets = overrideTargets;
-            //        }
+            // 代价支付
+            if (effect.Costs != null && effect.Costs.Count > 0)
+            {
+                var costContext = new CostContext
+                {
+                    Payer = instance.Controller,
+                    ZoneManager = _zoneManager,
+                    ElementPool = _elementPool,
+                    Source = instance.Source
+                };
+                if (!CostHandlerRegistry.PayAll(effect.Costs, costContext))
+                {
+                    UnityEngine.Debug.LogWarning($"代价支付失败: {effect.Id}");
+                    return;
+                }
+            }
 
-            //        // 应用修正器
-            //        context.Modifiers = effectInstance.Modifiers ?? new List<EffectModifier>();
+            // 目标解析由每个原子效果在 EffectHandlerRegistry.ExecuteEffect 中独立完成
 
-            //        // 执行效果
-            //        atomicEffect.Execute(context);
-            //    }
-            //}
+            // 三阶段事件：发动
+            foreach (var atomicEffect in effect.Effects)
+            {
+                EventManager.Instance.Publish(new AtomicEffectPhaseEvent
+                {
+                    EffectType = atomicEffect.Type,
+                    Phase = AtomicEffectPhase.Activation,
+                    Source = context.Source,
+                    Targets = context.Targets,
+                    EffectInstance = atomicEffect,
+                    Context = context
+                });
+            }
+
+            // 三阶段事件：开始作用
+            EventManager.Instance.Publish(new AtomicEffectPhaseEvent
+            {
+                EffectType = effect.Effects[0].Type,
+                Phase = AtomicEffectPhase.StartApplying,
+                Source = context.Source,
+                Targets = context.Targets,
+                EffectInstance = effect.Effects[0],
+                Context = context
+            });
+
+            // 执行效果
+            foreach (var atomicEffect in effect.Effects)
+            {
+                EffectHandlerRegistry.ExecuteEffect(atomicEffect, context);
+            }
+
+            // 三阶段事件：结算完成
+            foreach (var atomicEffect in effect.Effects)
+            {
+                EventManager.Instance.Publish(new AtomicEffectPhaseEvent
+                {
+                    EffectType = atomicEffect.Type,
+                    Phase = AtomicEffectPhase.ResolutionComplete,
+                    Source = context.Source,
+                    Targets = context.Targets,
+                    EffectInstance = atomicEffect,
+                    Context = context
+                });
+            }
 
             // 标记已结算
             instance.IsResolved = true;
@@ -132,54 +163,13 @@ namespace CardCore
             _usageTracker.RecordActivation(effect.Id);
 
             // 触发效果结算事件
-            GameEventBus.Publish(new EffectResolveEvent
+            EventManager.Instance.Publish(new EffectResolveEvent
             {
                 ResolvedEffect = null, // TODO: 需要关联到 Effect
                 Context = null // TODO: 创建 EffectResolutionContext
             });
         }
 
-        /// <summary>
-        /// 解析目标
-        /// </summary>
-        public List<Entity> ResolveTargets(
-            EffectDefinition effect,
-            Entity source,
-            Player controller,
-            IGameEvent triggeringEvent = null)
-        {
-            if (effect.TargetSelector == null)
-                return new List<Entity>();
-
-            return _targetResolver.ResolveTargets(
-                effect.TargetSelector,
-                source,
-                controller,
-                triggeringEvent
-            );
-        }
-
-        /// <summary>
-        /// 获取有效目标列表
-        /// </summary>
-        public List<Entity> GetValidTargets(
-            EffectDefinition effect,
-            Entity source,
-            Player controller)
-        {
-            if (effect.TargetSelector == null)
-                return new List<Entity>();
-
-            return _targetResolver.GetValidTargets(effect.TargetSelector, source, controller);
-        }
-
-        /// <summary>
-        /// 支付代价
-        /// </summary>
-        public bool PayCost(Player player, ActivationCost cost, Dictionary<ResourceCost, List<Card>> selectedCards = null)
-        {
-            return _costPayer.Pay(player, cost, selectedCards);
-        }
 
         /// <summary>
         /// 新回合开始
@@ -325,7 +315,7 @@ namespace CardCore
             _waitingForPlayer = true;
 
             // 触发事件
-            GameEventBus.Publish(new StackAddEvent
+            EventManager.Instance.Publish(new StackAddEvent
             {
                 AddedObject = instance,
                 AddingPlayer = pending.Controller
@@ -366,7 +356,7 @@ namespace CardCore
             _consecutivePassCount++;
 
             // 触发事件
-            GameEventBus.Publish(new PriorityPassEvent
+            EventManager.Instance.Publish(new PriorityPassEvent
             {
                 PassingPlayer = player,
                 BothPassed = _consecutivePassCount >= 2
@@ -381,7 +371,7 @@ namespace CardCore
 
             // 传递优先权
             _priorityHolder = player.Opponent;
-            GameEventBus.Publish(new PriorityGainEvent
+            EventManager.Instance.Publish(new PriorityGainEvent
             {
                 GainingPlayer = _priorityHolder
             });
@@ -423,7 +413,7 @@ namespace CardCore
             _speedCounter.BeginResolution();
             _waitingForPlayer = false;
 
-            GameEventBus.Publish(new StackResolutionStartEvent
+            EventManager.Instance.Publish(new StackResolutionStartEvent
             {
                 StackSize = _stack.Count
             });
@@ -451,7 +441,7 @@ namespace CardCore
                     CheckAndAddAutoEffects(newSpeed);
 
                     // 4. 触发结算事件
-                    GameEventBus.Publish(new StackResolutionEndEvent
+                    EventManager.Instance.Publish(new StackResolutionEndEvent
                     {
                         StackSize = _stack.Count
                     });
@@ -500,7 +490,7 @@ namespace CardCore
             _speedCounter.Reset();
             _pendingQueue.Clear();
 
-            GameEventBus.Publish(new StackEmptyEvent
+            EventManager.Instance.Publish(new StackEmptyEvent
             {
                 LastPriorityHolder = _priorityHolder
             });
@@ -759,6 +749,27 @@ namespace CardCore
             _executor = new EffectExecutor(_zoneManager, _elementPool);
             _stackEngine = new StackEngine(_executor);
             _triggerEngine = new TriggerEngine(_stackEngine);
+
+            RegisterBuiltinHandlers();
+            BuiltinCostHandlers.RegisterAll();
+        }
+
+        private void RegisterBuiltinHandlers()
+        {
+            var handlers = new IAtomicEffectHandler[]
+            {
+                new DealDamageHandler(),
+                new DestroyHandler(),
+                new GrantHasteHandler(),
+                new DrawCardHandler(),
+                new ReturnToHandHandler(),
+                new FreezePermanentHandler(),
+                new HealHandler(),
+                new ModifyPowerHandler(),
+                new CreateTokenHandler(),
+            };
+            foreach (var handler in handlers)
+                EffectHandlerRegistry.Register(handler);
         }
 
         /// <summary>

@@ -1,133 +1,90 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// 事件数据基接口
-/// 事件分为广播事件和定向事件
-/// 广播事件会触发所有订阅者
-/// 定向事件在触发时需要额外指定接收者ID，ID通常是创建多个子类时子类在List中的索引
-/// </summary>
-/// 警告！ 
-/// 代码大多数事件是用于数据层沟通UI层的，UI操作只能在主线程中执行，不允许在异步中使用UI事件
-/// 新增！
-/// Func<T, bool> 返回事件是否执行 事件自身有自己的规则校验，没有通过则发送者需要回卷//尚未实现回卷
-public interface IEventData { }
-
-public interface ITargetedEventData : IEventData
+namespace CardCore
 {
-    // 通常是父物体创建子类时分配的索引ID
-    int TargetId { get; }
-}
+    /// <summary>
+    /// 事件数据基接口
+    /// 广播事件会触发所有订阅者，定向事件需要指定接收者ID
+    /// </summary>
+    public interface IEventData { }
 
-
-// 事件处理器接口
-public interface IEventHandler<T> where T : IEventData { }
-
-// 扩展方法支持接收者标识
-public static class EventHandlerExtensions
-{
-    public static void RegisterHandler<T>(
-        this IEventHandler<T> handler,
-        Func<T, bool> handlerAction,
-        int receiverId = -1) where T : IEventData
+    /// <summary>
+    /// 定向事件数据接口
+    /// </summary>
+    public interface ITargetedEventData : IEventData
     {
-        EventManager.Instance.Subscribe(handlerAction, receiverId);
+        int TargetId { get; }
     }
 
-    public static void UnregisterHandler<T>(
-        this IEventHandler<T> handler,
-        Func<T, bool> handlerAction,
-        int receiverId = -1) where T : IEventData
+    /// <summary>
+    /// 统一事件管理器
+    /// 整合了原 GameEventBus（游戏逻辑事件）和 EventManager（UI事件）的功能
+    /// 支持广播和定向两种事件模式
+    /// </summary>
+    public sealed class EventManager
     {
-        EventManager.Instance.Unsubscribe(handlerAction, receiverId);
-    }
-}
+        private static EventManager _instance;
+        public static EventManager Instance => _instance ??= new EventManager();
 
+        // 广播事件处理程序
+        private readonly Dictionary<Type, List<Func<IEventData, bool>>> _broadcastHandlers =
+             new Dictionary<Type, List<Func<IEventData, bool>>>(64);
 
+        // 定向事件处理程序（指定接收者ID）
+        private readonly Dictionary<Type, Dictionary<int, List<Func<IEventData, bool>>>> _targetedHandlers =
+            new Dictionary<Type, Dictionary<int, List<Func<IEventData, bool>>>>(64);
 
-// 事件触发器接口
-public interface IEventTrigger { }
+        // 对象池
+        private readonly Stack<List<Func<IEventData, bool>>> _listPool = new Stack<List<Func<IEventData, bool>>>();
 
-// 扩展方法支持定向触发
-public static class EventTriggerExtensions
-{
-    public static bool TriggerEvent<T>(this IEventTrigger eventTrigger, T eventData, int receiverId = -1)
-        where T : IEventData
-    {
-        return EventManager.Instance.Publish(eventData, receiverId);
-    }
-}
+        #region 订阅
 
-public sealed class EventManager
-{
-    private static EventManager _instance;
-    public static EventManager Instance => _instance ??= new EventManager();
-
-    // 广播事件处理程序 
-    private readonly Dictionary<Type, List<Func<IEventData, bool>>> _broadcastHandlers =
-         new Dictionary<Type, List<Func<IEventData, bool>>>(64);
-
-    // 定向事件处理程序（指定接收者ID）
-    private readonly Dictionary<Type, Dictionary<int, List<Func<IEventData, bool>>>> _targetedHandlers =
-        new Dictionary<Type, Dictionary<int, List<Func<IEventData, bool>>>>(64);
-
-    // 对象池 
-    private readonly Stack<List<Func<IEventData, bool>>> _listPool = new Stack<List<Func<IEventData, bool>>>();
-
-    public void Subscribe<T>(Func<T, bool> handler, int receiverId) where T : IEventData
-    {
-        var eventType = typeof(T);
-
-        if (receiverId == -1)
+        /// <summary>订阅广播事件（Func 版，返回是否执行成功）</summary>
+        public void Subscribe<T>(Func<T, bool> handler, int receiverId = -1) where T : IEventData
         {
-            if (!_broadcastHandlers.TryGetValue(eventType, out var handlers))
-            {
-                handlers = new List<Func<IEventData, bool>>(4);
-                _broadcastHandlers[eventType] = handlers;
-            }
-            handlers.Add(evt => handler((T)evt));
-        }
-        else
-        {
-            if (!_targetedHandlers.TryGetValue(eventType, out var idToHandlers))
-            {
-                idToHandlers = new Dictionary<int, List<Func<IEventData, bool>>>();
-                _targetedHandlers[eventType] = idToHandlers;
-            }
-            if (!idToHandlers.TryGetValue(receiverId, out var handlers))
-            {
-                handlers = new List<Func<IEventData, bool>>(4);
-                idToHandlers[receiverId] = handlers;
-            }
-            handlers.Add(evt => handler((T)evt));
-        }
-    }
+            var eventType = typeof(T);
 
-    public void Unsubscribe<T>(Func<T, bool> handler, int receiverId) where T : IEventData
-    {
-        var eventType = typeof(T);
-
-        if (receiverId == -1)
-        {
-            if (_broadcastHandlers.TryGetValue(eventType, out var handlers))
+            if (receiverId == -1)
             {
-                for (int i = handlers.Count - 1; i >= 0; i--)
+                if (!_broadcastHandlers.TryGetValue(eventType, out var handlers))
                 {
-                    if (handlers[i].Target == handler.Target)
-                    {
-                        handlers.RemoveAt(i);
-                        break;
-                    }
+                    handlers = new List<Func<IEventData, bool>>(4);
+                    _broadcastHandlers[eventType] = handlers;
                 }
-                if (handlers.Count == 0) _broadcastHandlers.Remove(eventType);
+                handlers.Add(evt => handler((T)evt));
+            }
+            else
+            {
+                if (!_targetedHandlers.TryGetValue(eventType, out var idToHandlers))
+                {
+                    idToHandlers = new Dictionary<int, List<Func<IEventData, bool>>>();
+                    _targetedHandlers[eventType] = idToHandlers;
+                }
+                if (!idToHandlers.TryGetValue(receiverId, out var handlers))
+                {
+                    handlers = new List<Func<IEventData, bool>>(4);
+                    idToHandlers[receiverId] = handlers;
+                }
+                handlers.Add(evt => handler((T)evt));
             }
         }
-        else
+
+        /// <summary>订阅广播事件（Action 版，无需返回值）</summary>
+        public void Subscribe<T>(Action<T> handler) where T : IEventData
         {
-            if (_targetedHandlers.TryGetValue(eventType, out var idToHandlers))
+            Subscribe<T>(e => { handler(e); return true; }, -1);
+        }
+
+        /// <summary>取消订阅</summary>
+        public void Unsubscribe<T>(Func<T, bool> handler, int receiverId = -1) where T : IEventData
+        {
+            var eventType = typeof(T);
+
+            if (receiverId == -1)
             {
-                if (idToHandlers.TryGetValue(receiverId, out var handlers))
+                if (_broadcastHandlers.TryGetValue(eventType, out var handlers))
                 {
                     for (int i = handlers.Count - 1; i >= 0; i--)
                     {
@@ -137,169 +94,255 @@ public sealed class EventManager
                             break;
                         }
                     }
-                    if (handlers.Count == 0)
+                    if (handlers.Count == 0) _broadcastHandlers.Remove(eventType);
+                }
+            }
+            else
+            {
+                if (_targetedHandlers.TryGetValue(eventType, out var idToHandlers))
+                {
+                    if (idToHandlers.TryGetValue(receiverId, out var handlers))
                     {
-                        idToHandlers.Remove(receiverId);
-                        if (idToHandlers.Count == 0)
-                            _targetedHandlers.Remove(eventType);
+                        for (int i = handlers.Count - 1; i >= 0; i--)
+                        {
+                            if (handlers[i].Target == handler.Target)
+                            {
+                                handlers.RemoveAt(i);
+                                break;
+                            }
+                        }
+                        if (handlers.Count == 0)
+                        {
+                            idToHandlers.Remove(receiverId);
+                            if (idToHandlers.Count == 0)
+                                _targetedHandlers.Remove(eventType);
+                        }
                     }
                 }
             }
         }
-    }
 
-    public bool Publish<T>(T eventData, int targetId) where T : IEventData
-    {
-        var eventType = typeof(T);
-        List<Func<IEventData, bool>> handlersToInvoke = GetHandlerListFromPool();
-        bool allSuccess = true;
-
-        try
+        /// <summary>取消订阅（Action 版）</summary>
+        public void Unsubscribe<T>(Action<T> handler) where T : IEventData
         {
-            if (targetId == -1) // 广播事件
+            Unsubscribe<T>(e => { handler(e); return true; }, -1);
+        }
+
+        #endregion
+
+        #region 发布
+
+        /// <summary>广播发布事件（无 targetId）</summary>
+        public bool Publish<T>(T eventData) where T : IEventData
+        {
+            return Publish(eventData, -1);
+        }
+
+        /// <summary>发布事件（支持定向）</summary>
+        public bool Publish<T>(T eventData, int targetId) where T : IEventData
+        {
+            var eventType = typeof(T);
+            List<Func<IEventData, bool>> handlersToInvoke = GetHandlerListFromPool();
+            bool allSuccess = true;
+
+            try
             {
-                if (_broadcastHandlers.TryGetValue(eventType, out var handlers))
+                if (targetId == -1) // 广播事件
                 {
-                    handlersToInvoke.AddRange(handlers);
-                }
-
-                // 没有处理器时返回 false
-                if (handlersToInvoke.Count == 0) return false;
-
-                foreach (var handler in handlersToInvoke)
-                {
-                    try
+                    if (_broadcastHandlers.TryGetValue(eventType, out var handlers))
                     {
-                        if (!IsHandlerValid(handler)) continue;
-                        //广播时即时其中一个没有执行也继续调用下一个 但是最终返回值有一个没有执行就会返回false
-                        if (!handler(eventData))
+                        handlersToInvoke.AddRange(handlers);
+                    }
+
+                    if (handlersToInvoke.Count == 0) return false;
+
+                    foreach (var handler in handlersToInvoke)
+                    {
+                        try
                         {
+                            if (!IsHandlerValid(handler)) continue;
+                            if (!handler(eventData))
+                            {
+                                allSuccess = false;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogError($"Event handler error: {e}");
                             allSuccess = false;
                         }
                     }
-                    catch (Exception e)
+                    return allSuccess;
+                }
+                else // 定向事件
+                {
+                    if (_targetedHandlers.TryGetValue(eventType, out var idToHandlers) &&
+                        idToHandlers.TryGetValue(targetId, out var handlers))
                     {
-                        Debug.LogError($"Event handler error: {e}");
-                        allSuccess = false;
+                        handlersToInvoke.AddRange(handlers);
                     }
-                }
-                return allSuccess;
-            }
-            else // 定向事件
-            {
-                if (_targetedHandlers.TryGetValue(eventType, out var idToHandlers) &&
-                    idToHandlers.TryGetValue(targetId, out var handlers))
-                {
-                    handlersToInvoke.AddRange(handlers);
-                }
 
-                // 没有处理器时返回 false
-                if (handlersToInvoke.Count == 0) return false;
+                    if (handlersToInvoke.Count == 0) return false;
 
-                foreach (var handler in handlersToInvoke)
-                {
-                    try
+                    foreach (var handler in handlersToInvoke)
                     {
-                        if (!IsHandlerValid(handler)) continue;
-                        if (!handler(eventData))
+                        try
                         {
-                            return false; // handler自己的事件规则校验不通过 拒绝执行
+                            if (!IsHandlerValid(handler)) continue;
+                            if (!handler(eventData))
+                            {
+                                return false;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogError($"Event handler error: {e}");
+                            return false;
                         }
                     }
-                    catch (Exception e)
-                    {
-                        Debug.LogError($"Event handler error: {e}");
-                        return false;// 其他原因不通过 没有执行
-                    }
+                    return true;
                 }
-                return true;
             }
-        }
-        finally
-        {
-            handlersToInvoke.Clear();
-            // 回收对象池
-            if (_listPool.Count < 16)
+            finally
             {
-                _listPool.Push(handlersToInvoke);
-            }
-        }
-    }
-
-    // 检查处理器是否有效
-    private bool IsHandlerValid(Func<IEventData, bool> handler)
-    {
-        return !(handler.Target is UnityEngine.Object obj) || obj;
-    }
-
-    // 对象池
-    private List<Func<IEventData, bool>> GetHandlerListFromPool()
-    {
-        return _listPool.Count > 0 ? _listPool.Pop() : new List<Func<IEventData, bool>>(16);
-    }
-
-    // 清理无效的处理器
-    public void CleanupInvalidHandlers()
-    {
-        CleanupBroadcastHandlers();
-        CleanupTargetedHandlers();
-    }
-
-    private void CleanupBroadcastHandlers()
-    {
-        var typesToRemove = new List<Type>();
-
-        foreach (var kvp in _broadcastHandlers)
-        {
-            var handlers = kvp.Value;
-            handlers.RemoveAll(handler => !IsHandlerValid(handler));
-
-            if (handlers.Count == 0)
-            {
-                typesToRemove.Add(kvp.Key);
+                handlersToInvoke.Clear();
+                if (_listPool.Count < 16)
+                {
+                    _listPool.Push(handlersToInvoke);
+                }
             }
         }
 
-        foreach (var type in typesToRemove)
+        #endregion
+
+        #region 维护
+
+        /// <summary>清空所有订阅者</summary>
+        public void ClearAll()
         {
-            _broadcastHandlers.Remove(type);
+            _broadcastHandlers.Clear();
+            _targetedHandlers.Clear();
+            _listPool.Clear();
         }
-    }
 
-    private void CleanupTargetedHandlers()
-    {
-        var typesToRemove = new List<Type>();
+        /// <summary>获取当前订阅者数量</summary>
+        public int ObserverCount => _broadcastHandlers.Count + _targetedHandlers.Count;
 
-        foreach (var typeKvp in _targetedHandlers)
+        /// <summary>清理无效的处理器</summary>
+        public void CleanupInvalidHandlers()
         {
-            var idToHandlers = typeKvp.Value;
-            var idsToRemove = new List<int>();
+            CleanupBroadcastHandlers();
+            CleanupTargetedHandlers();
+        }
 
-            foreach (var idKvp in idToHandlers)
+        #endregion
+
+        #region 内部方法
+
+        private bool IsHandlerValid(Func<IEventData, bool> handler)
+        {
+            return !(handler.Target is UnityEngine.Object obj) || obj;
+        }
+
+        private List<Func<IEventData, bool>> GetHandlerListFromPool()
+        {
+            return _listPool.Count > 0 ? _listPool.Pop() : new List<Func<IEventData, bool>>(16);
+        }
+
+        private void CleanupBroadcastHandlers()
+        {
+            var typesToRemove = new List<Type>();
+
+            foreach (var kvp in _broadcastHandlers)
             {
-                var handlers = idKvp.Value;
+                var handlers = kvp.Value;
                 handlers.RemoveAll(handler => !IsHandlerValid(handler));
 
                 if (handlers.Count == 0)
                 {
-                    idsToRemove.Add(idKvp.Key);
+                    typesToRemove.Add(kvp.Key);
                 }
             }
 
-            foreach (var id in idsToRemove)
+            foreach (var type in typesToRemove)
             {
-                idToHandlers.Remove(id);
-            }
-
-            if (idToHandlers.Count == 0)
-            {
-                typesToRemove.Add(typeKvp.Key);
+                _broadcastHandlers.Remove(type);
             }
         }
 
-        foreach (var type in typesToRemove)
+        private void CleanupTargetedHandlers()
         {
-            _targetedHandlers.Remove(type);
+            var typesToRemove = new List<Type>();
+
+            foreach (var typeKvp in _targetedHandlers)
+            {
+                var idToHandlers = typeKvp.Value;
+                var idsToRemove = new List<int>();
+
+                foreach (var idKvp in idToHandlers)
+                {
+                    var handlers = idKvp.Value;
+                    handlers.RemoveAll(handler => !IsHandlerValid(handler));
+
+                    if (handlers.Count == 0)
+                    {
+                        idsToRemove.Add(idKvp.Key);
+                    }
+                }
+
+                foreach (var id in idsToRemove)
+                {
+                    idToHandlers.Remove(id);
+                }
+
+                if (idToHandlers.Count == 0)
+                {
+                    typesToRemove.Add(typeKvp.Key);
+                }
+            }
+
+            foreach (var type in typesToRemove)
+            {
+                _targetedHandlers.Remove(type);
+            }
+        }
+
+        #endregion
+    }
+
+    #region 扩展方法
+
+    public interface IEventHandler<T> where T : IEventData { }
+
+    public static class EventHandlerExtensions
+    {
+        public static void RegisterHandler<T>(
+            this IEventHandler<T> handler,
+            Func<T, bool> handlerAction,
+            int receiverId = -1) where T : IEventData
+        {
+            EventManager.Instance.Subscribe(handlerAction, receiverId);
+        }
+
+        public static void UnregisterHandler<T>(
+            this IEventHandler<T> handler,
+            Func<T, bool> handlerAction,
+            int receiverId = -1) where T : IEventData
+        {
+            EventManager.Instance.Unsubscribe(handlerAction, receiverId);
         }
     }
+
+    public interface IEventTrigger { }
+
+    public static class EventTriggerExtensions
+    {
+        public static bool TriggerEvent<T>(this IEventTrigger eventTrigger, T eventData, int receiverId = -1)
+            where T : IEventData
+        {
+            return EventManager.Instance.Publish(eventData, receiverId);
+        }
+    }
+
+    #endregion
 }

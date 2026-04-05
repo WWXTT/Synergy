@@ -60,6 +60,7 @@ namespace CardCore
         private ModifierSystem _modifierSystem;
         private AttributeCalculator _attributeCalculator;
         private CombatSystem _combatSystem;
+        private SummonEngine _summonEngine;
 
         /// <summary>
         /// 当前游戏状态
@@ -151,6 +152,11 @@ namespace CardCore
         /// </summary>
         public CombatSystem CombatSystem => _combatSystem;
 
+        /// <summary>
+        /// 召唤引擎
+        /// </summary>
+        public SummonEngine SummonEngine => _summonEngine;
+
         private GameCore()
         {
             Initialize();
@@ -194,7 +200,6 @@ namespace CardCore
             _sbaEngine.Initialize(this);
             _sbaEngine.RegisterChecker(new ZeroLifeChecker());
             _sbaEngine.RegisterChecker(new ZeroToughnessChecker());
-            _sbaEngine.RegisterChecker(new LegendaryRuleChecker());
 
             // 初始化替代引擎
             _replacementEngine = new ReplacementEngine();
@@ -224,6 +229,9 @@ namespace CardCore
 
             // 初始化战斗系统
             _combatSystem = new CombatSystem(_zoneManager);
+
+            // 初始化召唤引擎
+            _summonEngine = new SummonEngine(this);
         }
 
         /// <summary>
@@ -440,7 +448,7 @@ namespace CardCore
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
             // 通过事件总线发布到所有监听者
-            GameEventBus.Publish(e);
+            EventManager.Instance.Publish(e);
 
             // 通知各子系统
             _triggerEngine.OnEvent(e);

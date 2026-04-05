@@ -1,26 +1,8 @@
-﻿using System;
-using cfg;
+using System;
 
 namespace CardCore
 {
-    public abstract class GameEvent : IGameEvent
-    {
-        private static uint _nextEventId = 0;
-
-        public DateTime Timestamp { get; } = DateTime.Now;
-        public uint EventId { get; } = ++_nextEventId;
-    }
-
-    public class UnitDiedEvent : GameEvent
-    {
-        public Unit Unit;
-    }
-
-    public class TimingEvent : GameEvent
-    {
-        public TriggerTiming Point;
-        public Player TurnPlayer;
-        public object Context; // 可选：攻击者、被攻击者等
-    }
-
+    // GameEvent 已被 GameEventBase (GameEvents.cs) 取代
+    // UnitDiedEvent 和 TimingEvent 已被 CardDestroyEvent 和其他触发事件取代
+    // 此文件仅保留兼容性引用，所有事件定义已迁移到 GameEvents.cs
 }

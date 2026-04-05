@@ -82,10 +82,6 @@ namespace CardCore
         public List<Card> Deck => _deck;
         public List<Card> Hand => _hand;
 
-        /// <summary>
-        /// 预支追踪器
-        /// </summary>
-        public PrepayTracker PrepayTracker { get; private set; } = new PrepayTracker();
 
         public Player(string name, int maxHealth)
         {

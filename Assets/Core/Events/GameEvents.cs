@@ -1,14 +1,14 @@
 ﻿using System;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {
     /// <summary>
     /// 游戏事件基接口
     /// 所有游戏事件都实现此接口
+    /// 继承 IEventData 以兼容统一事件管理器
     /// </summary>
-    public interface IGameEvent
+    public interface IGameEvent : IEventData
     {
         /// <summary>
         /// 事件发生时间
@@ -212,7 +212,6 @@ namespace CardCore
         public Entity Source { get; set; }
         public Entity Target { get; set; }
         public int Amount { get; set; }
-        public DamageType Type { get; set; }
     }
 
     /// <summary>

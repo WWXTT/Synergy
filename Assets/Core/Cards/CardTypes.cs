@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {
@@ -70,14 +69,6 @@ namespace CardCore
     }
 
     // ============================================ 卡牌属性接口 ============================================
-
-    /// <summary>
-    /// 具有卡牌类型的接口
-    /// </summary>
-    public interface IHasCardType
-    {
-        CardType CardType { get; set; }
-    }
 
     /// <summary>
     /// 具有立绘的接口
@@ -152,6 +143,63 @@ namespace CardCore
     /// 原子效果接口
     /// </summary>
     public interface IAtomicEffect : IEffect { }
+
+    // ============================================ 扩展卡牌属性接口（三游戏统一） ============================================
+
+    /// <summary>
+    /// 具有子类型的接口（种族/职业）
+    /// </summary>
+    public interface IHasSubtypes
+    {
+        CardSubtype Subtypes { get; }
+        bool HasSubtype(CardSubtype subtype) => (Subtypes & subtype) != 0;
+    }
+
+    /// <summary>
+    /// 具有等级/阶级/连接值的接口（YGO 怪兽）
+    /// </summary>
+    public interface IHasLevel
+    {
+        int? Level { get; }
+        int? Rank { get; }
+        int? LinkRating { get; }
+    }
+
+    /// <summary>
+    /// 具有颜色认同的接口（MTG 颜色饼）
+    /// </summary>
+    public interface IHasColorIdentity
+    {
+        ColorIdentity ColorIdentity { get; }
+    }
+
+    /// <summary>
+    /// 额外卡组卡牌接口
+    /// </summary>
+    public interface IIsExtraDeck
+    {
+        bool IsExtraDeck { get; }
+        SummonMethod DefaultSummonMethod { get; }
+    }
+
+    /// <summary>
+    /// 具有来源信息的接口
+    /// </summary>
+    public interface IHasSourceGame
+    {
+        SourceGame SourceGame { get; }
+        string SourceArchetype { get; }
+    }
+
+    /// <summary>
+    /// 具有超类型的接口
+    /// </summary>
+    public interface IHasSupertype
+    {
+        Cardtype Supertype { get; set; }
+    }
+
+    // ============================================ 效果类 ============================================
 
     /// <summary>
     /// 造成伤害效果

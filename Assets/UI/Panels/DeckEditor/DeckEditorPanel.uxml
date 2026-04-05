@@ -1,0 +1,125 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/Panels/EffectEditor/EffectEditorPanel.uss?fileID=7433441132597879392&amp;guid=52c33c6fe493d0e4e84aa323877985aa&amp;type=3#EffectEditorPanel"/>
+    <ui:VisualElement name="panel-container" class="three-column-layout">
+        <ui:VisualElement class="panel-left" style="width: 280px;">
+            <ui:VisualElement class="panel-header">
+                <ui:Label text="可用卡牌" class="panel-title"/>
+            </ui:VisualElement>
+            <ui:VisualElement class="list-header">
+                <ui:VisualElement class="search-container">
+                    <ui:TextField name="search-input" placeholder="搜索卡牌..." class="search-input"/>
+                </ui:VisualElement>
+                <ui:VisualElement class="filter-tags">
+                    <ui:Button name="filter-all" text="全部" class="filter-tag active"/>
+                    <ui:Button name="filter-creature" text="生物" class="filter-tag"/>
+                    <ui:Button name="filter-spell" text="术法" class="filter-tag"/>
+                    <ui:Button name="filter-domain" text="领域" class="filter-tag"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:ScrollView name="available-cards" class="list-content"/>
+        </ui:VisualElement>
+        <ui:VisualElement class="panel-center">
+            <ui:VisualElement class="panel-header">
+                <ui:Label text="卡组编辑" class="panel-title"/>
+                <ui:Label name="deck-name-display" text="未命名卡组" class="deck-name-display"/>
+            </ui:VisualElement>
+            <ui:VisualElement class="deck-edit-content">
+                <ui:VisualElement class="section">
+                    <ui:VisualElement class="section-header">
+                        <ui:Label text="主卡组" class="section-title"/>
+                        <ui:Label name="main-deck-count" text="0/60" class="deck-count-label"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="main-deck-area" class="deck-area">
+                        <ui:VisualElement class="deck-area-header">
+                            <ui:Label text="拖拽卡牌到此处添加" class="deck-area-hint"/>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="main-deck-cards" class="deck-area-content"/>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="section">
+                    <ui:VisualElement class="section-header">
+                        <ui:Label text="额外卡组" class="section-title"/>
+                        <ui:Label name="extra-deck-count" text="0/15" class="deck-count-label"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="extra-deck-area" class="deck-area">
+                        <ui:VisualElement class="deck-area-header">
+                            <ui:Label text="传奇卡牌区域" class="deck-area-hint"/>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="extra-deck-cards" class="deck-area-content"/>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="panel-right" style="width: 280px;">
+            <ui:VisualElement class="panel-header">
+                <ui:Label text="卡组信息" class="panel-title"/>
+            </ui:VisualElement>
+            <ui:ScrollView class="preview-content">
+                <ui:VisualElement class="section">
+                    <ui:Label text="卡组名称" class="section-title"/>
+                    <ui:TextField name="deck-name-input" class="input-field"/>
+                </ui:VisualElement>
+                <ui:VisualElement class="section">
+                    <ui:Label text="描述" class="section-title"/>
+                    <ui:TextField name="deck-desc-input" multiline="true" class="textarea"/>
+                </ui:VisualElement>
+                <ui:VisualElement class="divider"/>
+                <ui:VisualElement class="section">
+                    <ui:Label text="统计信息" class="section-title"/>
+                    <ui:VisualElement class="stats-panel">
+                        <ui:VisualElement class="stats-row">
+                            <ui:Label text="总卡牌数" class="stats-label"/>
+                            <ui:Label name="stat-total" text="0" class="stats-value"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stats-row">
+                            <ui:Label text="生物" class="stats-label"/>
+                            <ui:Label name="stat-creatures" text="0" class="stats-value"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stats-row">
+                            <ui:Label text="术法" class="stats-label"/>
+                            <ui:Label name="stat-spells" text="0" class="stats-value"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stats-row">
+                            <ui:Label text="领域" class="stats-label"/>
+                            <ui:Label name="stat-domains" text="0" class="stats-value"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stats-row">
+                            <ui:Label text="传奇" class="stats-label"/>
+                            <ui:Label name="stat-legendaries" text="0" class="stats-value"/>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="section">
+                    <ui:Label text="颜色分布" class="section-title"/>
+                    <ui:VisualElement name="color-distribution" class="color-distribution">
+                        <ui:VisualElement name="color-red-bar" class="color-bar">
+                            <ui:VisualElement class="color-fill mana-red" style="width: 0%;"/>
+                            <ui:Label text="红" class="color-label"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="color-blue-bar" class="color-bar">
+                            <ui:VisualElement class="color-fill mana-blue" style="width: 0%;"/>
+                            <ui:Label text="蓝" class="color-label"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="color-green-bar" class="color-bar">
+                            <ui:VisualElement class="color-fill mana-green" style="width: 0%;"/>
+                            <ui:Label text="绿" class="color-label"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="color-white-bar" class="color-bar">
+                            <ui:VisualElement class="color-fill mana-white" style="width: 0%;"/>
+                            <ui:Label text="白" class="color-label"/>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="color-black-bar" class="color-bar">
+                            <ui:VisualElement class="color-fill mana-black" style="width: 0%;"/>
+                            <ui:Label text="黑" class="color-label"/>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="section">
+                    <ui:Button name="btn-save-deck" text="保存卡组" class="btn btn-primary"/>
+                    <ui:Button name="btn-export-deck" text="导出卡组" class="btn btn-secondary"/>
+                    <ui:Button name="btn-delete-deck" text="删除卡组" class="btn btn-danger"/>
+                </ui:VisualElement>
+            </ui:ScrollView>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

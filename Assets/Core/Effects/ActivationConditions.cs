@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {
@@ -166,14 +165,11 @@ namespace CardCore
         /// <summary>数值参数2</summary>
         public int Value2;
 
-        /// <summary>卡牌类型参数</summary>
-        public CardType? CardTypeParam;
+        /// <summary>卡牌超类型参数</summary>
+        public Cardtype? SupertypeParam;
 
         /// <summary>法力类型参数</summary>
         public ManaType? ManaTypeParam;
-
-        /// <summary>目标选择器（用于指定条件检查的目标）</summary>
-        public TargetSelector Target;
 
         /// <summary>是否取反</summary>
         public bool Negate;
@@ -207,7 +203,7 @@ namespace CardCore
                 // 实体条件
                 ConditionType.ControllerHasLife => $"生命值{Value}以上",
                 ConditionType.OpponentHasLife => $"对手生命值{Value}以下",
-                ConditionType.CardHasType => $"卡牌类型为{CardTypeParam}",
+                ConditionType.CardHasType => $"卡牌类型为{SupertypeParam}",
                 ConditionType.CardHasManaType => $"法力类型为{ManaTypeParam}",
                 ConditionType.CardIsTapped => "已横置",
                 ConditionType.CardIsUntapped => "未横置",
@@ -227,10 +223,10 @@ namespace CardCore
                 ConditionType.NotDuringCombat => "非战斗中",
 
                 // 场地条件
-                ConditionType.FieldHasCardType => $"场上有{CardTypeParam}",
-                ConditionType.OpponentFieldHasCardType => $"对手场上有{CardTypeParam}",
-                ConditionType.HandHasCardType => $"手牌中有{CardTypeParam}",
-                ConditionType.GraveyardHasCardType => $"墓地中有{CardTypeParam}",
+                ConditionType.FieldHasCardType => $"场上有{SupertypeParam}",
+                ConditionType.OpponentFieldHasCardType => $"对手场上有{SupertypeParam}",
+                ConditionType.HandHasCardType => $"手牌中有{SupertypeParam}",
+                ConditionType.GraveyardHasCardType => $"墓地中有{SupertypeParam}",
 
                 // 伤害条件
                 ConditionType.DamageDealtThisTurn => $"本回合造成{Value}点以上伤害",
@@ -315,19 +311,6 @@ namespace CardCore
             Type = ConditionType.OnlyOwnTurn
         };
 
-        /// <summary>场上有特定类型</summary>
-        public static ActivationCondition FieldHasType(CardType cardType) => new()
-        {
-            Type = ConditionType.FieldHasCardType,
-            CardTypeParam = cardType
-        };
-
-        /// <summary>手牌中有特定类型</summary>
-        public static ActivationCondition HandHasType(CardType cardType) => new()
-        {
-            Type = ConditionType.HandHasCardType,
-            CardTypeParam = cardType
-        };
 
         /// <summary>卡牌已横置</summary>
         public static ActivationCondition IsTapped() => new()
@@ -621,7 +604,7 @@ namespace CardCore
                     {
                         var pool = context.ElementPool?.GetPool(context.Activator);
                         if (pool == null) return false;
-                        if (!pool.AvailableMana.TryGetValue(condition.ManaTypeParam ?? ManaType.灰色, out int count))
+                        if (!pool.AvailableMana.TryGetValue(condition.ManaTypeParam ?? ManaType.Gray, out int count))
                             return false;
                         return count >= condition.Value;
                     }
@@ -635,8 +618,8 @@ namespace CardCore
                     return context.Activator.Opponent.Life <= condition.Value;
 
                 case ConditionType.CardHasType:
-                    if (context.Source is Card card && card is IHasCardType hasCardType)
-                        return hasCardType.CardType == condition.CardTypeParam;
+                    if (context.Source is Card card && card is IHasSupertype hasSupertype)
+                        return hasSupertype.Supertype == condition.SupertypeParam;
                     return false;
 
                 case ConditionType.CardHasManaType:
@@ -706,28 +689,28 @@ namespace CardCore
                     {
                         var container = _zoneManager.GetZoneContainer(context.Activator);
                         var cards = container.GetCards(Zone.Battlefield);
-                        return cards.Any(c => c is IHasCardType ct && ct.CardType == condition.CardTypeParam);
+                        return cards.Any(c => c is IHasSupertype ct && ct.Supertype == condition.SupertypeParam);
                     }
 
                 case ConditionType.OpponentFieldHasCardType:
                     {
                         var container = _zoneManager.GetZoneContainer(context.Activator.Opponent);
                         var cards = container.GetCards(Zone.Battlefield);
-                        return cards.Any(c => c is IHasCardType ct && ct.CardType == condition.CardTypeParam);
+                        return cards.Any(c => c is IHasSupertype ct && ct.Supertype == condition.SupertypeParam);
                     }
 
                 case ConditionType.HandHasCardType:
                     {
                         var container = _zoneManager.GetZoneContainer(context.Activator);
                         var cards = container.GetCards(Zone.Hand);
-                        return cards.Any(c => c is IHasCardType ct && ct.CardType == condition.CardTypeParam);
+                        return cards.Any(c => c is IHasSupertype ct && ct.Supertype == condition.SupertypeParam);
                     }
 
                 case ConditionType.GraveyardHasCardType:
                     {
                         var container = _zoneManager.GetZoneContainer(context.Activator);
                         var cards = container.GetCards(Zone.Graveyard);
-                        return cards.Any(c => c is IHasCardType ct && ct.CardType == condition.CardTypeParam);
+                        return cards.Any(c => c is IHasSupertype ct && ct.Supertype == condition.SupertypeParam);
                     }
                 #endregion
 

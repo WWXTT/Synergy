@@ -127,40 +127,4 @@ namespace CardCore
             return false;
         }
     }
-
-    /// <summary>
-    /// CardData 类的扩展方法
-    /// </summary>
-    public static class CardDataExtensions
-    {
-        /// <summary>
-        /// 验证卡牌数据
-        /// </summary>
-        public static bool Validate(this CardData card, out List<string> errors)
-        {
-            return CardRuleValidator.Instance.ValidateAllRules(card, out errors);
-        }
-
-        /// <summary>
-        /// 验证卡牌数据（返回第一个错误）
-        /// </summary>
-        public static bool Validate(this CardData card, out string error)
-        {
-            bool isValid = CardRuleValidator.Instance.ValidateAllRules(card, out var errors);
-            error = isValid ? null : errors.FirstOrDefault();
-            return isValid;
-        }
-
-        /// <summary>
-        /// 检查是否有效（返回单个错误或null）
-        /// </summary>
-        public static string GetValidationError(this CardData card)
-        {
-            if (Validate(card, out string error))
-            {
-                return null;
-            }
-            return error;
-        }
-    }
 }

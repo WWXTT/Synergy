@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -233,7 +233,7 @@ namespace CardCore
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            GameEventBus.Publish(e);
+            EventManager.Instance.Publish(e);
         }
     }
 
@@ -362,8 +362,7 @@ namespace CardCore
             {
                 Source = damageEvent.Source,
                 Target = damageEvent.Target,
-                Amount = ModifyDamage(damageEvent.Amount),
-                Type = damageEvent.Type
+                Amount = ModifyDamage(damageEvent.Amount)
             };
         }
 

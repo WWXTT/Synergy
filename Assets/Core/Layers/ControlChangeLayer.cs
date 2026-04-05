@@ -299,7 +299,7 @@ namespace CardCore
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            GameEventBus.Publish(e);
+            EventManager.Instance.Publish(e);
         }
     }
 

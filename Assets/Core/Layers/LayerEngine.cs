@@ -1,8 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using cfg;
-using CardCore.Data;
+
 
 namespace CardCore
 {
@@ -444,7 +443,7 @@ namespace CardCore
             {
                 case CharacteristicType.Color:
                     return CharacteristicDefiningType.DefinesColor;
-                case CharacteristicType.CardType:
+                case CharacteristicType.Supertype:
                     return CharacteristicDefiningType.DefinesType;
                 case CharacteristicType.Subtype:
                     return CharacteristicDefiningType.DefinesSubtype;
@@ -471,7 +470,7 @@ namespace CardCore
             }
 
             // 通过事件总线发布状态变化事件
-            GameEventBus.Publish(new StateChangeEvent
+            EventManager.Instance.Publish(new StateChangeEvent
             {
                 Type = StateChangeType.Power, // TODO: 根据实际变化类型设置
                 Target = entity,

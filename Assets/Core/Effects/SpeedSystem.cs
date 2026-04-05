@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace CardCore
 {
@@ -161,9 +161,6 @@ namespace CardCore
     {
         /// <summary>提升的速度值</summary>
         public int SpeedIncrease;
-
-        /// <summary>需要支付的代价</summary>
-        public ActivationCost ActualCost;
 
         /// <summary>最大提升次数（0 = 无限制）</summary>
         public int MaxUses = 0;

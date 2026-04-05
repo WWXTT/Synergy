@@ -1,0 +1,94 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/Panels/EffectEditor/EffectEditorPanel.uss?fileID=7433441132597879392&amp;guid=52c33c6fe493d0e4e84aa323877985aa&amp;type=3#EffectEditorPanel"/>
+    <ui:VisualElement name="panel-container" class="effect-editor">
+        <ui:VisualElement class="effect-editor-left">
+            <ui:VisualElement class="panel-header">
+                <ui:Label text="效果库" class="panel-title"/>
+            </ui:VisualElement>
+            <ui:VisualElement class="filter-section">
+                <ui:Label text="颜色筛选" class="filter-label"/>
+                <ui:VisualElement class="color-filter-row">
+                    <ui:VisualElement name="filter-color-all" class="color-filter-btn color-all active"/>
+                    <ui:VisualElement name="filter-color-red" class="color-filter-btn color-red"/>
+                    <ui:VisualElement name="filter-color-blue" class="color-filter-btn color-blue"/>
+                    <ui:VisualElement name="filter-color-green" class="color-filter-btn color-green"/>
+                    <ui:VisualElement name="filter-color-white" class="color-filter-btn color-white"/>
+                    <ui:VisualElement name="filter-color-black" class="color-filter-btn color-black"/>
+                    <ui:VisualElement name="filter-color-gray" class="color-filter-btn color-gray"/>
+                </ui:VisualElement>
+                <ui:Label text="类型筛选" class="filter-label"/>
+                <ui:VisualElement class="type-filter-row">
+                    <ui:VisualElement name="filter-type-all" class="type-filter-tag active">
+                        <ui:Label text="全部"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="filter-type-damage" class="type-filter-tag">
+                        <ui:Label text="伤害"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="filter-type-healing" class="type-filter-tag">
+                        <ui:Label text="治疗"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="filter-type-cardmove" class="type-filter-tag">
+                        <ui:Label text="卡牌移动"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="filter-type-buff" class="type-filter-tag">
+                        <ui:Label text="增益"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="filter-type-control" class="type-filter-tag">
+                        <ui:Label text="控制"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="filter-type-protect" class="type-filter-tag">
+                        <ui:Label text="保护"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="filter-type-special" class="type-filter-tag">
+                        <ui:Label text="特殊"/>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="effect-search-bar">
+                <ui:TextField name="effect-search-input" placeholder="搜索效果..." class="search-input"/>
+            </ui:VisualElement>
+            <ui:Label name="effect-list-count" text="共 0 个效果" class="effect-list-count"/>
+            <ui:ScrollView name="effect-library-list" class="effect-list-scroll"/>
+        </ui:VisualElement>
+        <ui:VisualElement class="effect-editor-center">
+            <ui:VisualElement class="assembly-header">
+                <ui:Label text="效果组装" class="panel-title"/>
+                <ui:VisualElement class="assembly-header-actions">
+                    <ui:Button name="btn-add-node" text="添加节点" class="btn btn-sm btn-secondary"/>
+                    <ui:Button name="btn-clear-assembly" text="清空" class="btn btn-sm btn-secondary"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:ScrollView name="assembly-content" class="assembly-content">
+                <ui:VisualElement name="assembly-empty-zone" class="assembly-empty-zone">
+                    <ui:Label text="从左侧拖拽效果到此处开始组装" class="drop-zone-hint"/>
+                </ui:VisualElement>
+            </ui:ScrollView>
+            <ui:VisualElement class="assembly-footer">
+                <ui:Button name="btn-reset" text="重置" class="btn btn-secondary"/>
+                <ui:Button name="btn-save" text="保存效果" class="btn btn-primary"/>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="effect-editor-right">
+            <ui:VisualElement class="condition-section">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="发动条件" class="panel-title"/>
+                </ui:VisualElement>
+                <ui:VisualElement class="condition-search-bar">
+                    <ui:TextField name="condition-search-input" placeholder="搜索条件..." class="search-input"/>
+                </ui:VisualElement>
+                <ui:ScrollView name="condition-library-list" class="condition-list-scroll"/>
+            </ui:VisualElement>
+            <ui:VisualElement class="preview-section">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="效果预览" class="panel-title"/>
+                </ui:VisualElement>
+                <ui:VisualElement name="preview-content" class="preview-content">
+                    <ui:VisualElement name="preview-empty" class="preview-empty">
+                        <ui:Label text="尚未添加效果"/>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="preview-tree" class="hidden"/>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
