@@ -1367,12 +1367,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.VisualScripting.Flow">
-      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.Flow.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.RenderPipelines.Core.Runtime">
       <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VisualScripting.Flow">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.Flow.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro.Editor">
@@ -1512,10 +1512,6 @@
     <ProjectReference Include="UniTask.Addressables.csproj">
       <Project>{8C712FB7-56D2-8560-95EE-837B9C512165}</Project>
       <Name>UniTask.Addressables</Name>
-    </ProjectReference>
-    <ProjectReference Include="UIConverter.Editor.csproj">
-      <Project>{B563C394-7C68-A04B-87C4-F267A682400C}</Project>
-      <Name>UIConverter.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="UniTask.Linq.csproj">
       <Project>{C8ECD9A7-040A-18F9-C404-5D8C21DE8E45}</Project>

@@ -65,17 +65,12 @@ namespace CardCore
     public enum PhaseType
     {
         /// <summary>
-        /// 准备阶段
+        /// 准备阶段（含抽牌、可选放元素池）
         /// </summary>
         Standby,
 
         /// <summary>
-        /// 抽卡阶段
-        /// </summary>
-        Draw,
-
-        /// <summary>
-        /// 主要阶段（包含战斗）
+        /// 主要阶段（含战斗）
         /// </summary>
         Main,
 
@@ -414,7 +409,17 @@ namespace CardCore
         /// </summary>
         public void MoveCard(Card card, Player controller, Zone fromZone, Zone toZone)
         {
+            if (card == null)
+                throw new ZoneOperationException(null, fromZone, toZone, "Cannot move a null card between zones.");
+            if (fromZone == toZone)
+                throw new ZoneOperationException(card, fromZone, toZone, $"Source and destination zones are the same ({fromZone}).");
+            if (controller == null)
+                throw new ZoneOperationException(card, fromZone, toZone, "Controller is null for zone move operation.");
+
             var container = GetZoneContainer(controller);
+            if (container == null)
+                throw new ZoneOperationException(card, fromZone, toZone, $"No zone container found for controller.");
+
             container.Move(card, fromZone, toZone);
         }
 
@@ -544,17 +549,22 @@ namespace CardCore
         /// <summary>移动实体卡牌到新区域</summary>
         public static void MoveCard(this ZoneManager zm, Entity entity, Zone fromZone, Zone toZone)
         {
-            if (zm == null || entity == null) return;
-            if (!(entity is Card card)) return;
+            if (zm == null)
+                throw new ZoneOperationException(entity as Card, fromZone, toZone, "ZoneManager is null.");
+            if (entity == null)
+                throw new ZoneOperationException(null, fromZone, toZone, "Cannot move a null entity between zones.");
+            if (!(entity is Card card))
+                throw new ZoneOperationException(null, fromZone, toZone, "Entity is not a Card and cannot be moved between zones.");
 
             var controller = card.GetController();
-            if (controller == null) return;
+            if (controller == null)
+                throw new ZoneOperationException(card, fromZone, toZone, "Card has no controller; cannot determine zone container.");
 
             var container = zm.GetZoneContainer(controller);
-            if (container != null)
-            {
-                container.Move(card, fromZone, toZone);
-            }
+            if (container == null)
+                throw new ZoneOperationException(card, fromZone, toZone, "No zone container found for card's controller.");
+
+            container.Move(card, fromZone, toZone);
         }
 
         /// <summary>从牌库抽一张牌</summary>

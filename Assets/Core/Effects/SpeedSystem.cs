@@ -4,95 +4,87 @@ namespace CardCore
 {
     /// <summary>
     /// 速度等级常量
-    /// 速度从0开始，可以通过支付代价提升
+    /// 基础速度由阶段+回合归属决定
+    /// 卡牌可通过 BaseSpeed 效果加成或动态支付提速
     /// </summary>
     public static class SpeedLevel
     {
-        /// <summary>基础速度 - 最低速度</summary>
-        public const int Base = 0;
+        /// <summary>基础速度 — 非主要阶段 / 非回合持有者</summary>
+        public const int None = 0;
 
-        /// <summary>普通速度</summary>
+        /// <summary>普通速度 — 主要阶段 + 回合持有者</summary>
         public const int Normal = 1;
-
-        /// <summary>快速速度</summary>
-        public const int Quick = 2;
-
-        /// <summary>瞬时速度</summary>
-        public const int Instant = 3;
-
-        /// <summary>无上限 - 理论上速度可以通过支付代价无限提升</summary>
-        public const int Unlimited = int.MaxValue;
     }
 
     /// <summary>
-    /// 效果发动类型（决定入栈优先级）
+    /// 效果发动类型
+    /// 条件发动：基于事件自动触发，不参与速度比较
+    /// 速度发动：玩家自主决定，受记速器限制
     /// </summary>
     public enum EffectActivationType
     {
-        /// <summary>强制发动 - 必须发动，最高优先级，满足条件自动入栈</summary>
+        /// <summary>强制发动 — 必须发动，满足条件自动入栈</summary>
         Mandatory,
 
-        /// <summary>自动发动 - 满足条件自动发动，次优先级</summary>
+        /// <summary>自动发动 — 满足条件自动发动</summary>
         Automatic,
 
-        /// <summary>自由发动 - 玩家选择是否发动，需要轮询</summary>
+        /// <summary>自由发动 — 玩家选择是否发动，需要轮询</summary>
         Voluntary,
     }
 
     /// <summary>
-    /// 全局速度计数器
-    /// 场上唯一的速度计，用于控制连锁深度
+    /// 全局速度计数器（记速器）
+    /// 场上唯一的记速器，用于控制连锁深度
+    /// 每个效果入栈后 +1，每结算一个 -1
+    /// 速度发动的速度必须超过记速器才能发动
     /// </summary>
     public class SpeedCounter
     {
         private int _currentSpeed = 0;
         private bool _isResolving = false;
-        private int _peakSpeed = 0;  // 本轮连锁的最高速度（用于记录）
+        private int _peakSpeed = 0;
 
-        /// <summary>当前速度值</summary>
+        /// <summary>当前记速器值</summary>
         public int CurrentSpeed => _currentSpeed;
 
         /// <summary>是否正在结算中</summary>
         public bool IsResolving => _isResolving;
 
-        /// <summary>本轮连锁的最高速度</summary>
+        /// <summary>本轮连锁的最高记速器值</summary>
         public int PeakSpeed => _peakSpeed;
 
         /// <summary>
-        /// 提升速度计数器（效果发动时）
+        /// 记速器 +1（效果入栈时调用）
         /// </summary>
-        /// <param name="effectSpeed">效果的发动速度</param>
-        public void RaiseTo(int effectSpeed)
+        public void Increment()
         {
-            if (effectSpeed > _currentSpeed)
-            {
-                _currentSpeed = effectSpeed;
-                if (effectSpeed > _peakSpeed)
-                    _peakSpeed = effectSpeed;
-            }
+            _currentSpeed++;
+            if (_currentSpeed > _peakSpeed)
+                _peakSpeed = _currentSpeed;
         }
 
         /// <summary>
         /// 检查效果是否可以发动
+        /// 速度发动：速度必须超过记速器
+        /// 条件发动：不参与速度比较（speed=Max 总是通过）
+        /// 结算中只允许条件发动
         /// </summary>
-        /// <param name="effectSpeed">效果的发动速度</param>
-        /// <param name="activationType">效果的发动类型</param>
-        /// <returns>是否可以发动</returns>
         public bool CanActivate(int effectSpeed, EffectActivationType activationType)
         {
-            // 速度必须大于当前计数器
-            if (effectSpeed <= _currentSpeed)
+            // 结算中不允许速度发动
+            if (_isResolving && activationType == EffectActivationType.Voluntary)
                 return false;
 
-            // 结算中只允许强制/自动效果加入
-            if (_isResolving && activationType == EffectActivationType.Voluntary)
+            // 速度必须超过记速器
+            if (effectSpeed <= _currentSpeed)
                 return false;
 
             return true;
         }
 
         /// <summary>
-        /// 开始结算
+        /// 开始结算（禁止速度发动入栈）
         /// </summary>
         public void BeginResolution()
         {
@@ -100,9 +92,9 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 结算完成一个效果，计数器-1
+        /// 结算完成一个效果，记速器 -1
         /// </summary>
-        /// <returns>新的速度值</returns>
+        /// <returns>新的记速器值</returns>
         public int Decrement()
         {
             if (_currentSpeed > 0)
@@ -111,7 +103,7 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 重置计数器（连锁结算完成后）
+        /// 重置记速器（连锁结算完成后）
         /// </summary>
         public void Reset()
         {
@@ -126,7 +118,7 @@ namespace CardCore
         public string GetStateDescription()
         {
             string state = _isResolving ? "结算中" : "等待中";
-            return $"速度计数器: {_currentSpeed} ({state})";
+            return $"记速器: {_currentSpeed} ({state})";
         }
     }
 
@@ -168,54 +160,39 @@ namespace CardCore
 
     /// <summary>
     /// 速度计算器
-    /// 用于计算效果的最终发动速度
+    /// 速度三层来源：基础(阶段+回合归属) + 卡牌加成(BaseSpeed) + 动态支付(paidBoost)
     /// </summary>
     public static class SpeedCalculator
     {
         /// <summary>
-        /// 计算效果的实际发动速度
+        /// 协调怪兽提速费率：1速 = 1费（硬编码）
         /// </summary>
-        /// <param name="baseSpeed">效果基础速度</param>
-        /// <param name="activator">发动者</param>
-        /// <param name="activePlayer">主回合玩家</param>
-        /// <param name="paidBoost">支付代价提升的速度</param>
-        /// <returns>实际发动速度</returns>
-        public static int CalculateActivationSpeed(
-            int baseSpeed,
-            Player activator,
-            Player activePlayer,
-            int paidBoost = 0)
+        public const int SPEED_COST_RATE = 1;
+
+        /// <summary>
+        /// 获取默认速度（由阶段 + 回合归属决定）
+        /// 主阶段 + 回合持有者 = 1，其他情况 = 0
+        /// </summary>
+        public static int GetDefaultSpeed(Player activator, Player turnPlayer, PhaseType phase)
         {
-            int speed = baseSpeed;
-
-            // 主回合玩家加成 +1
-            if (activator == activePlayer)
-                speed += 1;
-
-            // 支付的代价提升
-            speed += paidBoost;
-
-            return speed;
+            if (phase != PhaseType.Main) return 0;
+            return activator == turnPlayer ? 1 : 0;
         }
 
         /// <summary>
-        /// 检查是否可以在当前速度下发动
+        /// 计算最终发动速度 = 默认 + 卡牌加成(BaseSpeed) + 动态支付
         /// </summary>
-        public static bool CanActivateAtSpeed(
-            int effectSpeed,
-            int currentSpeed,
-            bool isResolving,
-            EffectActivationType activationType)
+        public static int CalculateSpeed(int defaultSpeed, int baseSpeed, int paidBoost)
         {
-            // 速度必须大于当前计数器
-            if (effectSpeed <= currentSpeed)
-                return false;
+            return defaultSpeed + baseSpeed + paidBoost;
+        }
 
-            // 结算中只允许强制/自动效果
-            if (isResolving && activationType == EffectActivationType.Voluntary)
-                return false;
-
-            return true;
+        /// <summary>
+        /// 计算提速需要支付的额外费用
+        /// </summary>
+        public static int CalculateSpeedCost(int desiredBoost)
+        {
+            return desiredBoost * SPEED_COST_RATE;
         }
     }
 }

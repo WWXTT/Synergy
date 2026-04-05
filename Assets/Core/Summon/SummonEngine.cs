@@ -93,9 +93,16 @@ namespace CardCore
         /// </summary>
         public Card FusionSummon(Player player, CardData fusionCard, List<Card> materials)
         {
+            if (player == null)
+                throw new ArgumentNullException(nameof(player));
+            if (fusionCard == null)
+                throw new ArgumentNullException(nameof(fusionCard));
+            if (materials == null || materials.Count == 0)
+                throw new GameRuleViolationException("融合召唤需要至少一个素材", "FUSION_NO_MATERIALS");
+
             // 1. 验证素材
             if (!ValidateFusionMaterials(fusionCard, materials))
-                return null;
+                throw new GameRuleViolationException("融合素材验证失败", "FUSION_INVALID_MATERIALS");
 
             // 2. 收集并叠加关键词
             var keywordStack = CollectAndStackKeywords(materials);
@@ -185,12 +192,17 @@ namespace CardCore
         /// </summary>
         public Card SynchroSummon(Player player, CardData synchroCard, Card tuner, List<Card> nonTuners)
         {
+            if (player == null)
+                throw new ArgumentNullException(nameof(player));
+            if (tuner == null)
+                throw new ArgumentNullException(nameof(tuner));
+
             var allMaterials = new List<Card> { tuner };
             allMaterials.AddRange(nonTuners);
 
             // 1. 验证
             if (!ValidateSynchroMaterials(synchroCard, tuner, nonTuners, allMaterials))
-                return null;
+                throw new GameRuleViolationException("同步召唤素材验证失败", "SYNCHRO_INVALID_MATERIALS");
 
             // 2. 获取调整生物的速度
             int tunerSpeed = GetTunerSpeed(tuner);
@@ -266,9 +278,14 @@ namespace CardCore
         /// </summary>
         public Card XyzSummon(Player player, CardData xyzCard, List<Card> materials)
         {
+            if (player == null)
+                throw new ArgumentNullException(nameof(player));
+            if (materials == null || materials.Count == 0)
+                throw new GameRuleViolationException("超量召唤需要至少一个素材", "XYZ_NO_MATERIALS");
+
             // 1. 验证素材
             if (!ValidateXyzMaterials(xyzCard, materials))
-                return null;
+                throw new GameRuleViolationException("超量召唤素材验证失败", "XYZ_INVALID_MATERIALS");
 
             // 2. 计算素材属性总和
             int totalPower = materials.Sum(GetCardPower);
@@ -344,9 +361,14 @@ namespace CardCore
         /// </summary>
         public Card LinkSummon(Player player, CardData linkCard, List<Card> materials)
         {
+            if (player == null)
+                throw new ArgumentNullException(nameof(player));
+            if (materials == null || materials.Count == 0)
+                throw new GameRuleViolationException("链接召唤需要至少一个素材", "LINK_NO_MATERIALS");
+
             // 1. 验证素材
             if (!ValidateLinkMaterials(linkCard, materials))
-                return null;
+                throw new GameRuleViolationException("链接召唤素材验证失败", "LINK_INVALID_MATERIALS");
 
             // 2. 收集素材的箭头方向
             var collectedDirections = HexDirection.None;

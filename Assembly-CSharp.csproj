@@ -67,14 +67,13 @@
     <Compile Include="Assets\Core\Events\EventManager.cs" />
     <Compile Include="Assets\Core\Effects\CostSystem.cs" />
     <Compile Include="Assets\Core\BaseSystems\TurnEngine.cs" />
-    <Compile Include="Assets\UI\Scripts\BaseUIToolkitPanel.cs" />
+    <Compile Include="Assets\Core\Effects\KeywordEffectMapper.cs" />
     <Compile Include="Assets\Core\Cards\CardData.cs" />
     <Compile Include="Assets\Core\Effects\ReplacementEngine.cs" />
     <Compile Include="Assets\Core\BaseSystems\TimestampSystem.cs" />
     <Compile Include="Assets\Core\Cards\Card.cs" />
     <Compile Include="Assets\Core\Effects\EffectDefinition.cs" />
     <Compile Include="Assets\Core\Enums\Zones.cs" />
-    <Compile Include="Assets\UI\Panels\EffectEditor\EffectEditorPanel.cs" />
     <Compile Include="Assets\Core\Attribute\AttributeEvents.cs" />
     <Compile Include="Assets\Core\Entity.cs" />
     <Compile Include="Assets\Core\Effects\EffectResolutionContext.cs" />
@@ -85,13 +84,18 @@
     <Compile Include="Assets\Core\GameCore.cs" />
     <Compile Include="Assets\Core\Attribute\AtomicEffectTable.cs" />
     <Compile Include="Assets\Core\Cards\CardExtensions.cs" />
+    <Compile Include="Assets\Core\Effects\EffectTemplateTable.cs" />
     <Compile Include="Assets\Core\Attribute\EntityEffectExtensions.cs" />
     <Compile Include="Assets\Core\Layers\ControlChangeLayer.cs" />
     <Compile Include="Assets\Core\Layers\TextChangeLayer.cs" />
+    <Compile Include="Assets\Core\Exceptions\GameExceptions.cs" />
     <Compile Include="Assets\Core\BaseSystems\StateBasedActions\StateBasedActions.cs" />
     <Compile Include="Assets\Core\Events\GameEvents.cs" />
     <Compile Include="Assets\Core\Cards\CardTypes.cs" />
     <Compile Include="Assets\Core\BaseSystems\ElementPool.cs" />
+    <Compile Include="Assets\Core\GameCore\SubSystemRegistry.cs" />
+    <Compile Include="Assets\Core\Effects\EffectTemplate.cs" />
+    <Compile Include="Assets\Core\GameCore\GameStateManager.cs" />
     <Compile Include="Assets\Core\Effects\TriggerTiming.cs" />
     <Compile Include="Assets\Core\Effects\SpeedSystem.cs" />
     <Compile Include="Assets\Core\ValueSystem\ValueSystemRuntimeConfig.cs" />
@@ -102,8 +106,10 @@
     <Compile Include="Assets\Core\Attribute\EffectHandlerRegistry.cs" />
     <Compile Include="Assets\Core\Enums\ColorIdentity.cs" />
     <Compile Include="Assets\Core\Effects\ElementAffinity.cs" />
+    <Compile Include="Assets\Core\Effects\BranchConfigTable.cs" />
     <Compile Include="Assets\Core\Summon\SummonEngine.cs" />
     <Compile Include="Assets\Core\Attribute\IAtomicEffectHandler.cs" />
+    <Compile Include="Assets\Core\Effects\BranchConfig.cs" />
     <Compile Include="Assets\Core\ValueSystem\SynergyConfig.cs" />
     <Compile Include="Assets\Core\BaseSystems\CombatSystem.cs" />
     <Compile Include="Assets\Core\Effects\AtomicEffectPhaseEvents.cs" />
@@ -112,34 +118,17 @@
     <Compile Include="Assets\Core\Attribute\AtomicEffectConfig.cs" />
     <Compile Include="Assets\Core\Layers\CopyEffects.cs" />
     <Compile Include="Assets\Core\Effects\ActivationConditions.cs" />
+    <Compile Include="Assets\Core\Attribute\Handlers\GrantKeywordHandlers.cs" />
     <Compile Include="Assets\Core\Enums\CardEnums.cs" />
+    <Compile Include="Assets\Core\GameActions.cs" />
     <Compile Include="Assets\Core\Utility\MurmurHash3.cs" />
+    <Compile Include="Assets\Core\GameCore\GameLoopController.cs" />
     <Compile Include="Assets\Core\BaseSystems\AttributeSystem.cs" />
     <Compile Include="Assets\Core\Effects\AtomicEffects.cs" />
+    <Compile Include="Assets\Core\Cards\CardLoader.cs" />
     <Compile Include="Assets\Core\Effects\EffectTargeting.cs" />
     <Compile Include="Assets\Core\BaseSystems\ElementUnlockManager.cs" />
     <Compile Include="Assets\Core\Effects\TargetFilterSystem.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Assets\UI\Components\ManaCostDisplay.uss" />
-    <None Include="Assets\UI\Components\CardPreviewCard.uxml" />
-    <None Include="Assets\UI\Components\ConditionListItem.uxml" />
-    <None Include="Assets\UI\Panels\EffectEditor\EffectEditorPanel.uss" />
-    <None Include="Assets\UI\Components\EffectListItem.uxml" />
-    <None Include="Assets\UI\Panels\EffectEditor\EffectEditorPanel.uxml" />
-    <None Include="Assets\UI\Components\Components.uss" />
-    <None Include="Assets\UI\Panels\DeckEditor\DeckEditorPanel.uss" />
-    <None Include="Assets\UI\Panels\CardEditor\CardEditorPanel.uss" />
-    <None Include="Assets\UI\Panels\CardEditor\CardEditorPanel.uxml" />
-    <None Include="Assets\UI\Components\Common.uss" />
-    <None Include="Assets\UI\Components\IconBadge.uxml" />
-    <None Include="Assets\UI\Components\ConditionListItem.uss" />
-    <None Include="Assets\UI\Components\Layouts.uss" />
-    <None Include="Assets\UI\Components\CardPreviewCard.uss" />
-    <None Include="Assets\UI\Components\EffectListItem.uss" />
-    <None Include="Assets\UI\Panels\DeckEditor\DeckEditorPanel.uxml" />
-    <None Include="Assets\UI\Components\ManaCostDisplay.uxml" />
-    <None Include="Assets\UI\Components\IconBadge.uss" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -1358,12 +1347,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.VisualScripting.Flow">
-      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.Flow.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.RenderPipelines.Core.Runtime">
       <HintPath>Library\ScriptAssemblies\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VisualScripting.Flow">
+      <HintPath>Library\ScriptAssemblies\Unity.VisualScripting.Flow.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro.Editor">
@@ -1499,10 +1488,6 @@
     <ProjectReference Include="UniTask.Addressables.csproj">
       <Project>{8C712FB7-56D2-8560-95EE-837B9C512165}</Project>
       <Name>UniTask.Addressables</Name>
-    </ProjectReference>
-    <ProjectReference Include="UIConverter.Editor.csproj">
-      <Project>{B563C394-7C68-A04B-87C4-F267A682400C}</Project>
-      <Name>UIConverter.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="UniTask.Linq.csproj">
       <Project>{C8ECD9A7-040A-18F9-C404-5D8C21DE8E45}</Project>

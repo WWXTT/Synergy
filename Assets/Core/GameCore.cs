@@ -1,161 +1,54 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace CardCore
 {
     /// <summary>
-    /// 游戏状态
-    /// </summary>
-    public enum GameState
-    {
-        /// <summary>
-        /// 未开始
-        /// </summary>
-        NotStarted,
-
-        /// <summary>
-        /// 运行中
-        /// </summary>
-        Running,
-
-        /// <summary>
-        /// 暂停
-        /// </summary>
-        Paused,
-
-        /// <summary>
-        /// 已结束
-        /// </summary>
-        Ended
-    }
-
-    /// <summary>
-    /// 游戏核心
-    /// 负责初始化、事件循环、模块协调、游戏结束判断
-    /// 它是系统的顶层调度器，不处理规则细节
+    /// 游戏核心 — 轻量级门面（Facade）
+    /// 负责初始化和组合各子系统，不处理规则细节
+    /// 业务逻辑委托给 GameStateManager、GameLoopController 等专职管理器
     /// </summary>
     public class GameCore
     {
         private static GameCore _instance;
         public static GameCore Instance => _instance ??= new GameCore();
 
-        private GameState _state = GameState.NotStarted;
+        // 子系统注册表
+        private readonly SubSystemRegistry _subSystems = new SubSystemRegistry();
+
+        // 核心管理器（职责分离后）
+        private GameStateManager _stateManager;
+        private GameLoopController _loopController;
+
         private Player _player1;
         private Player _player2;
 
-        // 核心子系统
-        private TurnEngine _turnEngine;
-        private StackEngine _stackEngine;
-        private LayerEngine _layerEngine;
-        private StateBasedActions _sbaEngine;
-        private ReplacementEngine _replacementEngine;
-        private TriggerEngine _triggerEngine;
-        private ZoneManager _zoneManager;
-        private ElementPoolSystem _elementPool;
-        private ControlChangeLayer _controlChangeLayer;
-        private TextChangeLayer _textChangeLayer;
-        private CopyEffectsEngine _copyEffectsEngine;
-        private ContinuousEffectDurationTracker _durationTracker;
-        private ModifierSystem _modifierSystem;
-        private AttributeCalculator _attributeCalculator;
-        private CombatSystem _combatSystem;
-        private SummonEngine _summonEngine;
+        #region 公共属性 — 子系统访问
 
-        /// <summary>
-        /// 当前游戏状态
-        /// </summary>
-        public GameState State => _state;
-
-        /// <summary>
-        /// 玩家1
-        /// </summary>
+        public GameState State => _stateManager.CurrentState;
         public Player Player1 => _player1;
-
-        /// <summary>
-        /// 玩家2
-        /// </summary>
         public Player Player2 => _player2;
+        public GameStateManager StateManager => _stateManager;
+        public SubSystemRegistry SubSystems => _subSystems;
 
-        /// <summary>
-        /// 回合引擎
-        /// </summary>
-        public TurnEngine TurnEngine => _turnEngine;
+        public TurnEngine TurnEngine => _subSystems.Get<TurnEngine>();
+        public StackEngine StackEngine => _subSystems.Get<StackEngine>();
+        public LayerEngine LayerEngine => _subSystems.Get<LayerEngine>();
+        public StateBasedActions SBAEngine => _subSystems.Get<StateBasedActions>();
+        public ReplacementEngine ReplacementEngine => _subSystems.Get<ReplacementEngine>();
+        public TriggerEngine TriggerEngine => _subSystems.Get<TriggerEngine>();
+        public ZoneManager ZoneManager => _subSystems.Get<ZoneManager>();
+        public ElementPoolSystem ElementPool => _subSystems.Get<ElementPoolSystem>();
+        public ControlChangeLayer ControlChangeLayer => _subSystems.Get<ControlChangeLayer>();
+        public TextChangeLayer TextChangeLayer => _subSystems.Get<TextChangeLayer>();
+        public CopyEffectsEngine CopyEffectsEngine => _subSystems.Get<CopyEffectsEngine>();
+        public ContinuousEffectDurationTracker DurationTracker => _subSystems.Get<ContinuousEffectDurationTracker>();
+        public ModifierSystem ModifierSystem => _subSystems.Get<ModifierSystem>();
+        public AttributeCalculator AttributeCalculator => _subSystems.Get<AttributeCalculator>();
+        public CombatSystem CombatSystem => _subSystems.Get<CombatSystem>();
+        public SummonEngine SummonEngine => _subSystems.Get<SummonEngine>();
 
-        /// <summary>
-        /// 栈/优先权引擎
-        /// </summary>
-        public StackEngine StackEngine => _stackEngine;
-
-        /// <summary>
-        /// 层引擎
-        /// </summary>
-        public LayerEngine LayerEngine => _layerEngine;
-
-        /// <summary>
-        /// 状态动作系统
-        /// </summary>
-        public StateBasedActions SBAEngine => _sbaEngine;
-
-        /// <summary>
-        /// 替代引擎
-        /// </summary>
-        public ReplacementEngine ReplacementEngine => _replacementEngine;
-
-        /// <summary>
-        /// 触发引擎
-        /// </summary>
-        public TriggerEngine TriggerEngine => _triggerEngine;
-
-        /// <summary>
-        /// 区域管理器
-        /// </summary>
-        public ZoneManager ZoneManager => _zoneManager;
-
-        /// <summary>
-        /// 元素池系统
-        /// </summary>
-        public ElementPoolSystem ElementPool => _elementPool;
-
-        /// <summary>
-        /// 控制变更层
-        /// </summary>
-        public ControlChangeLayer ControlChangeLayer => _controlChangeLayer;
-
-        /// <summary>
-        /// 文本变更层
-        /// </summary>
-        public TextChangeLayer TextChangeLayer => _textChangeLayer;
-
-        /// <summary>
-        /// 复制效果系统
-        /// </summary>
-        public CopyEffectsEngine CopyEffectsEngine => _copyEffectsEngine;
-
-        /// <summary>
-        /// 持续效果时长追踪
-        /// </summary>
-        public ContinuousEffectDurationTracker DurationTracker => _durationTracker;
-
-        /// <summary>
-        /// 修改器系统
-        /// </summary>
-        public ModifierSystem ModifierSystem => _modifierSystem;
-
-        /// <summary>
-        /// 属性计算器
-        /// </summary>
-        public AttributeCalculator AttributeCalculator => _attributeCalculator;
-
-        /// <summary>
-        /// 战斗系统
-        /// </summary>
-        public CombatSystem CombatSystem => _combatSystem;
-
-        /// <summary>
-        /// 召唤引擎
-        /// </summary>
-        public SummonEngine SummonEngine => _summonEngine;
+        #endregion
 
         private GameCore()
         {
@@ -163,7 +56,7 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 初始化所有子系统
+        /// 初始化所有子系统并注册到注册表
         /// </summary>
         private void Initialize()
         {
@@ -174,64 +67,141 @@ namespace CardCore
             _player2.Opponent = _player1;
 
             // 初始化区域管理器
-            _zoneManager = new ZoneManager();
-            _zoneManager.InitializePlayer(_player1);
-            _zoneManager.InitializePlayer(_player2);
+            var zoneManager = new ZoneManager();
+            zoneManager.InitializePlayer(_player1);
+            zoneManager.InitializePlayer(_player2);
+            _subSystems.Register(zoneManager);
 
             // 初始化元素池
-            _elementPool = new ElementPoolSystem();
-            _elementPool.InitializePlayer(_player1);
-            _elementPool.InitializePlayer(_player2);
+            var elementPool = new ElementPoolSystem();
+            elementPool.InitializePlayer(_player1);
+            elementPool.InitializePlayer(_player2);
+            _subSystems.Register(elementPool);
 
-            // 初始化效果执行器和栈引擎（新版需要依赖注入）
-            var executor = new EffectExecutor(_zoneManager, _elementPool);
-            _stackEngine = new StackEngine(executor);
-            _stackEngine.Initialize(_player1);
+            // 初始化效果执行器和栈引擎
+            var executor = new EffectExecutor(zoneManager, elementPool);
+            var stackEngine = new StackEngine(executor);
+            stackEngine.Initialize(_player1);
+            _subSystems.Register(stackEngine);
 
             // 初始化回合引擎
-            _turnEngine = new TurnEngine();
-            _turnEngine.Initialize(_player1);
+            var turnEngine = new TurnEngine();
+            turnEngine.Initialize(_player1);
+            _subSystems.Register(turnEngine);
 
             // 初始化层引擎
-            _layerEngine = new LayerEngine();
+            var layerEngine = new LayerEngine();
+            _subSystems.Register(layerEngine);
 
             // 初始化状态动作系统
-            _sbaEngine = new StateBasedActions();
-            _sbaEngine.Initialize(this);
-            _sbaEngine.RegisterChecker(new ZeroLifeChecker());
-            _sbaEngine.RegisterChecker(new ZeroToughnessChecker());
+            var sbaEngine = new StateBasedActions();
+            sbaEngine.Initialize(this);
+            sbaEngine.RegisterChecker(new ZeroLifeChecker());
+            sbaEngine.RegisterChecker(new ZeroToughnessChecker());
+            _subSystems.Register(sbaEngine);
 
             // 初始化替代引擎
-            _replacementEngine = new ReplacementEngine();
+            var replacementEngine = new ReplacementEngine();
+            _subSystems.Register(replacementEngine);
 
-            // 初始化触发引擎（新版需要 StackEngine）
-            _triggerEngine = new TriggerEngine(_stackEngine);
+            // 初始化触发引擎
+            var triggerEngine = new TriggerEngine(stackEngine);
+            _subSystems.Register(triggerEngine);
 
             // 初始化控制变更层
-            _controlChangeLayer = new ControlChangeLayer();
-            _controlChangeLayer.InitializePlayer(_player1);
-            _controlChangeLayer.InitializePlayer(_player2);
+            var controlChangeLayer = new ControlChangeLayer();
+            controlChangeLayer.InitializePlayer(_player1);
+            controlChangeLayer.InitializePlayer(_player2);
+            _subSystems.Register(controlChangeLayer);
 
             // 初始化文本变更层
-            _textChangeLayer = new TextChangeLayer();
+            var textChangeLayer = new TextChangeLayer();
+            _subSystems.Register(textChangeLayer);
 
             // 初始化复制效果系统
-            _copyEffectsEngine = new CopyEffectsEngine();
+            var copyEffectsEngine = new CopyEffectsEngine();
+            _subSystems.Register(copyEffectsEngine);
 
             // 初始化持续效果时长追踪
-            _durationTracker = new ContinuousEffectDurationTracker();
+            var durationTracker = new ContinuousEffectDurationTracker();
+            _subSystems.Register(durationTracker);
 
             // 初始化修改器系统
-            _modifierSystem = new ModifierSystem();
+            var modifierSystem = new ModifierSystem();
+            _subSystems.Register(modifierSystem);
 
             // 初始化属性计算器
-            _attributeCalculator = new AttributeCalculator(_modifierSystem);
+            var attributeCalculator = new AttributeCalculator(modifierSystem);
+            _subSystems.Register(attributeCalculator);
 
             // 初始化战斗系统
-            _combatSystem = new CombatSystem(_zoneManager);
+            var combatSystem = new CombatSystem(zoneManager);
+            _subSystems.Register(combatSystem);
 
             // 初始化召唤引擎
-            _summonEngine = new SummonEngine(this);
+            var summonEngine = new SummonEngine(this);
+            _subSystems.Register(summonEngine);
+
+            // 初始化状态管理器
+            _stateManager = new GameStateManager();
+
+            // 初始化循环控制器
+            _loopController = new GameLoopController(
+                turnEngine, stackEngine, triggerEngine,
+                sbaEngine, layerEngine, combatSystem,
+                durationTracker, controlChangeLayer, textChangeLayer);
+        }
+
+        #region 游戏生命周期
+
+        /// <summary>
+        /// 初始化游戏：加载卡组、洗牌、发起手、开始游戏
+        /// </summary>
+        /// <param name="deck1">玩家1的卡牌实例列表（牌库）</param>
+        /// <param name="deck2">玩家2的卡牌实例列表（牌库）</param>
+        public void InitGame(List<Card> deck1, List<Card> deck2)
+        {
+            if (deck1 == null || deck2 == null)
+                throw new ArgumentNullException("卡组不能为null");
+
+            // 重置游戏状态
+            Reset();
+
+            // 将卡牌加入牌库区域，设置控制者
+            foreach (var card in deck1)
+            {
+                card.SetController(_player1);
+                ZoneManager.GetZoneContainer(_player1).Add(card, Zone.Deck);
+            }
+            foreach (var card in deck2)
+            {
+                card.SetController(_player2);
+                ZoneManager.GetZoneContainer(_player2).Add(card, Zone.Deck);
+            }
+
+            // 洗牌
+            ZoneManagerExtensions.ShuffleDeck(ZoneManager, _player1);
+            ZoneManagerExtensions.ShuffleDeck(ZoneManager, _player2);
+
+            // 起手抽5张
+            for (int i = 0; i < 5; i++)
+            {
+                ZoneManagerExtensions.DrawCard(ZoneManager, _player1);
+                ZoneManagerExtensions.DrawCard(ZoneManager, _player2);
+            }
+
+            // 开始游戏
+            StartGame();
+        }
+
+        /// <summary>
+        /// 从CardData列表初始化游戏
+        /// </summary>
+        public void InitGame(List<CardData> deck1Data, List<CardData> deck2Data, int copiesPerCard = 3)
+        {
+            var deck1 = CardLoader.BuildDeck(deck1Data, copiesPerCard);
+            var deck2 = CardLoader.BuildDeck(deck2Data, copiesPerCard);
+            InitGame(deck1, deck2);
         }
 
         /// <summary>
@@ -239,60 +209,42 @@ namespace CardCore
         /// </summary>
         public void StartGame()
         {
-            if (_state != GameState.NotStarted)
-            {
-                return; // 已经开始
-            }
+            if (!_stateManager.StartGame())
+                return;
 
-            _state = GameState.Running;
-
-            // 触发游戏开始事件
             PublishEvent(new GameStartEvent
             {
                 FirstPlayer = _player1,
                 SecondPlayer = _player2
             });
 
-            // 开始第一回合
-            _turnEngine.StartNewTurn(_player1);
+            TurnEngine.StartNewTurn(_player1);
         }
 
         /// <summary>
         /// 暂停游戏
         /// </summary>
-        public void Pause()
-        {
-            if (_state != GameState.Running)
-                return;
-
-            _state = GameState.Paused;
-        }
+        public void Pause() => _stateManager.Pause();
 
         /// <summary>
         /// 恢复游戏
         /// </summary>
-        public void Resume()
-        {
-            if (_state != GameState.Paused)
-                return;
-
-            _state = GameState.Running;
-        }
+        public void Resume() => _stateManager.Resume();
 
         /// <summary>
         /// 结束游戏
         /// </summary>
         public void EndGame(Player winner, GameOverReason reason)
         {
-            _state = GameState.Ended;
+            if (!_stateManager.EndGame())
+                return;
 
-            // 触发游戏结束事件
             PublishEvent(new GameOverEvent
             {
                 Winner = winner,
                 Loser = winner.Opponent,
                 Reason = reason,
-                TotalTurns = _turnEngine.TurnNumber
+                TotalTurns = TurnEngine.TurnNumber
             });
         }
 
@@ -301,77 +253,10 @@ namespace CardCore
         /// </summary>
         public void Update()
         {
-            if (_state != GameState.Running)
+            if (!_stateManager.CanPerformGameActions)
                 return;
 
-            // 1. 检查并处理过期的持续效果
-            _durationTracker.CheckAndCleanExpired();
-
-            // 2. 处理过期的临时控制
-            _controlChangeLayer.ProcessExpiredTemporaryControls();
-
-            // 3. 检查文本修改
-            _textChangeLayer.CheckTextModifications();
-
-            // 4. 处理战斗阶段
-            if (_combatSystem.InCombat)
-            {
-                // 等待玩家操作或自动推进
-                // 战斗系统有自己的状态机
-            }
-
-            // 5. 检查是否有可行动作（栈为空且处于可行动阶段）
-            if (_stackEngine.IsEmpty && _turnEngine.CanActivateEffect())
-            {
-                // 6. 收集触发式并放入栈
-                _triggerEngine.PutTriggersOnStack();
-
-                // 7. 如果栈上有对象，处理优先权
-                if (_stackEngine.StackSize > 0)
-                {
-                    ProcessPriority();
-                }
-                else
-                {
-                    // 8. 栈为空，尝试推进阶段
-                    _turnEngine.CheckPhaseTransition();
-                }
-            }
-        }
-
-        /// <summary>
-        /// 处理优先权
-        /// </summary>
-        private void ProcessPriority()
-        {
-            // 如果栈为空，无法处理优先权
-            if (_stackEngine.IsEmpty)
-                return;
-
-            // 获取当前优先权持有者
-            Player currentHolder = _stackEngine.CurrentPriorityHolder;
-
-            // 检查当前玩家是否有可执行动作
-            bool hasAction = HasAvailableAction(currentHolder);
-
-            if (hasAction)
-            {
-                // 有可用动作，等待玩家决策
-                return;
-            }
-
-            // 没有可用动作，Pass优先权
-            _stackEngine.PassPriority(currentHolder);
-        }
-
-        /// <summary>
-        /// 检查玩家是否有可执行动作
-        /// </summary>
-        private bool HasAvailableAction(Player player)
-        {
-            // TODO: 检查手牌中是否有可发动的卡
-            // 检查场上是否有可横置的单位
-            return player.HasAvailableAction();
+            _loopController.Update();
         }
 
         /// <summary>
@@ -379,119 +264,57 @@ namespace CardCore
         /// </summary>
         public void ResolveStack()
         {
-            while (_stackEngine.StackSize > 0)
-            {
-                // 1. 弹出栈顶对象
-                var top = _stackEngine.Peek();
-                _stackEngine.ResolveTop();
-
-                if (top == null)
-                    break;
-
-                // 2. 替代引擎检查
-                // TODO: 需要将 IStackObject 转换为 IGameEvent 或创建效果事件
-                var replacementContext = new ReplacementContext
-                {
-
-                };
-                IGameEvent finalEvent = replacementContext.GetFinalEvent();
-
-                // 3. 结算效果
-                ResolveEffect(top, finalEvent, replacementContext);
-
-                // 4. 状态动作检查
-                _sbaEngine.CheckAndExecute();
-
-                // 5. 收集触发式并放入栈
-                _triggerEngine.PutTriggersOnStack();
-            }
-
-            // 栈清空后，检查状态稳定性
-            _sbaEngine.ExecuteAll();
+            _loopController.ResolveStack(ReplacementEngine);
         }
 
-        /// <summary>
-        /// 结算效果
-        /// </summary>
-        private void ResolveEffect(IStackObject stackObject, IGameEvent eventToProcess, ReplacementContext replacementContext)
-        {
-            // 1. 触发效果结算开始事件
-            PublishEvent(new EffectResolveEvent
-            {
-                ResolvedEffect = stackObject.SourceEffect as Effect,
-                Context = new EffectResolutionContext()
-            });
+        #endregion
 
-            // 2. 执行效果逻辑 应当引用EffectExecutor处理
-            //ExecuteEffectLogic(stackObject, eventToProcess, replacementContext);
-
-            // 3. 层引擎重新计算
-            _layerEngine.RecalculateAll();
-
-            // 4. 触发效果结算结束事件
-            PublishEvent(new EffectResolveEvent
-            {
-                ResolvedEffect = stackObject.SourceEffect as Effect,
-                Context = new EffectResolutionContext()
-            });
-
-            // 5. 如果是触发式，标记已结算
-            if (stackObject is TriggeredAbility)
-            {
-                _triggerEngine.OnTriggerResolved(stackObject as EffectInstance);
-            }
-        }
-
-        /// <summary>
-        /// 发布事件
-        /// </summary>
-        private void PublishEvent<T>(T e) where T : IGameEvent
-        {
-            // 通过事件总线发布到所有监听者
-            EventManager.Instance.Publish(e);
-
-            // 通知各子系统
-            _triggerEngine.OnEvent(e);
-            _layerEngine?.OnEvent(e);
-        }
+        #region 重置
 
         /// <summary>
         /// 重置游戏
         /// </summary>
         public void Reset()
         {
-            _state = GameState.NotStarted;
+            _stateManager.Reset();
 
-            _turnEngine.Initialize(_player1);
-            _stackEngine.Initialize(_player1);
+            TurnEngine.Initialize(_player1);
+            StackEngine.Initialize(_player1);
 
-            // 清空所有子系统状态
-            _layerEngine.ClearAll();
-            _sbaEngine.ClearHistory();
-            _replacementEngine.ClearAll();
-            _triggerEngine.ClearAll();
-            _elementPool.Reset();
-            _controlChangeLayer.ClearAll();
-            _textChangeLayer.ClearAll();
-            _copyEffectsEngine.ClearAll();
-            _durationTracker.ClearAll();
-            _modifierSystem.Clear();
+            LayerEngine.ClearAll();
+            SBAEngine.ClearHistory();
+            ReplacementEngine.ClearAll();
+            TriggerEngine.ClearAll();
+            ElementPool.Reset();
+            ControlChangeLayer.ClearAll();
+            TextChangeLayer.ClearAll();
+            CopyEffectsEngine.ClearAll();
+            DurationTracker.ClearAll();
+            ModifierSystem.Clear();
         }
+
+        #endregion
+
+        #region 查询
+
+        public Player GetCurrentTurnPlayer() => TurnEngine.TurnPlayer;
+
+        public Player GetOpponent(Player player) => player.Opponent;
+
+        #endregion
+
+        #region 事件发布
 
         /// <summary>
-        /// 获取当前回合玩家
+        /// 发布事件到事件总线并通知子系统
         /// </summary>
-        public Player GetCurrentTurnPlayer()
+        private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            return _turnEngine.TurnPlayer;
+            EventManager.Instance.Publish(e);
+            TriggerEngine.OnEvent(e);
+            LayerEngine?.OnEvent(e);
         }
 
-        /// <summary>
-        /// 获取对手玩家
-        /// </summary>
-        public Player GetOpponent(Player player)
-        {
-            return player.Opponent;
-        }
+        #endregion
     }
 }

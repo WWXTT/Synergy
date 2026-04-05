@@ -133,6 +133,12 @@ namespace CardCore
         GrantOverwhelm,
         GrantArmor,
         GrantWard,
+        GrantFirstStrike,
+        GrantFlying,
+        GrantVigilance,
+        GrantGuard,
+        GrantRegeneration,
+        GrantGrowth,
 
         // ============ 控制补充 ============
         CopyTargetAbility,

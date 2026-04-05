@@ -42,7 +42,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = true,
                 Priority = 50,
-                Tags = "Damage,Red"
+                Tags = "Damage,Red",
+                AvailableTriggerTimings = "OnPlay,OnDealDamage,Activate_Instant",
+                AvailableTargetScopes = "Single,AoE",
+                BranchConfigs = "DealDamageBranch"
             });
 
             AddConfig(new AtomicEffectConfig
@@ -61,7 +64,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = false,
                 Priority = 60,
-                Tags = "Destruction,Red"
+                Tags = "Destruction,Red",
+                AvailableTriggerTimings = "OnPlay,Activate_Instant",
+                AvailableTargetScopes = "Single",
+                BranchConfigs = ""
             });
 
             AddConfig(new AtomicEffectConfig
@@ -80,7 +86,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = false,
                 Priority = 30,
-                Tags = "Keyword,Haste,Red"
+                Tags = "Keyword,Haste,Red",
+                AvailableTriggerTimings = "OnPlay,Activate_Active,Activate_Instant",
+                AvailableTargetScopes = "Single",
+                BranchConfigs = ""
             });
 
             // --- 蓝色效果 ---
@@ -100,7 +109,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = true,
                 Priority = 40,
-                Tags = "Draw,Blue"
+                Tags = "Draw,Blue",
+                AvailableTriggerTimings = "OnPlay,OnTurnStart,OnDraw,Activate_Instant",
+                AvailableTargetScopes = "Single",
+                BranchConfigs = ""
             });
 
             AddConfig(new AtomicEffectConfig
@@ -119,7 +131,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = false,
                 Priority = 45,
-                Tags = "Bounce,Blue"
+                Tags = "Bounce,Blue",
+                AvailableTriggerTimings = "OnPlay,Activate_Instant,Activate_Response",
+                AvailableTargetScopes = "Single",
+                BranchConfigs = ""
             });
 
             AddConfig(new AtomicEffectConfig
@@ -138,7 +153,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = false,
                 Priority = 45,
-                Tags = "Freeze,Blue"
+                Tags = "Freeze,Blue",
+                AvailableTriggerTimings = "OnPlay,Activate_Instant,Activate_Response",
+                AvailableTargetScopes = "Single",
+                BranchConfigs = ""
             });
 
             // --- 绿色效果 ---
@@ -158,7 +176,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = true,
                 Priority = 30,
-                Tags = "Heal,Green"
+                Tags = "Heal,Green",
+                AvailableTriggerTimings = "OnPlay,OnTurnStart,OnTakeDamage,Activate_Instant",
+                AvailableTargetScopes = "Single,AoE",
+                BranchConfigs = ""
             });
 
             AddConfig(new AtomicEffectConfig
@@ -177,7 +198,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = true,
                 Priority = 30,
-                Tags = "Buff,Green"
+                Tags = "Buff,Green",
+                AvailableTriggerTimings = "OnPlay,OnTurnStart,Activate_Active,Activate_Instant",
+                AvailableTargetScopes = "Single,AoE",
+                BranchConfigs = ""
             });
 
             AddConfig(new AtomicEffectConfig
@@ -196,7 +220,10 @@ namespace CardCore.Attribute
                 ActivationType = EffectActivationType.Voluntary,
                 Stackable = true,
                 Priority = 40,
-                Tags = "Summon,Token,Green"
+                Tags = "Summon,Token,Green",
+                AvailableTriggerTimings = "OnPlay,OnTurnStart,OnDeath,Activate_Instant",
+                AvailableTargetScopes = "Single",
+                BranchConfigs = ""
             });
         }
 

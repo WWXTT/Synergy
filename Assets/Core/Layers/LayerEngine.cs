@@ -62,6 +62,105 @@ namespace CardCore
         Targeted
     }
 
+    #region 特征修饰器类型
+
+    /// <summary>
+    /// 特征修饰器基接口
+    /// 每种修饰器明确知道自己操作的值类型，避免装箱/拆箱
+    /// </summary>
+    public interface ICharacteristicModification
+    {
+        CharacteristicType TargetCharacteristic { get; }
+    }
+
+    /// <summary>
+    /// 整数加法修饰器（用于 Power/Toughness 的增减）
+    /// </summary>
+    public sealed class IntAddModification : ICharacteristicModification
+    {
+        public CharacteristicType TargetCharacteristic { get; }
+        public int Delta { get; }
+
+        public IntAddModification(CharacteristicType target, int delta)
+        {
+            TargetCharacteristic = target;
+            Delta = delta;
+        }
+
+        public int Apply(int original) => original + Delta;
+    }
+
+    /// <summary>
+    /// 整数设定修饰器（将值设为固定值）
+    /// </summary>
+    public sealed class IntSetModification : ICharacteristicModification
+    {
+        public CharacteristicType TargetCharacteristic { get; }
+        public int Value { get; }
+
+        public IntSetModification(CharacteristicType target, int value)
+        {
+            TargetCharacteristic = target;
+            Value = value;
+        }
+
+        public int Apply(int original) => Value;
+    }
+
+    /// <summary>
+    /// 费用修饰器（修改费用字典）
+    /// </summary>
+    public sealed class CostAddModification : ICharacteristicModification
+    {
+        public CharacteristicType TargetCharacteristic => CharacteristicType.Cost;
+        public Dictionary<int, float> CostDelta { get; }
+
+        public CostAddModification(Dictionary<int, float> costDelta)
+        {
+            CostDelta = costDelta;
+        }
+
+        public Dictionary<int, float> Apply(Dictionary<int, float> original)
+        {
+            var result = new Dictionary<int, float>(original);
+            foreach (var kvp in CostDelta)
+            {
+                if (result.ContainsKey(kvp.Key))
+                    result[kvp.Key] += kvp.Value;
+                else
+                    result[kvp.Key] = kvp.Value;
+            }
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 颜色添加修饰器
+    /// </summary>
+    public sealed class ColorAddModification : ICharacteristicModification
+    {
+        public CharacteristicType TargetCharacteristic => CharacteristicType.Color;
+        public List<ManaType> AddedColors { get; }
+
+        public ColorAddModification(List<ManaType> addedColors)
+        {
+            AddedColors = addedColors;
+        }
+
+        public List<ManaType> Apply(List<ManaType> original)
+        {
+            var result = new List<ManaType>(original);
+            foreach (var color in AddedColors)
+            {
+                if (!result.Contains(color))
+                    result.Add(color);
+            }
+            return result;
+        }
+    }
+
+    #endregion
+
     /// <summary>
     /// 持续效果记录（用于层引擎内部）
     /// </summary>
@@ -75,8 +174,8 @@ namespace CardCore
         public int SequenceNumber { get; set; }
         public DurationType Duration { get; set; }
         public bool IsActive { get; set; }
-        public Dictionary<CharacteristicType, object> Modifications { get; set; }
-            = new Dictionary<CharacteristicType, object>();
+        public Dictionary<CharacteristicType, ICharacteristicModification> Modifications { get; set; }
+            = new Dictionary<CharacteristicType, ICharacteristicModification>();
 
         /// <summary>
         /// 检查此效果是否影响指定特征
@@ -87,18 +186,49 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 修改特征值
+        /// 获取指定特征的修饰器
         /// </summary>
-        public T ModifyCharacteristic<T>(T originalValue)
+        public ICharacteristicModification GetModification(CharacteristicType type)
         {
-            if (!Modifications.TryGetValue(CharacteristicType.Power, out var powerMod) &&
-                typeof(T) == typeof(int) && typeof(T).IsGenericType == false)
-            {
-                return (T)(object)((int)(object)originalValue + (int)powerMod);
-            }
+            return Modifications.TryGetValue(type, out var mod) ? mod : null;
+        }
 
-            // TODO: 支持更多特征类型
-            return originalValue;
+        /// <summary>
+        /// 对整数特征应用修饰（Power/Toughness）
+        /// </summary>
+        public int ApplyIntModification(CharacteristicType type, int original)
+        {
+            if (!Modifications.TryGetValue(type, out var mod))
+                return original;
+
+            return mod switch
+            {
+                IntAddModification add => add.Apply(original),
+                IntSetModification set => set.Apply(original),
+                _ => original
+            };
+        }
+
+        /// <summary>
+        /// 对费用特征应用修饰
+        /// </summary>
+        public Dictionary<int, float> ApplyCostModification(Dictionary<int, float> original)
+        {
+            if (!Modifications.TryGetValue(CharacteristicType.Cost, out var mod))
+                return original;
+
+            return mod is CostAddModification costMod ? costMod.Apply(original) : original;
+        }
+
+        /// <summary>
+        /// 对颜色特征应用修饰
+        /// </summary>
+        public List<ManaType> ApplyColorModification(List<ManaType> original)
+        {
+            if (!Modifications.TryGetValue(CharacteristicType.Color, out var mod))
+                return original;
+
+            return mod is ColorAddModification colorMod ? colorMod.Apply(original) : original;
         }
     }
 
@@ -123,6 +253,7 @@ namespace CardCore
     /// <summary>
     /// 层引擎（简化版）
     /// 负责重新计算所有对象的当前状态、按层排序、时间戳排序
+    /// 使用脏标记缓存机制，仅在修饰器变更时重算
     /// </summary>
     public class LayerEngine
     {
@@ -140,119 +271,221 @@ namespace CardCore
         // 全局特征定义能力
         private List<CharacteristicDefiningAbility> _globalCDAs = new List<CharacteristicDefiningAbility>();
 
+        // 脏标记缓存
+        private HashSet<Entity> _dirtyEntities = new HashSet<Entity>();
+        private bool _globalDirty = true;
+        private Dictionary<Entity, CharacteristicCache> _cache =
+            new Dictionary<Entity, CharacteristicCache>();
+
         /// <summary>
-        /// 计算实体最终攻击力
+        /// 特征缓存条目
+        /// </summary>
+        private class CharacteristicCache
+        {
+            public int Power;
+            public int Toughness;
+            public Dictionary<int, float> Cost;
+            public List<ManaType> Colors;
+        }
+
+        /// <summary>
+        /// 标记指定实体为脏（需要重算）
+        /// </summary>
+        private void MarkDirty(Entity entity)
+        {
+            if (entity == null)
+            {
+                _globalDirty = true;
+                // 全局效果变更会使所有缓存失效
+                _dirtyEntities.Clear();
+                _cache.Clear();
+            }
+            else
+            {
+                _dirtyEntities.Add(entity);
+                _cache.Remove(entity);
+            }
+        }
+
+        /// <summary>
+        /// 检查实体是否需要重算
+        /// </summary>
+        private bool IsDirty(Entity entity)
+        {
+            return _globalDirty || _dirtyEntities.Contains(entity);
+        }
+
+        /// <summary>
+        /// 获取或创建实体缓存
+        /// </summary>
+        private CharacteristicCache GetOrCreateCache(Entity entity)
+        {
+            if (!_cache.TryGetValue(entity, out var cache))
+            {
+                cache = new CharacteristicCache();
+                _cache[entity] = cache;
+            }
+            return cache;
+        }
+
+        /// <summary>
+        /// 计算实体最终攻击力（带缓存）
         /// </summary>
         public int CalculatePower(Entity entity)
         {
-            // 获取基础攻击力
+            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached))
+                return cached.Power;
+
+            int value = CalculatePowerInternal(entity);
+
+            var cache = GetOrCreateCache(entity);
+            cache.Power = value;
+
+            // 如果这个特征已重算且全局不脏，从脏集合中移除
+            if (!_globalDirty)
+                _dirtyEntities.Remove(entity);
+
+            return value;
+        }
+
+        /// <summary>
+        /// 计算实体最终生命值（带缓存）
+        /// </summary>
+        public int CalculateToughness(Entity entity)
+        {
+            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached))
+                return cached.Toughness;
+
+            int value = CalculateToughnessInternal(entity);
+
+            var cache = GetOrCreateCache(entity);
+            cache.Toughness = value;
+
+            if (!_globalDirty)
+                _dirtyEntities.Remove(entity);
+
+            return value;
+        }
+
+        /// <summary>
+        /// 计算实体最终费用（带缓存）
+        /// </summary>
+        public Dictionary<int, float> CalculateCost(Entity entity)
+        {
+            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached) && cached.Cost != null)
+                return cached.Cost;
+
+            var value = CalculateCostInternal(entity);
+
+            var cache = GetOrCreateCache(entity);
+            cache.Cost = value;
+
+            if (!_globalDirty)
+                _dirtyEntities.Remove(entity);
+
+            return value;
+        }
+
+        /// <summary>
+        /// 计算实体最终颜色（带缓存）
+        /// </summary>
+        public List<ManaType> CalculateColors(Entity entity)
+        {
+            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached) && cached.Colors != null)
+                return cached.Colors;
+
+            var value = CalculateColorsInternal(entity);
+
+            var cache = GetOrCreateCache(entity);
+            cache.Colors = value;
+
+            if (!_globalDirty)
+                _dirtyEntities.Remove(entity);
+
+            return value;
+        }
+
+        /// <summary>
+        /// 强制刷新所有缓存（当全局状态变更时调用）
+        /// </summary>
+        public void InvalidateAllCache()
+        {
+            _globalDirty = true;
+            _dirtyEntities.Clear();
+            _cache.Clear();
+        }
+
+        #region 内部计算方法（无缓存，由带缓存的公有方法调用）
+
+        private int CalculatePowerInternal(Entity entity)
+        {
             int baseValue = GetBasePower(entity);
 
-            // 应用所有层的效果
             var allEffects = GetSortedEffectsForEntity(entity);
             foreach (var effect in allEffects)
             {
                 if (effect.AffectsCharacteristic(CharacteristicType.Power))
-                {
-                    baseValue = effect.ModifyCharacteristic(baseValue);
-                }
+                    baseValue = effect.ApplyIntModification(CharacteristicType.Power, baseValue);
             }
 
-            // 应用CDA（CDAs具有最高优先级）
             var cda = GetHighestPriorityCDA(entity, CharacteristicType.Power);
             if (cda != null && cda.DefinedValue is int cdaValue)
-            {
                 baseValue = cdaValue;
-            }
 
             return baseValue;
         }
 
-        /// <summary>
-        /// 计算实体最终生命值
-        /// </summary>
-        public int CalculateToughness(Entity entity)
+        private int CalculateToughnessInternal(Entity entity)
         {
-            // 获取基础生命值
             int baseValue = GetBaseToughness(entity);
 
-            // 应用所有层的效果
             var allEffects = GetSortedEffectsForEntity(entity);
             foreach (var effect in allEffects)
             {
                 if (effect.AffectsCharacteristic(CharacteristicType.Toughness))
-                {
-                    baseValue = effect.ModifyCharacteristic(baseValue);
-                }
+                    baseValue = effect.ApplyIntModification(CharacteristicType.Toughness, baseValue);
             }
 
-            // 应用CDA（CDAs具有最高优先级）
             var cda = GetHighestPriorityCDA(entity, CharacteristicType.Toughness);
             if (cda != null && cda.DefinedValue is int cdaValue)
-            {
                 baseValue = cdaValue;
-            }
 
             return baseValue;
         }
 
-        /// <summary>
-        /// 计算实体最终费用
-        /// </summary>
-        public Dictionary<int, float> CalculateCost(Entity entity)
+        private Dictionary<int, float> CalculateCostInternal(Entity entity)
         {
-            // 获取基础费用
             var baseValue = GetBaseCost(entity);
 
-            // 应用所有层的效果
             var allEffects = GetSortedEffectsForEntity(entity);
             foreach (var effect in allEffects)
             {
                 if (effect.AffectsCharacteristic(CharacteristicType.Cost))
-                {
-                    baseValue = effect.ModifyCharacteristic(baseValue);
-                }
+                    baseValue = effect.ApplyCostModification(baseValue);
             }
 
             return baseValue;
         }
 
-        /// <summary>
-        /// 计算实体最终颜色
-        /// </summary>
-        public List<ManaType> CalculateColors(Entity entity)
+        private List<ManaType> CalculateColorsInternal(Entity entity)
         {
             var result = GetBaseColors(entity);
 
-            // 应用所有层的效果
             var allEffects = GetSortedEffectsForEntity(entity);
             foreach (var effect in allEffects)
             {
                 if (effect.AffectsCharacteristic(CharacteristicType.Color))
-                {
-                    if (effect.Modifications.TryGetValue(CharacteristicType.Color, out var colorMod))
-                    {
-                        if (colorMod is List<ManaType> addedColors)
-                        {
-                            foreach (var color in addedColors)
-                            {
-                                if (!result.Contains(color))
-                                    result.Add(color);
-                            }
-                        }
-                    }
-                }
+                    result = effect.ApplyColorModification(result);
             }
 
-            // 应用CDA
             var cda = GetHighestPriorityCDA(entity, CharacteristicType.Color);
             if (cda != null && cda.DefinedValue is List<ManaType> cdaColors)
-            {
                 result = cdaColors;
-            }
 
             return result;
         }
+
+        #endregion
 
         /// <summary>
         /// 添加持续效果
@@ -261,19 +494,17 @@ namespace CardCore
         {
             if (effect.TargetEntity == null)
             {
-                // 全局效果
                 _globalEffects.Add(effect);
             }
             else
             {
-                // 目标效果
                 if (!_entityEffects.ContainsKey(effect.TargetEntity))
                     _entityEffects[effect.TargetEntity] = new List<LayerContinuousEffect>();
 
                 _entityEffects[effect.TargetEntity].Add(effect);
             }
 
-            // 触发状态变化事件
+            MarkDirty(effect.TargetEntity);
             PublishStateChangeEvent(effect.TargetEntity, effect.Layer);
         }
 
@@ -291,7 +522,7 @@ namespace CardCore
                 _entityEffects[effect.TargetEntity].Remove(effect);
             }
 
-            // 触发状态变化事件
+            MarkDirty(effect.TargetEntity);
             PublishStateChangeEvent(effect.TargetEntity, effect.Layer);
         }
 
@@ -302,19 +533,17 @@ namespace CardCore
         {
             if (cda.DefinedEntity == null)
             {
-                // 全局CDA
                 _globalCDAs.Add(cda);
             }
             else
             {
-                // 目标CDA
                 if (!_entityCDAs.ContainsKey(cda.DefinedEntity))
                     _entityCDAs[cda.DefinedEntity] = new List<CharacteristicDefiningAbility>();
 
                 _entityCDAs[cda.DefinedEntity].Add(cda);
             }
 
-            // 触发状态变化事件
+            MarkDirty(cda.DefinedEntity);
             PublishStateChangeEvent(cda.DefinedEntity, LayerType.Layer1);
         }
 
@@ -332,7 +561,7 @@ namespace CardCore
                 _entityCDAs[cda.DefinedEntity].Remove(cda);
             }
 
-            // 触发状态变化事件
+            MarkDirty(cda.DefinedEntity);
             PublishStateChangeEvent(cda.DefinedEntity, LayerType.Layer1);
         }
 
@@ -538,6 +767,7 @@ namespace CardCore
             _entityCDAs.Clear();
             _globalEffects.Clear();
             _globalCDAs.Clear();
+            InvalidateAllCache();
         }
 
         /// <summary>

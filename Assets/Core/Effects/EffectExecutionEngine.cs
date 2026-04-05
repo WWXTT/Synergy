@@ -76,8 +76,10 @@ namespace CardCore
         /// </summary>
         public void Execute(EffectInstance instance)
         {
-            if (instance == null || instance.Definition == null)
-                return;
+            if (instance == null)
+                throw new ArgumentNullException(nameof(instance));
+            if (instance.Definition == null)
+                throw new EffectResolutionException("Effect instance has no definition", instance.SourceEffect);
 
             var effect = instance.Definition;
 
@@ -104,8 +106,7 @@ namespace CardCore
                 };
                 if (!CostHandlerRegistry.PayAll(effect.Costs, costContext))
                 {
-                    UnityEngine.Debug.LogWarning($"代价支付失败: {effect.Id}");
-                    return;
+                    throw new EffectResolutionException(instance.SourceEffect, $"Cost payment failed for effect {effect.Id}.");
                 }
             }
 
@@ -219,11 +220,17 @@ namespace CardCore
 
     #endregion
 
-    #region 栈引擎（重构）
+    #region 栈引擎
 
     /// <summary>
-    /// 栈引擎（重构版）
-    /// 整合速度计数器和待发效果队列
+    /// 栈引擎
+    /// 管理效果入栈、轮询、结算
+    ///
+    /// 流程：
+    /// 1. 条件发动（事件触发）自动入栈，每个 counter++
+    /// 2. 轮询阶段：双方交替，速度发动 speed > counter 才能入栈，counter++
+    /// 3. 双方 Pass → 结算（LIFO），结算中不轮询，每结算一个 counter--
+    /// 4. counter 归0 → 检查延迟触发 → 有则开始新一轮
     /// </summary>
     public class StackEngine
     {
@@ -236,41 +243,16 @@ namespace CardCore
         private Player _priorityHolder;
         private bool _waitingForPlayer = false;
         private int _consecutivePassCount = 0;
+        private PhaseType _currentPhase;
 
-        /// <summary>
-        /// 当前速度计数器
-        /// </summary>
         public SpeedCounter SpeedCounter => _speedCounter;
-
-        /// <summary>
-        /// 待发效果队列
-        /// </summary>
         public PendingEffectQueue PendingQueue => _pendingQueue;
-
-        /// <summary>
-        /// 栈大小
-        /// </summary>
         public int StackSize => _stack.Count;
-
-        /// <summary>
-        /// 栈是否为空
-        /// </summary>
         public bool IsEmpty => _stack.Count == 0;
-
-        /// <summary>
-        /// 当前优先权持有者
-        /// </summary>
         public Player CurrentPriorityHolder => _priorityHolder;
-
-        /// <summary>
-        /// 主回合玩家
-        /// </summary>
         public Player ActivePlayer => _activePlayer;
-
-        /// <summary>
-        /// 是否等待玩家选择
-        /// </summary>
         public bool WaitingForPlayer => _waitingForPlayer;
+        public PhaseType CurrentPhase => _currentPhase;
 
         public StackEngine(EffectExecutor executor)
         {
@@ -278,9 +260,6 @@ namespace CardCore
             _pendingQueue = new PendingEffectQueue(_speedCounter);
         }
 
-        /// <summary>
-        /// 初始化
-        /// </summary>
         public void Initialize(Player startingPlayer)
         {
             _activePlayer = startingPlayer;
@@ -293,28 +272,57 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 尝试发动效果
+        /// 设置当前阶段（阶段变更时调用）
+        /// </summary>
+        public void SetPhase(PhaseType phase)
+        {
+            _currentPhase = phase;
+        }
+
+        /// <summary>
+        /// 处理条件发动效果（强制/自动，不检查速度，自动入栈）
+        /// 每轮轮询前调用
+        /// </summary>
+        public void ProcessTriggeredEffects()
+        {
+            while (true)
+            {
+                var next = _pendingQueue.GetNextEffect();
+                if (next == null) break;
+
+                _speedCounter.Increment();
+                var instance = EffectInstance.FromPendingEffect(next);
+                _stack.Push(instance);
+                next.IsOnStack = true;
+
+                EventManager.Instance.Publish(new StackAddEvent
+                {
+                    AddedObject = instance,
+                    AddingPlayer = next.Controller
+                });
+            }
+        }
+
+        /// <summary>
+        /// 尝试发动效果（速度发动入口）
+        /// 速度检查： speed > counter
+        /// 入栈后 counter +1（不是 RaiseTo）
         /// </summary>
         public bool TryActivateEffect(PendingEffect pending)
         {
-            // 速度检查
             if (!_speedCounter.CanActivate(pending.ActivationSpeed, pending.ActivationType))
                 return false;
 
-            // 提升速度计数器
-            _speedCounter.RaiseTo(pending.ActivationSpeed);
+            _speedCounter.Increment(); // ★ 记速器 +1
 
-            // 创建效果实例并入栈
             var instance = EffectInstance.FromPendingEffect(pending);
             _stack.Push(instance);
             pending.IsOnStack = true;
 
-            // 重置优先权轮转
             _priorityHolder = pending.Controller.Opponent;
             _consecutivePassCount = 0;
             _waitingForPlayer = true;
 
-            // 触发事件
             EventManager.Instance.Publish(new StackAddEvent
             {
                 AddedObject = instance,
@@ -325,7 +333,7 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 添加待发效果
+        /// 添加待发效果到队列
         /// </summary>
         public void AddPendingEffect(PendingEffect effect)
         {
@@ -333,21 +341,15 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 处理待发效果（自动入栈强制/自动效果）
+        /// 处理待发效果（条件发动自动入栈）
         /// </summary>
         public void ProcessPendingEffects()
         {
-            while (true)
-            {
-                var next = _pendingQueue.GetNextEffect();
-                if (next == null) break;
-
-                TryActivateEffect(next);
-            }
+            ProcessTriggeredEffects();
         }
 
         /// <summary>
-        /// 玩家Pass
+        /// 玩家 Pass（让出优先权）
         /// </summary>
         public void PlayerPass(Player player)
         {
@@ -355,21 +357,18 @@ namespace CardCore
 
             _consecutivePassCount++;
 
-            // 触发事件
             EventManager.Instance.Publish(new PriorityPassEvent
             {
                 PassingPlayer = player,
                 BothPassed = _consecutivePassCount >= 2
             });
 
-            // 双方连续Pass，开始结算
             if (_consecutivePassCount >= 2)
             {
                 BeginResolution();
                 return;
             }
 
-            // 传递优先权
             _priorityHolder = player.Opponent;
             EventManager.Instance.Publish(new PriorityGainEvent
             {
@@ -378,7 +377,7 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 玩家选择发动自由效果
+        /// 玩家选择发动速度效果
         /// </summary>
         public bool PlayerActivateVoluntary(PendingEffect effect)
         {
@@ -398,7 +397,7 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 获取可发动的自由效果列表
+        /// 获取可发动的速度效果列表
         /// </summary>
         public List<PendingEffect> GetActivatableVoluntaryEffects()
         {
@@ -422,83 +421,53 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 结算栈
+        /// 结算栈（LIFO）
+        /// 结算中不轮询，不插入任何效果
+        /// 结算期间产生的新条件触发效果存入延迟队列
         /// </summary>
         private void ResolveStack()
         {
-            while (_stack.Count > 0 || _speedCounter.CurrentSpeed > 0)
+            while (_stack.Count > 0)
             {
-                // 1. 如果栈不为空，结算栈顶
-                if (_stack.Count > 0)
+                var top = _stack.Pop();
+                _executor.Execute(top);
+                _speedCounter.Decrement();
+
+                EventManager.Instance.Publish(new StackResolutionEndEvent
                 {
-                    var top = _stack.Pop();
-                    _executor.Execute(top);
-
-                    // 2. 计数器-1
-                    int newSpeed = _speedCounter.Decrement();
-
-                    // 3. 检查是否有新的强制/自动效果需要入栈
-                    CheckAndAddAutoEffects(newSpeed);
-
-                    // 4. 触发结算事件
-                    EventManager.Instance.Publish(new StackResolutionEndEvent
-                    {
-                        StackSize = _stack.Count
-                    });
-                }
-                else
-                {
-                    // 栈为空但计数器>0，继续降速检查
-                    int newSpeed = _speedCounter.Decrement();
-                    CheckAndAddAutoEffects(newSpeed);
-                }
+                    StackSize = _stack.Count
+                });
             }
 
-            // 结算完成
             FinishResolution();
         }
 
         /// <summary>
-        /// 检查并添加自动效果
-        /// </summary>
-        private void CheckAndAddAutoEffects(int currentSpeed)
-        {
-            var autoEffects = _pendingQueue.GetAutoActivatableEffects(currentSpeed);
-
-            // 按速度降序、时间戳升序排序
-            var sorted = autoEffects
-                .OrderByDescending(e => e.ActivationSpeed)
-                .ThenBy(e => e.SequenceNumber);
-
-            foreach (var effect in sorted)
-            {
-                // 提升速度计数器
-                _speedCounter.RaiseTo(effect.ActivationSpeed);
-
-                // 创建实例并入栈
-                var instance = EffectInstance.FromPendingEffect(effect);
-                _stack.Push(instance);
-                effect.IsOnStack = true;
-            }
-        }
-
-        /// <summary>
-        /// 结算完成
+        /// 结算完成 — 检查延迟触发，可能开始新一轮
         /// </summary>
         private void FinishResolution()
         {
             _speedCounter.Reset();
-            _pendingQueue.Clear();
+            _waitingForPlayer = false;
 
             EventManager.Instance.Publish(new StackEmptyEvent
             {
                 LastPriorityHolder = _priorityHolder
             });
+
+            // 结算期间产生的条件触发效果 → 新一轮
+            if (_pendingQueue.HasAutoEffects)
+            {
+                ProcessTriggeredEffects();
+                if (_stack.Count > 0)
+                {
+                    _waitingForPlayer = true;
+                    _consecutivePassCount = 0;
+                    return;
+                }
+            }
         }
 
-        /// <summary>
-        /// 新回合开始
-        /// </summary>
         public void OnTurnStart(Player newTurnPlayer)
         {
             _activePlayer = newTurnPlayer;
@@ -507,9 +476,6 @@ namespace CardCore
             _waitingForPlayer = false;
         }
 
-        /// <summary>
-        /// 清空栈
-        /// </summary>
         public void Clear()
         {
             _stack.Clear();
@@ -519,25 +485,16 @@ namespace CardCore
             _consecutivePassCount = 0;
         }
 
-        /// <summary>
-        /// 获取栈内容（从底到顶）
-        /// </summary>
         public List<EffectInstance> GetStackContents()
         {
             return _stack.Reverse().ToList();
         }
 
-        /// <summary>
-        /// 传递优先权（PlayerPass 的别名）
-        /// </summary>
         public void PassPriority(Player player)
         {
             PlayerPass(player);
         }
 
-        /// <summary>
-        /// 结算栈顶一个效果
-        /// </summary>
         public void ResolveTop()
         {
             if (_stack.Count > 0)
@@ -548,17 +505,11 @@ namespace CardCore
             }
         }
 
-        /// <summary>
-        /// 查看栈顶（不弹出）
-        /// </summary>
         public EffectInstance Peek()
         {
             return _stack.Count > 0 ? _stack.Peek() : null;
         }
 
-        /// <summary>
-        /// 获取效果执行器
-        /// </summary>
         public EffectExecutor GetExecutor() => _executor;
     }
 
@@ -567,17 +518,14 @@ namespace CardCore
     #region 触发引擎（扩展）
 
     /// <summary>
-    /// 触发引擎扩展
-    /// 整合效果定义系统
+    /// 触发引擎
+    /// 处理条件发动效果（基于事件触发）
     /// </summary>
     public class TriggerEngine
     {
         private List<RegisteredEffect> _registeredEffects = new List<RegisteredEffect>();
         private StackEngine _stackEngine;
 
-        /// <summary>
-        /// 已注册的效果列表
-        /// </summary>
         public List<RegisteredEffect> RegisteredEffects => _registeredEffects;
 
         public TriggerEngine(StackEngine stackEngine)
@@ -619,6 +567,7 @@ namespace CardCore
 
         /// <summary>
         /// 处理游戏事件
+        /// 匹配触发时点 → 创建 PendingEffect → 加入待发队列
         /// </summary>
         public void OnEvent(IGameEvent gameEvent)
         {
@@ -631,6 +580,7 @@ namespace CardCore
                     match.Source,
                     match.Controller,
                     _stackEngine.ActivePlayer,
+                    _stackEngine.CurrentPhase,
                     triggeringEvent: gameEvent
                 );
 
@@ -659,8 +609,7 @@ namespace CardCore
                 if (registered.Source != null && !registered.Source.IsAlive)
                     continue;
 
-                // 检查触发条件
-                // TODO: 实现触发条件检查
+                // TODO: 检查触发条件
 
                 result.Add(registered);
             }
@@ -669,33 +618,23 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 将待发触发效果放入栈（由 StackEngine 处理）
+        /// 将待发触发效果放入栈
         /// </summary>
         public void PutTriggersOnStack()
         {
-            _stackEngine.ProcessPendingEffects();
+            _stackEngine.ProcessTriggeredEffects();
         }
 
-        /// <summary>
-        /// 触发效果结算后的处理
-        /// </summary>
         public void OnTriggerResolved(EffectInstance effect)
         {
-            // 触发效果结算后的清理工作
-            // 当前不需要特殊处理
+            // 触发效果结算后的清理
         }
 
-        /// <summary>
-        /// 清空所有注册效果
-        /// </summary>
         public void Clear()
         {
             _registeredEffects.Clear();
         }
 
-        /// <summary>
-        /// 清空所有注册效果（别名）
-        /// </summary>
         public void ClearAll()
         {
             Clear();
@@ -756,6 +695,7 @@ namespace CardCore
 
         private void RegisterBuiltinHandlers()
         {
+            // 基础效果处理器
             var handlers = new IAtomicEffectHandler[]
             {
                 new DealDamageHandler(),
@@ -769,6 +709,10 @@ namespace CardCore
                 new CreateTokenHandler(),
             };
             foreach (var handler in handlers)
+                EffectHandlerRegistry.Register(handler);
+
+            // 注册所有关键词授予处理器
+            foreach (var handler in GrantKeywordHandlerFactory.CreateAll())
                 EffectHandlerRegistry.Register(handler);
         }
 
@@ -799,13 +743,20 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 注册卡牌效果
+        /// 注册卡牌效果（含关键词触发效果）
         /// </summary>
         public void RegisterCardEffects(Card card, List<EffectDefinition> effects, Player controller)
         {
             foreach (var effect in effects)
             {
                 _triggerEngine.RegisterEffect(effect, card, controller);
+            }
+
+            // 注册关键词触发的效果（狂暴、成长、再生等）
+            var keywordEffects = KeywordEffectMapper.CreateAllTriggeredEffects(card);
+            foreach (var kwEffect in keywordEffects)
+            {
+                _triggerEngine.RegisterEffect(kwEffect, card, controller);
             }
         }
 

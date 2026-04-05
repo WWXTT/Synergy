@@ -62,6 +62,15 @@ namespace CardCore.Attribute
         /// <summary>效果标签（逗号分隔）</summary>
         public string Tags;
 
+        /// <summary>可选触发时机（逗号分隔的 TriggerTiming 枚举名，空表示无触发配置）</summary>
+        public string AvailableTriggerTimings;
+
+        /// <summary>可选目标范围（逗号分隔的 EffectTargetScope 枚举名，空则使用 TargetScope）</summary>
+        public string AvailableTargetScopes;
+
+        /// <summary>分支配置ID（逗号分隔，引用 BranchConfigTable）</summary>
+        public string BranchConfigs;
+
         /// <summary>关联效果枚举名（逗号分隔，常搭配出现的效果）</summary>
         public string RelatedEffects;
 
@@ -91,6 +100,51 @@ namespace CardCore.Attribute
             if (string.IsNullOrEmpty(Tags)) return new List<string>();
             var list = new List<string>();
             foreach (var s in Tags.Split(','))
+            {
+                var trimmed = s.Trim();
+                if (!string.IsNullOrEmpty(trimmed)) list.Add(trimmed);
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 获取可选触发时机列表
+        /// </summary>
+        public List<string> GetAvailableTriggerTimingList()
+        {
+            if (string.IsNullOrEmpty(AvailableTriggerTimings)) return new List<string>();
+            var list = new List<string>();
+            foreach (var s in AvailableTriggerTimings.Split(','))
+            {
+                var trimmed = s.Trim();
+                if (!string.IsNullOrEmpty(trimmed)) list.Add(trimmed);
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 获取可选目标范围列表
+        /// </summary>
+        public List<string> GetAvailableTargetScopeList()
+        {
+            if (string.IsNullOrEmpty(AvailableTargetScopes)) return new List<string>();
+            var list = new List<string>();
+            foreach (var s in AvailableTargetScopes.Split(','))
+            {
+                var trimmed = s.Trim();
+                if (!string.IsNullOrEmpty(trimmed)) list.Add(trimmed);
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 获取分支配置ID列表
+        /// </summary>
+        public List<string> GetBranchConfigIdList()
+        {
+            if (string.IsNullOrEmpty(BranchConfigs)) return new List<string>();
+            var list = new List<string>();
+            foreach (var s in BranchConfigs.Split(','))
             {
                 var trimmed = s.Trim();
                 if (!string.IsNullOrEmpty(trimmed)) list.Add(trimmed);

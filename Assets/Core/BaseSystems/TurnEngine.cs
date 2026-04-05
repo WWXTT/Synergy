@@ -53,7 +53,6 @@ namespace CardCore
         private List<PhaseType> _phaseOrder = new List<PhaseType>
         {
             PhaseType.Standby,
-            PhaseType.Draw,
             PhaseType.Main,
             PhaseType.End
         };
@@ -136,9 +135,6 @@ namespace CardCore
                 case PhaseType.Standby:
                     OnStandbyPhaseStarted();
                     break;
-                case PhaseType.Draw:
-                    OnDrawPhaseStarted();
-                    break;
                 case PhaseType.Main:
                     OnMainPhaseStarted();
                     break;
@@ -149,46 +145,74 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 准备阶段开始
+        /// 准备阶段：重置一回合一次 → 抽1张 → 等待玩家放元素池
         /// </summary>
         private void OnStandbyPhaseStarted()
         {
-            // 所有横置的单位恢复为立置状态
-            // TODO: 实现 Unit 的 untap 逻辑
-            // 触发 UntapEvent
+            // 1. 重置回合使用标记
+            // TODO: 遍历战场卡牌重置一回合一次计数
+
+            // 2. 抽一张牌
+            // 由 GameCore 调用 ZoneManagerExtensions.DrawCard
+
+            // 3. 重置元素池每回合一次标记
+            // 由 GameCore 调用 ElementPool.ResetTurnUsage
+
+            // 4. 准备阶段自动完成后进入主阶段
+            // 玩家在准备阶段的操作（放元素池）由 GameActions 处理
+            // 完成后调用 AdvanceFromStandby()
         }
 
         /// <summary>
-        /// 抽卡阶段开始
+        /// 准备阶段完成，进入主阶段
+        /// 由 GameActions.AddToElementPool 或 GameActions.SkipElementPool 调用
         /// </summary>
-        private void OnDrawPhaseStarted()
+        public void AdvanceFromStandby()
         {
-            // 玩家抽卡
-            // TODO: 实现 ZoneManager 从 Deck 抽卡到 Hand
-            // 触发 CardDrawEvent
-
-            // 检查是否可以进入下一阶段
-            CheckPhaseTransition();
+            if (_currentPhase?.Phase != PhaseType.Standby)
+                return;
+            EndCurrentPhase();
+            GoToNextPhase();
         }
 
         /// <summary>
-        /// 主阶段开始
+        /// 主阶段：玩家可出牌、攻击、发动效果
         /// </summary>
         private void OnMainPhaseStarted()
         {
-            // 战斗融入主阶段
-            // 玩家可以通过 GameCore.CombatSystem.StartCombat() 开始战斗
-            // 战斗不是强制性的，玩家可以选择是否进行战斗
+            // 主阶段等待玩家操作，不做自动推进
         }
 
         /// <summary>
-        /// 结束阶段开始
+        /// 结束阶段：SBA检查 → 手牌上限 → 清理临时效果 → 切换玩家
         /// </summary>
         private void OnEndPhaseStarted()
         {
-            // 检查手牌上限
-            // 丢弃超出手牌
-            // 触发 PhaseEndEvent
+            // 由 GameCore 调用 SBA 检查和清理
+            // 这里只发布事件和推进
+
+            PublishEvent(new TurnEndEvent
+            {
+                TurnPlayer = _turnPlayer,
+                TurnNumber = _turnNumber
+            });
+
+            CheckGameOver();
+            PrepareNextTurn();
+        }
+
+        /// <summary>
+        /// 玩家主动结束回合
+        /// </summary>
+        public void EndTurn()
+        {
+            if (_currentPhase?.Phase != PhaseType.Main)
+                return;
+            if (_currentPhase?.State != PhaseState.Active)
+                return;
+
+            EndCurrentPhase();
+            GoToNextPhase();
         }
 
         /// <summary>
@@ -233,56 +257,11 @@ namespace CardCore
         /// </summary>
         private void OnPhaseEnded(PhaseType phaseType)
         {
-            switch (phaseType)
+            // 主阶段结束时清理
+            if (phaseType == PhaseType.Main)
             {
-                case PhaseType.Draw:
-                    OnDrawPhaseEnded();
-                    break;
-                case PhaseType.Main:
-                    OnMainPhaseEnded();
-                    break;
-                case PhaseType.End:
-                    OnEndPhaseEnded();
-                    break;
+                // 清理战斗状态
             }
-        }
-
-        /// <summary>
-        /// 抽卡阶段结束
-        /// </summary>
-        private void OnDrawPhaseEnded()
-        {
-            // 清理临时效果
-            // 检查状态变化
-        }
-
-        /// <summary>
-        /// 主阶段结束
-        /// </summary>
-        private void OnMainPhaseEnded()
-        {
-            // 清理持续效果
-            // 检查战斗结果
-        }
-
-        /// <summary>
-        /// 结束阶段结束
-        /// </summary>
-        private void OnEndPhaseEnded()
-        {
-            // 回合结束处理
-            // 触发回合结束事件
-            PublishEvent(new TurnEndEvent
-            {
-                TurnPlayer = _turnPlayer,
-                TurnNumber = _turnNumber
-            });
-
-            // 检查游戏结束条件
-            CheckGameOver();
-
-            // 准备下一回合
-            PrepareNextTurn();
         }
 
         /// <summary>
@@ -327,10 +306,7 @@ namespace CardCore
         /// </summary>
         private void CheckGameOver()
         {
-            // 检查玩家生命值
-            // TODO: 通过 Entity 获取玩家生命值
-            /*
-            if (_turnPlayer.Life <= 0 || _turnPlayer.Opponent.Life <= 0)
+            if (_turnPlayer != null && _turnPlayer.Life <= 0)
             {
                 PublishEvent(new GameOverEvent
                 {
@@ -340,7 +316,17 @@ namespace CardCore
                     TotalTurns = _turnNumber
                 });
             }
-            */
+
+            if (_turnPlayer?.Opponent != null && _turnPlayer.Opponent.Life <= 0)
+            {
+                PublishEvent(new GameOverEvent
+                {
+                    Winner = _turnPlayer,
+                    Loser = _turnPlayer.Opponent,
+                    Reason = GameOverReason.LifeZero,
+                    TotalTurns = _turnNumber
+                });
+            }
         }
 
         /// <summary>
@@ -401,7 +387,6 @@ namespace CardCore
             var phaseOrder = new List<PhaseType>
             {
                 PhaseType.Standby,
-                PhaseType.Draw,
                 PhaseType.Main,
                 PhaseType.End
             };

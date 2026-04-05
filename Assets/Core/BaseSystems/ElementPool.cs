@@ -1,61 +1,107 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-
 
 namespace CardCore
 {
     /// <summary>
-    /// 元素池卡
-    /// 放置在元素池中的卡牌（背面向上）
+    /// 元素池中的卡牌（带指示物）
+    /// 基于卡牌的费用构成放置对应数量的元素指示物
+    /// 每回合可取一个指示物获得对应元素
+    /// 指示物耗尽后卡牌进入墓地
     /// </summary>
-    public class ElementCard
+    public class PooledCard
     {
-        public Card Card { get; set; }
-        public ManaType ManaType { get; set; }
-        public DateTime PlacedTime { get; set; }
-        public int SequenceNumber { get; set; }
-        public bool IsConsumed { get; set; }
+        public Card SourceCard { get; }
+
+        /// <summary>剩余指示物 {Red:2, Gray:1}</summary>
+        public Dictionary<ManaType, int> Tokens { get; private set; }
+
+        /// <summary>初始指示物数量（用于显示）</summary>
+        public Dictionary<ManaType, int> TotalTokens { get; }
+
+        public PooledCard(Card card, Dictionary<ManaType, int> tokens)
+        {
+            SourceCard = card;
+            Tokens = new Dictionary<ManaType, int>(tokens);
+            TotalTokens = new Dictionary<ManaType, int>(tokens);
+        }
+
+        public bool HasToken(ManaType type)
+        {
+            return Tokens.ContainsKey(type) && Tokens[type] > 0;
+        }
+
+        /// <summary>是否所有指示物已耗尽</summary>
+        public bool IsDepleted => Tokens.Values.Sum() == 0;
+
+        /// <summary>获取指示物总数</summary>
+        public int TotalTokenCount => Tokens.Values.Sum();
+
+        /// <summary>
+        /// 移除一个指定颜色的指示物
+        /// </summary>
+        /// <returns>true 表示该卡已耗尽</returns>
+        public bool RemoveToken(ManaType type)
+        {
+            if (!HasToken(type))
+                throw new InvalidOperationException($"PooledCard 没有颜色 {type} 的指示物");
+
+            Tokens[type]--;
+            return IsDepleted;
+        }
+
+        /// <summary>获取所有有剩余指示物的颜色</summary>
+        public List<ManaType> GetAvailableColors()
+        {
+            return Tokens.Where(kv => kv.Value > 0).Select(kv => kv.Key).ToList();
+        }
+    }
+
+    /// <summary>
+    /// 玩家元素池数据
+    /// </summary>
+    public class PlayerElementPool
+    {
+        /// <summary>池中的卡牌（带指示物）</summary>
+        public List<PooledCard> PooledCards { get; } = new List<PooledCard>();
+
+        /// <summary>本回合是否已获得过元素（每回合一次）</summary>
+        public bool HasGainedTokenThisTurn { get; set; }
+
+        /// <summary>当前可用元素（从指示物获得 + 临时效果添加）</summary>
+        public Dictionary<ManaType, int> AvailableMana { get; } = new Dictionary<ManaType, int>();
+
+        public PlayerElementPool()
+        {
+            foreach (ManaType mana in Enum.GetValues(typeof(ManaType)))
+            {
+                AvailableMana[mana] = 0;
+            }
+        }
     }
 
     /// <summary>
     /// 元素池系统
-    /// 负责管理元素池，支持按颜色分类、优先消耗先入场的元素
-    /// 按玩家分开管理
+    /// 核心费用体系：
+    /// 1. 准备阶段放1张手牌进元素池，基于费用生成指示物
+    /// 2. 每回合一次，取1个指示物 → 获得1个对应元素
+    /// 3. 指示物耗尽 → 卡牌进墓地
+    /// 4. 出牌/发动效果时，从可用元素中支付费用
     /// </summary>
     public class ElementPoolSystem
     {
-        private const int MAX_TOTAL_COST = 12;
+        private const int HAND_SIZE_LIMIT = 7;
+        private const int MAX_POOL_SIZE = 12;
 
-        // 按玩家分类的元素池
         private Dictionary<Player, PlayerElementPool> _playerPools =
             new Dictionary<Player, PlayerElementPool>();
 
-        /// <summary>
-        /// 玩家元素池数据
-        /// </summary>
-        public class PlayerElementPool
-        {
-            public Dictionary<ManaType, Queue<ElementCard>> Elements =
-                new Dictionary<ManaType, Queue<ElementCard>>();
-            public int TotalCost = 0;
+        /// <summary>耗尽卡牌时用于移动到墓地</summary>
+        public event Action<Card, Player> OnCardDepleted;
 
-            /// <summary>临时可用元素（效果直接添加，不通过卡牌）</summary>
-            public Dictionary<ManaType, int> AvailableMana = new Dictionary<ManaType, int>();
+        // ======================================== 初始化 ========================================
 
-            public PlayerElementPool()
-            {
-                foreach (ManaType mana in Enum.GetValues(typeof(ManaType)))
-                {
-                    Elements[mana] = new Queue<ElementCard>();
-                    AvailableMana[mana] = 0;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 初始化玩家元素池
-        /// </summary>
         public void InitializePlayer(Player player)
         {
             if (!_playerPools.ContainsKey(player))
@@ -64,9 +110,6 @@ namespace CardCore
             }
         }
 
-        /// <summary>
-        /// 获取玩家元素池
-        /// </summary>
         public PlayerElementPool GetPool(Player player)
         {
             if (!_playerPools.ContainsKey(player))
@@ -74,257 +117,342 @@ namespace CardCore
             return _playerPools[player];
         }
 
-        /// <summary>
-        /// 获取玩家当前总费用
-        /// </summary>
-        public int GetTotalCost(Player player)
-        {
-            return GetPool(player).TotalCost;
-        }
+        // ======================================== 放卡进元素池 ========================================
 
         /// <summary>
-        /// 检查玩家元素池是否已满
+        /// 将卡牌放入元素池（准备阶段调用）
+        /// 基于卡牌的费用构成生成指示物
         /// </summary>
-        public bool IsFull(Player player)
+        public bool AddCardToPool(Card card, Player owner)
         {
-            return GetPool(player).TotalCost >= MAX_TOTAL_COST;
-        }
+            if (card == null || owner == null) return false;
 
-        /// <summary>
-        /// 获取玩家剩余空间
-        /// </summary>
-        public int GetRemainingSpace(Player player)
-        {
-            return MAX_TOTAL_COST - GetPool(player).TotalCost;
-        }
-
-        /// <summary>
-        /// 添加元素到池中
-        /// </summary>
-        public bool AddElement(Card card, ManaType manaType, Player owner)
-        {
             var pool = GetPool(owner);
 
-            // 检查是否已满
-            if (pool.TotalCost >= MAX_TOTAL_COST)
+            // 检查池大小限制
+            int totalTokensInPool = pool.PooledCards.Sum(pc => pc.TotalTokenCount);
+            if (totalTokensInPool >= MAX_POOL_SIZE)
                 return false;
 
-            // 检查卡牌是否已经在池中
-            if (pool.Elements[manaType].Any(e => e.Card == card))
+            // 从卡牌读取费用构成
+            var cost = GetCardCostAsTokens(card);
+            if (cost.Values.Sum() == 0)
                 return false;
 
-            // 创建元素卡
-            var elementCard = new ElementCard
-            {
-                Card = card,
-                ManaType = manaType,
-                PlacedTime = DateTime.Now,
-                SequenceNumber = pool.Elements[manaType].Count,
-                IsConsumed = false
-            };
+            // 创建带指示物的池卡
+            var pooledCard = new PooledCard(card, cost);
+            pool.PooledCards.Add(pooledCard);
 
-            // 添加到对应颜色的队列
-            pool.Elements[manaType].Enqueue(elementCard);
-
-            // 更新总费用
-            pool.TotalCost += GetCardCost(card);
-
-            // 触发事件
             PublishEvent(new ElementPoolAddEvent
             {
                 Player = owner,
                 AddedCard = card,
-                ManaType = manaType
+                Tokens = cost
             });
 
             return true;
         }
 
+        // ======================================== 从指示物获得元素 ========================================
+
         /// <summary>
-        /// 消耗元素
+        /// 每回合一次：从指示物获得一个元素
         /// </summary>
-        public bool ConsumeElement(ManaType manaType, int amount, Effect source, Player player)
+        /// <param name="type">要获得的元素颜色</param>
+        /// <returns>是否成功</returns>
+        public bool GainElementFromToken(ManaType type, Player player)
         {
             var pool = GetPool(player);
-            var queue = pool.Elements[manaType];
 
-            // 检查是否有足够元素
-            if (GetElementCount(manaType, player) < amount)
+            // 每回合一次限制
+            if (pool.HasGainedTokenThisTurn)
                 return false;
 
-            // 消耗指定数量的元素（先入先出）
-            for (int i = 0; i < amount; i++)
-            {
-                if (queue.Count > 0)
-                {
-                    var element = queue.Dequeue();
-                    element.IsConsumed = true;
-                    pool.TotalCost -= GetCardCost(element.Card);
-                }
-            }
+            // 找到有该颜色指示物的池卡
+            var pooledCard = pool.PooledCards.FirstOrDefault(pc => pc.HasToken(type));
+            if (pooledCard == null)
+                return false;
 
-            // 触发事件
-            PublishEvent(new ElementPoolConsumeEvent
+            // 移除指示物，增加可用元素
+            bool depleted = pooledCard.RemoveToken(type);
+            pool.AvailableMana[type]++;
+            pool.HasGainedTokenThisTurn = true;
+
+            PublishEvent(new ElementPoolGainEvent
             {
                 Player = player,
-                ManaType = manaType,
-                Amount = amount,
-                Source = source
+                GainedType = type,
+                FromCard = pooledCard.SourceCard
+            });
+
+            // 检查是否耗尽
+            if (depleted)
+            {
+                MoveDepletedCard(pooledCard, player);
+            }
+
+            return true;
+        }
+
+        // ======================================== 支付费用 ========================================
+
+        /// <summary>
+        /// 检查是否可以支付指定费用
+        /// </summary>
+        public bool CanPayCost(Dictionary<int, float> cost, Player player)
+        {
+            var pool = GetPool(player);
+
+            foreach (var kvp in cost)
+            {
+                ManaType type = (ManaType)kvp.Key;
+                int amount = (int)kvp.Value;
+                if (!pool.AvailableMana.ContainsKey(type) || pool.AvailableMana[type] < amount)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 支付费用（出牌时调用）
+        /// </summary>
+        public bool PayCost(Dictionary<int, float> cost, Player player)
+        {
+            var pool = GetPool(player);
+
+            // 先检查是否够
+            if (!CanPayCost(cost, player))
+                return false;
+
+            // 扣减可用元素
+            foreach (var kvp in cost)
+            {
+                ManaType type = (ManaType)kvp.Key;
+                int amount = (int)kvp.Value;
+                pool.AvailableMana[type] -= amount;
+            }
+
+            PublishEvent(new ElementPoolPayEvent
+            {
+                Player = player,
+                PaidCost = cost
             });
 
             return true;
         }
 
+        // ======================================== 回合管理 ========================================
+
         /// <summary>
-        /// 检查是否可以消耗指定数量的元素
+        /// 回合开始时重置使用标记
         /// </summary>
-        public bool CanConsume(ManaType manaType, int amount, Player player)
+        public void ResetTurnUsage(Player player)
         {
-            return GetElementCount(manaType, player) >= amount;
+            var pool = GetPool(player);
+            pool.HasGainedTokenThisTurn = false;
         }
 
         /// <summary>
-        /// 获取指定颜色的元素数量
+        /// 检查并移除所有耗尽的卡牌到墓地
         /// </summary>
-        public int GetElementCount(ManaType manaType, Player player)
+        public void CheckDepletedCards(Player player)
         {
             var pool = GetPool(player);
-            return pool.Elements.ContainsKey(manaType) ? pool.Elements[manaType].Count : 0;
-        }
+            var depleted = pool.PooledCards.Where(pc => pc.IsDepleted).ToList();
 
-        /// <summary>
-        /// 获取玩家所有元素卡
-        /// </summary>
-        public List<ElementCard> GetAllElements(Player player)
-        {
-            var result = new List<ElementCard>();
-            var pool = GetPool(player);
-            foreach (var kvp in pool.Elements)
+            foreach (var pc in depleted)
             {
-                result.AddRange(kvp.Value);
+                MoveDepletedCard(pc, player);
             }
-            return result;
         }
 
         /// <summary>
-        /// 获取指定颜色的元素队列
+        /// 检查并移除所有耗尽的卡牌到墓地（含区域移动）
         /// </summary>
-        public Queue<ElementCard> GetElementQueue(ManaType manaType, Player player)
-        {
-            return GetPool(player).Elements[manaType];
-        }
-
-        /// <summary>
-        /// 移除指定的元素卡
-        /// </summary>
-        public bool RemoveElement(ElementCard element, Player player)
+        public void CheckDepletedCards(Player player, ZoneManager zoneManager)
         {
             var pool = GetPool(player);
-            var queue = pool.Elements[element.ManaType];
+            var depleted = pool.PooledCards.Where(pc => pc.IsDepleted).ToList();
 
-            if (!queue.Contains(element))
-                return false;
-
-            var tempList = queue.ToList();
-            tempList.Remove(element);
-            pool.Elements[element.ManaType] = new Queue<ElementCard>(tempList);
-            pool.TotalCost -= GetCardCost(element.Card);
-
-            return true;
-        }
-
-        /// <summary>
-        /// 移除卡牌对应的所有元素
-        /// </summary>
-        public void RemoveElementsByCard(Card card, Player player)
-        {
-            var pool = GetPool(player);
-            foreach (var kvp in pool.Elements)
+            foreach (var pc in depleted)
             {
-                var toRemove = kvp.Value.Where(e => e.Card == card).ToList();
-                foreach (var element in toRemove)
+                pool.PooledCards.Remove(pc);
+
+                PublishEvent(new ElementPoolDepleteEvent
                 {
-                    RemoveElement(element, player);
+                    Player = player,
+                    DepletedCard = pc.SourceCard
+                });
+
+                // 将耗尽卡牌移到墓地
+                if (zoneManager != null)
+                    zoneManager.MoveCard(pc.SourceCard, player, Zone.ElementPool, Zone.Graveyard);
+
+                OnCardDepleted?.Invoke(pc.SourceCard, player);
+            }
+        }
+
+        // ======================================== 查询 ========================================
+
+        public int GetAvailableManaCount(ManaType type, Player player)
+        {
+            var pool = GetPool(player);
+            return pool.AvailableMana.ContainsKey(type) ? pool.AvailableMana[type] : 0;
+        }
+
+        public int GetTotalAvailableMana(Player player)
+        {
+            return GetPool(player).AvailableMana.Values.Sum();
+        }
+
+        public bool HasGainedTokenThisTurn(Player player)
+        {
+            return GetPool(player).HasGainedTokenThisTurn;
+        }
+
+        public List<PooledCard> GetPooledCards(Player player)
+        {
+            return GetPool(player).PooledCards.ToList();
+        }
+
+        public List<ManaType> GetGainedableTypes(Player player)
+        {
+            var pool = GetPool(player);
+            if (pool.HasGainedTokenThisTurn)
+                return new List<ManaType>();
+
+            return pool.PooledCards
+                .SelectMany(pc => pc.GetAvailableColors())
+                .Distinct()
+                .ToList();
+        }
+
+        public int GetTotalTokensInPool(Player player)
+        {
+            return GetPool(player).PooledCards.Sum(pc => pc.TotalTokenCount);
+        }
+
+        // ======================================== 内部方法 ========================================
+
+        private void MoveDepletedCard(PooledCard pooledCard, Player player)
+        {
+            var pool = GetPool(player);
+            pool.PooledCards.Remove(pooledCard);
+
+            PublishEvent(new ElementPoolDepleteEvent
+            {
+                Player = player,
+                DepletedCard = pooledCard.SourceCard
+            });
+
+            OnCardDepleted?.Invoke(pooledCard.SourceCard, player);
+        }
+
+        /// <summary>
+        /// 从卡牌读取费用，转换为指示物
+        /// </summary>
+        private Dictionary<ManaType, int> GetCardCostAsTokens(Card card)
+        {
+            var tokens = new Dictionary<ManaType, int>();
+
+            // 从 IHasCost 接口读取费用
+            if (card is IHasCost hasCost && hasCost.Cost != null)
+            {
+                foreach (var kvp in hasCost.Cost)
+                {
+                    ManaType type = (ManaType)kvp.Key;
+                    int amount = (int)kvp.Value;
+                    if (amount > 0)
+                    {
+                        tokens[type] = amount;
+                    }
                 }
             }
+
+            // 如果卡牌没有费用（灰色1点），给一个默认灰色指示物
+            if (tokens.Values.Sum() == 0)
+            {
+                tokens[ManaType.Gray] = 1;
+            }
+
+            return tokens;
         }
 
-        /// <summary>
-        /// 重置所有元素池
-        /// </summary>
+        // ======================================== 重置/工具 ========================================
+
         public void Reset()
         {
             foreach (var pool in _playerPools.Values)
             {
-                foreach (var queue in pool.Elements.Values)
+                pool.PooledCards.Clear();
+                pool.HasGainedTokenThisTurn = false;
+                foreach (ManaType mana in Enum.GetValues(typeof(ManaType)))
                 {
-                    queue.Clear();
+                    pool.AvailableMana[mana] = 0;
                 }
-                pool.TotalCost = 0;
             }
         }
 
-        /// <summary>
-        /// 获取卡牌费用
-        /// </summary>
-        private int GetCardCost(Card card)
-        {
-            return 1;
-        }
-
-        /// <summary>
-        /// 获取玩家元素池状态字符串
-        /// </summary>
         public string GetStatusString(Player player)
         {
             var pool = GetPool(player);
-            var result = $"元素池 ({pool.TotalCost}/{MAX_TOTAL_COST}):\n";
+            var result = $"元素池 ({pool.PooledCards.Count} 张卡):\n";
 
-            foreach (ManaType manaType in Enum.GetValues(typeof(ManaType)))
+            foreach (var pc in pool.PooledCards)
             {
-                int count = GetElementCount(manaType, player);
-                if (count > 0)
-                {
-                    result += $"  {manaType}: {count}\n";
-                }
+                var name = (pc.SourceCard as IHasName)?.CardName ?? pc.SourceCard.ID;
+                var tokenStr = string.Join(", ", pc.Tokens.Where(kv => kv.Value > 0).Select(kv => $"{kv.Key}:{kv.Value}"));
+                result += $"  [{name}] 指示物: {tokenStr}\n";
             }
+
+            var manaStr = string.Join(", ", pool.AvailableMana.Where(kv => kv.Value > 0).Select(kv => $"{kv.Key}:{kv.Value}"));
+            result += $"可用元素: {manaStr}\n";
+            result += $"本回合已取指示物: {(pool.HasGainedTokenThisTurn ? "是" : "否")}";
 
             return result;
         }
 
-        /// <summary>
-        /// 发布事件
-        /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
             EventManager.Instance.Publish(e);
         }
     }
 
-    /// <summary>
-    /// 元素池扩展方法
-    /// </summary>
-    public static class ElementPoolExtensions
+    // ======================================== 元素池事件 ========================================
+
+    public class ElementPoolAddEvent : IGameEvent
     {
-        /// <summary>
-        /// 计算多色卡的可选元素类型
-        /// </summary>
-        public static List<ManaType> GetAvailableManaTypes(
-            this Card card,
-            ElementPoolSystem elementPool,
-            Player player)
-        {
-            var result = new List<ManaType>();
+        public Player Player { get; set; }
+        public Card AddedCard { get; set; }
+        public Dictionary<ManaType, int> Tokens { get; set; }
+    }
 
-            foreach (ManaType mana in Enum.GetValues(typeof(ManaType)))
-            {
-                if (elementPool.GetElementCount(mana, player) > 0)
-                {
-                    result.Add(mana);
-                }
-            }
+    public class ElementPoolGainEvent : IGameEvent
+    {
+        public Player Player { get; set; }
+        public ManaType GainedType { get; set; }
+        public Card FromCard { get; set; }
+    }
 
-            return result;
-        }
+    public class ElementPoolPayEvent : IGameEvent
+    {
+        public Player Player { get; set; }
+        public Dictionary<int, float> PaidCost { get; set; }
+    }
+
+    public class ElementPoolDepleteEvent : IGameEvent
+    {
+        public Player Player { get; set; }
+        public Card DepletedCard { get; set; }
+    }
+
+    // 保留旧事件名的兼容性
+    public class ElementPoolConsumeEvent : IGameEvent
+    {
+        public Player Player { get; set; }
+        public ManaType ManaType { get; set; }
+        public int Amount { get; set; }
+        public Effect Source { get; set; }
     }
 }

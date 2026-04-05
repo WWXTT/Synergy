@@ -144,6 +144,27 @@ namespace CardCore
         }
 
         /// <summary>
+        /// 验证目标实体是否可以作为效果目标，失败时抛出异常
+        /// </summary>
+        /// <param name="target">目标实体</param>
+        /// <param name="source">效果来源</param>
+        /// <param name="effectType">效果类型</param>
+        /// <exception cref="InvalidTargetException">目标为null、已死亡或不可被指定时抛出</exception>
+        public static void ValidateTarget(Entity target, Entity source, AtomicEffectType effectType)
+        {
+            if (target == null)
+                throw new InvalidTargetException(null, $"Target is null for effect type {effectType}.");
+            if (!target.IsAlive)
+                throw new InvalidTargetException(target, $"Target {target} is not alive and cannot be targeted by {effectType}.");
+
+            if (target is IHasEffectImmunity immunity)
+            {
+                if (!immunity.CanBeTargetedBy(source, effectType))
+                    throw new InvalidTargetException(target, $"Target {target} cannot be targeted by {effectType} from {source} due to immunity.");
+            }
+        }
+
+        /// <summary>
         /// 检查实体是否受效果影响
         /// </summary>
         /// <param name="target">目标实体</param>
@@ -158,6 +179,24 @@ namespace CardCore
                 return !immunity.IsUnaffectedBy(effectType);
             }
             return true;
+        }
+
+        /// <summary>
+        /// 验证实体是否受效果影响，失败时抛出异常
+        /// </summary>
+        /// <param name="target">目标实体</param>
+        /// <param name="effectType">效果类型</param>
+        /// <exception cref="InvalidTargetException">目标不受效果影响时抛出</exception>
+        public static void ValidateAffectedBy(Entity target, AtomicEffectType effectType)
+        {
+            if (target == null)
+                throw new InvalidTargetException(null, $"Cannot check effect affinity: target is null for effect type {effectType}.");
+
+            if (target is IHasEffectImmunity immunity)
+            {
+                if (immunity.IsUnaffectedBy(effectType))
+                    throw new InvalidTargetException(target, $"Target {target} is unaffected by {effectType}.");
+            }
         }
 
         /// <summary>

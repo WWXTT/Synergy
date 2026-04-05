@@ -119,6 +119,17 @@ namespace CardCore
         }
 
         /// <summary>
+        /// 关键词列表（如冲锋、飞行、圣盾等自身被动效果）
+        /// </summary>
+        [SerializeField]
+        private List<string> _keywords;
+        public List<string> Keywords
+        {
+            get => _keywords ??= new List<string>();
+            set => _keywords = value;
+        }
+
+        /// <summary>
         /// 总费用计算
         /// </summary>
         [NonSerialized]
@@ -379,7 +390,9 @@ namespace CardCore
         IHasPower,
         IHasCost,
         IHasEffects,
-        IHasRuntimeEffects
+        IHasRuntimeEffects,
+        IHasKeywords,
+        CardDataWrapper
     {
         private readonly CardData _data;
         private List<IEffect> _runtimeEffects;
@@ -410,6 +423,34 @@ namespace CardCore
         {
             get => _runtimeEffects;
             set => _runtimeEffects = value;
+        }
+
+        // IHasKeywords - 直接使用 Card._keywords，与 EntityEffectExtensions 统一
+        HashSet<string> IHasKeywords.Keywords
+        {
+            get => _keywords;
+            set
+            {
+                _keywords.Clear();
+                if (value != null)
+                    foreach (var kw in value)
+                        _keywords.Add(kw);
+            }
+        }
+
+        void IHasKeywords.AddKeyword(string keywordId)
+        {
+            _keywords.Add(keywordId);
+        }
+
+        void IHasKeywords.RemoveKeyword(string keywordId)
+        {
+            _keywords.Remove(keywordId);
+        }
+
+        bool IHasKeywords.HasKeyword(string keywordId)
+        {
+            return _keywords.Contains(keywordId);
         }
 
         /// <summary>
@@ -449,6 +490,12 @@ namespace CardCore
 
             // 初始化运行时效果列表（需要从效果表中解析）
             _runtimeEffects = new List<IEffect>();
+
+            // 注入关键词到 Card._keywords（与 EntityEffectExtensions 统一）
+            foreach (var kw in data.Keywords)
+            {
+                _keywords.Add(kw);
+            }
         }
 
         /// <summary>
