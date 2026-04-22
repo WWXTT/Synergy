@@ -198,26 +198,4 @@ namespace CardCore
     {
         Cardtype Supertype { get; set; }
     }
-
-    // ============================================ 效果类 ============================================
-
-    /// <summary>
-    /// 造成伤害效果
-    /// </summary>
-    [Serializable]
-    public class EDamage : IAtomicEffect
-    {
-        public int Amount { get; }
-        public EDamage(int amount) { Amount = amount; }
-    }
-
-    /// <summary>
-    /// 回复生命效果
-    /// </summary>
-    [Serializable]
-    public class EHeal : IAtomicEffect
-    {
-        public int Amount { get; }
-        public EHeal(int amount) { Amount = amount; }
-    }
 }

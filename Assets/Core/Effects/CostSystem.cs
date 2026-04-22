@@ -161,12 +161,14 @@ namespace CardCore
         public bool CanPay(CostInstance cost, CostContext context)
         {
             if (context.ElementPool == null || context.Payer == null) return false;
-            return context.ElementPool.CanConsume(cost.ManaType, cost.Value, context.Payer);
+            var costDict = new Dictionary<int, float> { { (int)cost.ManaType, cost.Value } };
+            return context.ElementPool.CanPayCost(costDict, context.Payer);
         }
 
         public void Pay(CostInstance cost, CostContext context)
         {
-            context.ElementPool.ConsumeElement(cost.ManaType, cost.Value, null, context.Payer);
+            var costDict = new Dictionary<int, float> { { (int)cost.ManaType, cost.Value } };
+            context.ElementPool.PayCost(costDict, context.Payer);
         }
 
         public string GetDescription(CostInstance cost)

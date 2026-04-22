@@ -64,16 +64,17 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.5.0a8\Editor\Data\BCLExtensions\TargetingPacks\netstandard2.1\analyzers\dotnet\roslyn4.0\cs\System.Text.Json.SourceGeneration.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Tests\Core\ZoneManagerTests.cs" />
+    <Compile Include="Assets\Tests\Core\StackEngineTests.cs" />
     <Compile Include="Assets\Tests\Core\EventManagerTests.cs" />
     <Compile Include="Assets\Tests\Core\ReplacementEngineTests.cs" />
-    <Compile Include="Assets\Tests\Core\StateBasedActionsTests.cs" />
-    <Compile Include="Assets\Tests\Core\GameLoopTests.cs" />
+    <Compile Include="Assets\Tests\Core\TurnEngineTests.cs" />
     <Compile Include="Assets\Tests\Core\CardLoaderTests.cs" />
     <Compile Include="Assets\Tests\Core\LayerEngineTests.cs" />
-    <Compile Include="Assets\Tests\Core\TurnEngineTests.cs" />
+    <Compile Include="Assets\Tests\Core\StateBasedActionsTests.cs" />
     <Compile Include="Assets\Tests\Core\SummonEngineTests.cs" />
     <Compile Include="Assets\Tests\Core\CombatSystemTests.cs" />
-    <Compile Include="Assets\Tests\Core\ZoneManagerTests.cs" />
+    <Compile Include="Assets\Tests\Core\GameLoopTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Tests\CardCore.Tests.asmdef" />
@@ -1231,12 +1232,12 @@
       <HintPath>Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEditor.TestRunner">
-      <HintPath>Library\ScriptAssemblies\UnityEditor.TestRunner.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.TestRunner">
       <HintPath>Library\ScriptAssemblies\UnityEngine.TestRunner.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEditor.TestRunner">
+      <HintPath>Library\ScriptAssemblies\UnityEditor.TestRunner.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

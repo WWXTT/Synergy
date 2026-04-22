@@ -421,34 +421,34 @@ namespace CardCore
 
     // ======================================== 元素池事件 ========================================
 
-    public class ElementPoolAddEvent : IGameEvent
+    public class ElementPoolAddEvent : GameEventBase
     {
         public Player Player { get; set; }
         public Card AddedCard { get; set; }
         public Dictionary<ManaType, int> Tokens { get; set; }
     }
 
-    public class ElementPoolGainEvent : IGameEvent
+    public class ElementPoolGainEvent : GameEventBase
     {
         public Player Player { get; set; }
         public ManaType GainedType { get; set; }
         public Card FromCard { get; set; }
     }
 
-    public class ElementPoolPayEvent : IGameEvent
+    public class ElementPoolPayEvent : GameEventBase
     {
         public Player Player { get; set; }
         public Dictionary<int, float> PaidCost { get; set; }
     }
 
-    public class ElementPoolDepleteEvent : IGameEvent
+    public class ElementPoolDepleteEvent : GameEventBase
     {
         public Player Player { get; set; }
         public Card DepletedCard { get; set; }
     }
 
     // 保留旧事件名的兼容性
-    public class ElementPoolConsumeEvent : IGameEvent
+    public class ElementPoolConsumeEvent : GameEventBase
     {
         public Player Player { get; set; }
         public ManaType ManaType { get; set; }

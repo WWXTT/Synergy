@@ -7,6 +7,10 @@ namespace CardCore
     /// </summary>
     public static class MurmurHash3
     {
+        // Synergy 项目专用种子
+        public const uint SYNERGY_TAG_SEED = 0x53796E67;       // "Syng"
+        public const ulong SYNERGY_EFFECT_SEED = 0x53796E6765727931UL; // "Syngery1"
+
         public static uint Hash32(byte[] data, uint seed = 0)
         {
             const uint c1 = 0xcc9e2d51;
@@ -196,6 +200,22 @@ namespace CardCore
         {
             byte[] data = System.Text.Encoding.UTF8.GetBytes(input);
             return Hash64(data, seed);
+        }
+
+        /// <summary>
+        /// 从 "ClassName.PropertyName" 生成稳定的 int 标签，用于 MemoryPackOrder
+        /// </summary>
+        public static int StableTag(string className, string propertyName)
+        {
+            return (int)(Hash32($"{className}.{propertyName}", SYNERGY_TAG_SEED) & 0x7FFFFFFF);
+        }
+
+        /// <summary>
+        /// 从效果描述文本生成 64 位标签，用于效果唯一标识
+        /// </summary>
+        public static long EffectTag(string description)
+        {
+            return (long)Hash64(description, SYNERGY_EFFECT_SEED);
         }
     }
 }

@@ -79,7 +79,7 @@ namespace CardCore
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
             if (instance.Definition == null)
-                throw new EffectResolutionException("Effect instance has no definition", instance.SourceEffect);
+                throw new EffectResolutionException(instance.SourceEffect, "Effect instance has no definition");
 
             var effect = instance.Definition;
 

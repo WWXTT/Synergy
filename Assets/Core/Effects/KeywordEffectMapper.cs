@@ -151,7 +151,7 @@ namespace CardCore
                 {
                     Type = AtomicEffectType.Heal,
                     Value = 999, // 恢复所有伤害
-                    Duration = DurationType.Instant
+                    Duration = DurationType.Once
                 },
                 Description = "回合结束时恢复所有伤害"
             });

@@ -370,29 +370,6 @@ namespace CardCore
         public int TotalTurns { get; set; }
     }
 
-    // ==================== 元素池事件 ====================
-
-    /// <summary>
-    /// 元素池添加事件
-    /// </summary>
-    public class ElementPoolAddEvent : GameEventBase
-    {
-        public Player Player { get; set; }
-        public Card AddedCard { get; set; } // 背面放置的卡
-        public ManaType ManaType { get; set; }
-    }
-
-    /// <summary>
-    /// 元素池消耗事件
-    /// </summary>
-    public class ElementPoolConsumeEvent : GameEventBase
-    {
-        public Player Player { get; set; }
-        public ManaType ManaType { get; set; }
-        public int Amount { get; set; }
-        public Effect Source { get; set; }
-    }
-
     // ==================== 触发事件 ====================
 
     /// <summary>
