@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace CardCore
@@ -88,10 +89,10 @@ namespace CardCore
         /// 效果列表
         /// </summary>
         [SerializeField]
-        private List<EffectData> _effects;
-        public List<EffectData> Effects
+        private List<CardEffectData> _effects;
+        public List<CardEffectData> Effects
         {
-            get => _effects ??= new List<EffectData>();
+            get => _effects ??= new List<CardEffectData>();
             set => _effects = value;
         }
         
@@ -164,7 +165,8 @@ namespace CardCore
                 {
                     foreach (var effect in Effects)
                     {
-                        if (effect.Initiative)
+                        if (effect.TriggerTiming == (int)TriggerTiming.Activate_Active ||
+                            effect.TriggerTiming == (int)TriggerTiming.Activate_Instant)
                         {
                             _hasActiveEffect = true;
                             return true;
@@ -275,108 +277,68 @@ namespace CardCore
     }
 
     /// <summary>
-    /// 效果数据 - 可序列化的效果配置
+    /// 原子效果条目 —— 描述单个原子效果的所有参数
+    /// 直接映射为 AtomicEffectInstance
     /// </summary>
     [Serializable]
-    public class EffectData
+    public class AtomicEffectEntry
     {
-        /// <summary>
-        /// 效果缩写/唯一标识
-        /// </summary>
-        [SerializeField]
-        private string _abbreviation;
-        public string Abbreviation
-        {
-            get => _abbreviation;
-            set => _abbreviation = value;
-        }
+        public string EffectType;      // AtomicEffectType 枚举名，如 "DealDamage"
+        public int Value;              // 主数值（伤害量、抽卡数、攻血修改量）
+        public int Value2;             // 副数值（ModifyAllStats 的 life 值）
+        public string StringValue;     // 字符串参数（token ID、关键词 ID）
+        public int ManaTypeParam;      // ManaType 枚举值
+        public int ZoneParam;          // Zone 枚举值
+        public int Duration;           // DurationType 枚举值，0 = 使用表默认
+    }
 
-        /// <summary>
-        /// 是否为主动效果
-        /// </summary>
-        [SerializeField]
-        private bool _initiative;
-        public bool Initiative
-        {
-            get => _initiative;
-            set => _initiative = value;
-        }
+    /// <summary>
+    /// 代价条目 —— 卡牌效果的费用配置
+    /// </summary>
+    [Serializable]
+    public class CostEntry
+    {
+        public int CostType;           // CostType 枚举值
+        public int Value;              // 代价数值
+        public int ManaType;           // 元素消耗的 ManaType
+        public int TurnDuration;       // 沉睡回合数
+    }
 
-        /// <summary>
-        /// 效果参数值
-        /// </summary>
-        [SerializeField]
-        private float _parameters;
-        public float Parameters
-        {
-            get => _parameters;
-            set => _parameters = value;
-        }
+    /// <summary>
+    /// 发动条件条目
+    /// </summary>
+    [Serializable]
+    public class ActivationConditionData
+    {
+        public int Type;               // ConditionType 枚举值
+        public int Value;
+        public int Value2;
+        public string StringValue;
+        public bool Negate;
+    }
 
-        /// <summary>
-        /// 效果速度
-        /// </summary>
-        [SerializeField]
-        private int _speed;
-        public EffectSpeed Speed
-        {
-            get => (EffectSpeed)_speed;
-            set => _speed = (int)value;
-        }
+    /// <summary>
+    /// 卡牌效果数据 —— 描述卡牌的一个完整效果
+    /// 包含触发时点、条件、代价、以及有序的原子效果列表
+    /// 转换后成为一个 EffectDefinition
+    /// </summary>
+    [Serializable]
+    public class CardEffectData
+    {
+        public string Id;
+        public string DisplayName;
+        public string Description;
+        public int TriggerTiming;      // TriggerTiming 枚举值
+        public int ActivationType;     // 0=强制, 1=自动, 2=主动
+        public int BaseSpeed;
+        public bool IsOptional;
+        public int Duration;           // 整体效果的 DurationType
 
-        /// <summary>
-        /// 法力类型
-        /// </summary>
-        [SerializeField]
-        private int _manaType;
-        public ManaType ManaType
-        {
-            get => (ManaType)_manaType;
-            set => _manaType = (int)value;
-        }
-
-        /// <summary>
-        /// 效果描述
-        /// </summary>
-        [SerializeField]
-        private string _description;
-        public string Description
-        {
-            get => _description;
-            set => _description = value;
-        }
-
-        /// <summary>
-        /// 从 Effect_table 转换
-        /// </summary>
-        public static EffectData FromEffectTable(Effect_table table)
-        {
-            return new EffectData
-            {
-                Abbreviation = table.Effect_Abbreviation,
-                Initiative = table.Initiative,
-                Parameters = table.Parameters,
-                Speed = table.EffctSpeed,
-                ManaType = table.Mana_type,
-                Description = table.Effect_Description
-            };
-        }
-
-        /// <summary>
-        /// 转换为 Effect_table
-        /// </summary>
-        public Effect_table ToEffectTable()
-        {
-            return new Effect_table
-            {
-                Effect_Abbreviation = Abbreviation,
-                Initiative = Initiative,
-                Parameters = Parameters,
-                EffctSpeed = Speed,
-                Mana_type = ManaType,
-                Effect_Description = Description
-            };
-        }
+        public List<ActivationConditionData> ActivationConditions;
+        public List<ActivationConditionData> TriggerConditions;
+        public List<AtomicEffectEntry> AtomicEffects;
+        public List<CostEntry> Costs;
+        public List<string> Tags;
     }
 
     /// <summary>
@@ -481,14 +443,10 @@ namespace CardCore
             // 设置费用
             (this as IHasCost).Cost = data.Cost;
 
-            // 设置效果列表
+            // 设置效果列表（Editor路径使用 Effect_table，运行时由 CardEffectConverter 转换）
             (this as IHasEffects).Effects = new List<Effect_table>();
-            foreach (var effect in data.Effects)
-            {
-                (this as IHasEffects).Effects.Add(effect.ToEffectTable());
-            }
 
-            // 初始化运行时效果列表（需要从效果表中解析）
+            // 初始化运行时效果列表（由 CardEffectConverter 在 PlayCard 时填充）
             _runtimeEffects = new List<IEffect>();
 
             // 注入关键词到 Card._keywords（与 EntityEffectExtensions 统一）
@@ -551,10 +509,10 @@ namespace CardCore
         }
 
         [SerializeField]
-        private List<EffectData> _defaultEffects;
-        public List<EffectData> DefaultEffects
+        private List<CardEffectData> _defaultEffects;
+        public List<CardEffectData> DefaultEffects
         {
-            get => _defaultEffects ??= new List<EffectData>();
+            get => _defaultEffects ??= new List<CardEffectData>();
             set => _defaultEffects = value;
         }
 
@@ -570,7 +528,7 @@ namespace CardCore
                 Illustration = Illustration,
                 Life = DefaultLife,
                 Power = DefaultPower,
-                Effects = new List<EffectData>(DefaultEffects),
+                Effects = new List<CardEffectData>(DefaultEffects),
                 Cost = new Dictionary<int, float>()
             };
         }

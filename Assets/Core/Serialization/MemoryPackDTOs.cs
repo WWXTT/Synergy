@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using MemoryPack;
@@ -30,7 +30,7 @@ namespace CardCore.Serialization
         public CostEntryDTO[] Cost;
 
         [MemoryPackOrder(TagTable.CardData_Effects)]
-        public SerializableEffectData[] Effects;
+        public SerializableCardEffectData[] Effects;
 
         [MemoryPackOrder(TagTable.CardData_CreationTicks)]
         public long CreationTicks;
@@ -54,13 +54,11 @@ namespace CardCore.Serialization
                 CreationTicks = data.CreationTime.Ticks,
             };
 
-            // Cost: Dictionary → array
             dto.Cost = data.Cost?.Select(kvp => new CostEntryDTO { ManaType = kvp.Key, Value = kvp.Value }).ToArray()
                        ?? Array.Empty<CostEntryDTO>();
 
-            // Effects: List<EffectData> → array
-            dto.Effects = data.Effects?.Select(SerializableEffectData.FromEffectData).ToArray()
-                          ?? Array.Empty<SerializableEffectData>();
+            dto.Effects = data.Effects?.Select(SerializableCardEffectData.FromCardEffectData).ToArray()
+                          ?? Array.Empty<SerializableCardEffectData>();
 
             dto.Tags = data.Tags?.ToArray() ?? Array.Empty<string>();
             dto.Keywords = data.Keywords?.ToArray() ?? Array.Empty<string>();
@@ -81,7 +79,6 @@ namespace CardCore.Serialization
                 CreationTime = new DateTime(CreationTicks),
             };
 
-            // Cost: array → Dictionary
             if (Cost != null)
             {
                 data.Cost = new Dictionary<int, float>();
@@ -89,10 +86,9 @@ namespace CardCore.Serialization
                     data.Cost[entry.ManaType] = entry.Value;
             }
 
-            // Effects: array → List<EffectData>
             if (Effects != null)
             {
-                data.Effects = Effects.Select(e => e.ToEffectData()).ToList();
+                data.Effects = Effects.Select(e => e.ToCardEffectData()).ToList();
             }
 
             if (Tags != null)
@@ -115,60 +111,104 @@ namespace CardCore.Serialization
     }
 
     [MemoryPackable]
-    public partial class SerializableEffectData
+    public partial class SerializableCardEffectData
     {
         [MemoryPackOrder(TagTable.EffectData_Abbreviation)]
-        public string Abbreviation;
-
-        [MemoryPackOrder(TagTable.EffectData_Initiative)]
-        public bool Initiative;
-
-        [MemoryPackOrder(TagTable.EffectData_Parameters)]
-        public float Parameters;
-
-        [MemoryPackOrder(TagTable.EffectData_Speed)]
-        public int Speed;
-
-        [MemoryPackOrder(TagTable.EffectData_ManaType)]
-        public int ManaType;
+        public string Id;
 
         [MemoryPackOrder(TagTable.EffectData_Description)]
         public string Description;
 
-        [MemoryPackOrder(TagTable.EffectData_EffectTag)]
-        public long EffectTag;
+        [MemoryPackOrder(TagTable.EffectData_Initiative)]
+        public int TriggerTiming;
 
-        public void ComputeEffectTag()
-        {
-            if (!string.IsNullOrEmpty(Description))
-                EffectTag = MurmurHash3.EffectTag(Description);
-        }
+        [MemoryPackOrder(TagTable.EffectData_Speed)]
+        public int ActivationType;
 
-        public static SerializableEffectData FromEffectData(EffectData data)
+        [MemoryPackOrder(TagTable.EffectData_Parameters)]
+        public int BaseSpeed;
+
+        [MemoryPackOrder(TagTable.EffectData_ManaType)]
+        public SerializableAtomicEffectEntry[] AtomicEffects;
+
+        public static SerializableCardEffectData FromCardEffectData(CardEffectData data)
         {
-            var dto = new SerializableEffectData
+            var dto = new SerializableCardEffectData
             {
-                Abbreviation = data.Abbreviation,
-                Initiative = data.Initiative,
-                Parameters = data.Parameters,
-                Speed = (int)data.Speed,
-                ManaType = (int)data.ManaType,
+                Id = data.Id,
                 Description = data.Description,
+                TriggerTiming = data.TriggerTiming,
+                ActivationType = data.ActivationType,
+                BaseSpeed = data.BaseSpeed,
             };
-            dto.ComputeEffectTag();
+            dto.AtomicEffects = data.AtomicEffects?.Select(SerializableAtomicEffectEntry.FromEntry).ToArray()
+                                ?? Array.Empty<SerializableAtomicEffectEntry>();
             return dto;
         }
 
-        public EffectData ToEffectData()
+        public CardEffectData ToCardEffectData()
         {
-            return new EffectData
+            return new CardEffectData
             {
-                Abbreviation = Abbreviation,
-                Initiative = Initiative,
-                Parameters = Parameters,
-                Speed = (EffectSpeed)Speed,
-                ManaType = (ManaType)ManaType,
+                Id = Id,
                 Description = Description,
+                TriggerTiming = TriggerTiming,
+                ActivationType = ActivationType,
+                BaseSpeed = BaseSpeed,
+                AtomicEffects = AtomicEffects?.Select(e => e.ToEntry()).ToList() ?? new List<AtomicEffectEntry>(),
+            };
+        }
+    }
+
+    [MemoryPackable]
+    public partial class SerializableAtomicEffectEntry
+    {
+        [MemoryPackOrder(TagTable.AEI_Type)]
+        public string EffectType;
+
+        [MemoryPackOrder(TagTable.AEI_Value)]
+        public int Value;
+
+        [MemoryPackOrder(TagTable.AEI_Value2)]
+        public int Value2;
+
+        [MemoryPackOrder(TagTable.AEI_StringValue)]
+        public string StringValue;
+
+        [MemoryPackOrder(TagTable.AEI_ManaTypeParam)]
+        public int ManaTypeParam;
+
+        [MemoryPackOrder(TagTable.AEI_ZoneParam)]
+        public int ZoneParam;
+
+        [MemoryPackOrder(TagTable.AEI_Duration)]
+        public int Duration;
+
+        public static SerializableAtomicEffectEntry FromEntry(AtomicEffectEntry entry)
+        {
+            return new SerializableAtomicEffectEntry
+            {
+                EffectType = entry.EffectType,
+                Value = entry.Value,
+                Value2 = entry.Value2,
+                StringValue = entry.StringValue,
+                ManaTypeParam = entry.ManaTypeParam,
+                ZoneParam = entry.ZoneParam,
+                Duration = entry.Duration,
+            };
+        }
+
+        public AtomicEffectEntry ToEntry()
+        {
+            return new AtomicEffectEntry
+            {
+                EffectType = EffectType,
+                Value = Value,
+                Value2 = Value2,
+                StringValue = StringValue,
+                ManaTypeParam = ManaTypeParam,
+                ZoneParam = ZoneParam,
+                Duration = Duration,
             };
         }
     }

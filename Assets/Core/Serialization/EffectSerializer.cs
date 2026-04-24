@@ -14,48 +14,21 @@ namespace CardCore.Serialization
             return MurmurHash3.EffectTag(description);
         }
 
-        public static long ComputeEffectTagFromAbbreviation(string abbreviation)
+        public static byte[] SerializeCardEffects(List<CardEffectData> effects)
         {
-            if (string.IsNullOrEmpty(abbreviation))
-                return 0;
-            return (long)MurmurHash3.Hash32($"Effect.{abbreviation}", MurmurHash3.SYNERGY_TAG_SEED);
-        }
-
-        public static byte[] SerializeEffects(List<EffectData> effects)
-        {
-            var dtos = effects.Select(e =>
-            {
-                var dto = SerializableEffectData.FromEffectData(e);
-                dto.ComputeEffectTag();
-                return dto;
-            }).ToArray();
+            var dtos = effects.Select(SerializableCardEffectData.FromCardEffectData).ToArray();
             return MemoryPackSerializer.Serialize(dtos);
         }
 
-        public static List<EffectData> DeserializeEffects(byte[] data)
+        public static List<CardEffectData> DeserializeCardEffects(byte[] data)
         {
-            var dtos = MemoryPackSerializer.Deserialize<SerializableEffectData[]>(data);
-            var result = new List<EffectData>();
-            foreach (var dto in dtos)
-            {
-                // 校验 tag 与描述的一致性
-                long expectedTag = ComputeEffectTag(dto.Description);
-                if (dto.EffectTag != 0 && expectedTag != 0 && dto.EffectTag != expectedTag)
-                    throw new InvalidOperationException(
-                        $"Effect tag mismatch for '{dto.Abbreviation}': expected {expectedTag}, got {dto.EffectTag}");
-                result.Add(dto.ToEffectData());
-            }
-            return result;
+            var dtos = MemoryPackSerializer.Deserialize<SerializableCardEffectData[]>(data);
+            return dtos.Select(d => d.ToCardEffectData()).ToList();
         }
 
         public static byte[] SerializeEffectDefinitions(List<EffectDefinition> definitions)
         {
-            var dtos = definitions.Select(d =>
-            {
-                var dto = SerializableEffectDefinition.FromDefinition(d);
-                dto.ComputeEffectTag();
-                return dto;
-            }).ToArray();
+            var dtos = definitions.Select(SerializableEffectDefinition.FromDefinition).ToArray();
             return MemoryPackSerializer.Serialize(dtos);
         }
 

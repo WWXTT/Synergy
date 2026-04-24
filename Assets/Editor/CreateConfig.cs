@@ -8,13 +8,13 @@ namespace CardCore.Editor
     /// <summary>
     /// Luban 配置刷新工具
     /// </summary>
-    public static class CreateConfigEditor
+    public static class CreateConfig
     {
         [MenuItem("Tools/一键刷新配置")]
         public static void RefreshConfig()
         {
             string batpath = "C:\\Users\\Administrator\\Desktop\\Synergy\\Config";
-            string genBatPath = Path.Combine(batpath, "export_attribute.bat.bat");
+            string genBatPath = Path.Combine(batpath, "export_attribute.bat");
 
             if (!File.Exists(genBatPath))
             {

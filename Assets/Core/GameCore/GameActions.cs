@@ -230,7 +230,11 @@ namespace CardCore
         /// </summary>
         private static List<EffectDefinition> GetCardEffectDefinitions(Card card)
         {
-            // TODO: 从卡牌的 EffectData 列表转换为 EffectDefinition
+            if (card is CardWrapper wrapper)
+            {
+                var cardData = wrapper.GetData();
+                return CardEffectConverter.ConvertAll(cardData.Effects, cardData.ID);
+            }
             return new List<EffectDefinition>();
         }
     }

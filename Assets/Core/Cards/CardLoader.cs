@@ -44,6 +44,7 @@ namespace CardCore
         public List<CostJsonEntry> costList;
         public List<string> keywords;
         public List<string> tags;
+        public List<CardEffectData> effects;
     }
 
     /// <summary>
@@ -220,7 +221,7 @@ namespace CardCore
                 Cost = ParseCost(entry.costList),
                 Keywords = entry.keywords ?? new List<string>(),
                 Tags = entry.tags ?? new List<string>(),
-                Effects = new List<EffectData>()
+                Effects = entry.effects ?? new List<CardEffectData>()
             };
 
             return cardData;
