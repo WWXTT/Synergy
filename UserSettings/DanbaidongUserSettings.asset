@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 041304d71b1b4de4fb09dce62f914847, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.DanbaidongUserSettings
-  m_WizardPopupAlreadyShownOnce: 0
+  m_WizardPopupAlreadyShownOnce: 1
   m_WizardActiveTab: 0
   m_WizardNeedRestartAfterChangingToDX12: 0
   m_WizardNeedToRunFixAllAgainAfterDomainReload: 0
-  m_WizardIsStartPopup: 1
+  m_WizardIsStartPopup: 0

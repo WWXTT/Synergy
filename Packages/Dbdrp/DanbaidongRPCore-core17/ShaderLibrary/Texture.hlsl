@@ -23,6 +23,7 @@ struct UnityTexture2D
     SAMPLER(samplerstate);
     float4 texelSize;
     float4 scaleTranslate;
+    float4 hdrDecode;
 
     // these functions allows users to convert code using Texture2D to UnityTexture2D by simply changing the type of the variable
     // the existing texture macros will call these functions, which will forward the call to the texture appropriately
@@ -61,15 +62,16 @@ float4 tex2D(UnityTexture2D tex, float2 uv)                 { return SAMPLE_TEXT
 float4 tex2Dlod(UnityTexture2D tex, float4 uv0l)            { return SAMPLE_TEXTURE2D_LOD(tex.tex, tex.samplerstate, uv0l.xy, uv0l.w); }
 float4 tex2Dbias(UnityTexture2D tex, float4 uv0b)           { return SAMPLE_TEXTURE2D_BIAS(tex.tex, tex.samplerstate, uv0b.xy, uv0b.w); }
 
-#define UnityBuildTexture2DStruct(n) UnityBuildTexture2DStructInternal(TEXTURE2D_ARGS(n, sampler##n), n##_TexelSize, n##_ST)
-#define UnityBuildTexture2DStructNoScale(n) UnityBuildTexture2DStructInternal(TEXTURE2D_ARGS(n, sampler##n), n##_TexelSize, float4(1, 1, 0, 0))
-UnityTexture2D UnityBuildTexture2DStructInternal(TEXTURE2D_PARAM(tex, samplerstate), float4 texelSize, float4 scaleTranslate)
+#define UnityBuildTexture2DStruct(n) UnityBuildTexture2DStructInternal(TEXTURE2D_ARGS(n, sampler##n), n##_TexelSize, n##_ST, float4(0, 0, 0, 0))
+#define UnityBuildTexture2DStructNoScale(n) UnityBuildTexture2DStructInternal(TEXTURE2D_ARGS(n, sampler##n), n##_TexelSize, float4(1, 1, 0, 0), float4(0, 0, 0, 0))
+UnityTexture2D UnityBuildTexture2DStructInternal(TEXTURE2D_PARAM(tex, samplerstate), float4 texelSize, float4 scaleTranslate, float4 hdrDecode)
 {
     UnityTexture2D result;
     result.tex = tex;
     result.samplerstate = samplerstate;
     result.texelSize = texelSize;
     result.scaleTranslate = scaleTranslate;
+    result.hdrDecode = hdrDecode;
     return result;
 }
 

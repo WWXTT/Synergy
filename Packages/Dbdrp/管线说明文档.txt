@@ -1,34 +1,44 @@
-https://my.feishu.cn/docx/EXPtdrNmnox8hkx4mnCcy8QNn2b
-DanbaidongRP 核心思路是在 URP 的性能骨架中，逐个整合那些原本被视为 HDRP 才有的“独占”特性。它就像一个高保真渲染技术的集成平台，用 URP 的架构承载了这些功能：
+🎨 卡通渲染管线（已实现）
+PBR Toon Shader & Character Forward Lighting
+项目的核心模块。在 URP 的基础上实现了 PBR（基于物理）与 NPR（非物理）融合的卡通渲染着色器，并提供了针对角色优化的特殊前向渲染路径（Inserted GBuffer Passes）。这使得角色可以在 GBuffer 阶段插入自定义数据，为后续的卡通光照计算提供必要信息，兼顾了风格化表现与物理光照的融合。
 
-🚀 光照与阴影系统
-Clustered GPU Lights (集群GPU光照)：相比 URP 传统的逐像素或逐物体光源筛选，这种将视锥体切割成3D网格的算法，在处理成百上千动态光源时性能更好，而这正是 HDRP 等高端管线的核心技术之一。
+Danbaidong Shader GUI
+自定义着色器编辑器面板。使用方式是在自己的 Shader 中添加 CustomEditor "UnityEditor.DanbaidongGUI.DanbaidongGUI"，即可获得专用于卡通渲染参数调节的可视化界面，简化了 Toon Shader 的调试与配置流程。
 
-Compute Deferred Lighting (计算着色器延迟光照)：使用GPU的Compute Shader来加速完成延迟渲染管线中繁重的光照计算。
+Toon Bloom
+针对卡通风格优化的泛光后处理效果，使高光溢出更符合动画/漫画的视觉风格，而非写实管线的物理泛光。
 
-高级阴影系统（PerObjectShadow, ScreenSpaceShadow, ShadowmapArray）：URP默认是全局统一阴影设置，而DanbaidongRP直接集成了定向光的屏幕空间阴影，并支持HDRP和UE5中常用的逐对象阴影（利于主角重点表现与性能优化）与阴影图数组（提升多阴影渲染效率）。
+Anime Toonmapping
+动漫风格的色调映射，将 HDR 颜色映射为符合动画美术风格的 LDR 输出，区别于传统影视级 Tone Mapping 追求真实感的策略。
 
-🪞 反射与图像特效
-Screen Space Reflection：可大幅提升画面的真实感，而URP原生管线并不直接提供此功能。
+SmoothNormal 描边支持
+通过独立的 SmoothNormal 包（https://github.com/danbaidong1111/SmoothNormal.git）提供平滑法线数据，只需将模型文件名加上 _SN 后缀即可使用，用于实现无棱角断裂的描边效果。
 
-Ray Tracing Reflection：更是通常只有HDRP这类高端管线才支持的硬件加速特性。
+🔦 阴影系统（已实现）
+PerObjectShadow（逐对象阴影）
+URP 原生只提供全局统一的阴影设置，而 DanbaidongRP 实现了逐对象独立阴影控制。这对主角或关键物体的阴影精度表现和性能优化非常有价值——可以为重要角色分配更高精度的阴影资源，同时降低次要物体的阴影开销。使用方式：添加 Renderer Feature PerObjectShadowFeature，并在目标 Mesh 上挂载 PerObjectShadowProjector 脚本。
 
-Spatiotemporal Blue Noise (时空蓝噪声)：通过利用帧间连续性提升采样质量，在相同性能下获得更干净的图像。
+ScreenSpaceShadow（屏幕空间阴影）
+针对定向光的屏幕空间阴影效果，作为 Renderer Feature 集成，使用时需添加 ScreenSpaceShadows Feature。这是一种在屏幕空间中解析阴影的技术，可以提供更柔和的阴影边缘表现。
 
-📊 深度处理与历史帧系统
-Depth Pyramid (深度金字塔) & GPUCopyDepth (GPU深度拷贝)：是HDRP的核心优化技术，它生成的多级深度纹理能为屏幕空间反射（SSR）和环境光遮蔽（SSAO）等功能提供加速。GPUCopyDepth则是高效管理深度数据的基础。
+🛠️ 工具链与开发体验（已实现）
+Wizard for Default Presets（管线创建向导）
+完成管线资产创建和 Graphics 设置后重启项目，会自动弹出一个图形化向导窗口，引导用户完成 DanbaidongRP 所需的必要配置，降低了初始设置的门槛和出错概率。
 
-History Frame RT System (历史帧系统)：用于缓存多帧渲染数据，是实现高质量TAA等时域效果的技术基石。
+多包 UPM 分发架构
+项目拆分为 Core、Config、DanbaidongRP 三个独立包，通过 Unity Package Manager 以 Git URL 方式安装，结构清晰，便于版本管理和增量更新。
 
-🌌 天空系统与基于图像的光照 (IBL)
-Sky System & FilterIBL (天空系统 & IBL过滤)：Sky System提供了可定制的天空渲染能力。FilterIBL让环境光（IBL）能随着物体表面粗糙度的变化而变化，使光影表现更自然，这也是PBR渲染的关键一环。
+🗺️ Roadmap（计划中，尚未实现）
+以下特性在 README 中被列为开发路线图，目前均未完成：
 
-🎨 卡通渲染专属管线
-PBRToon Shaders & Character Forward Lighting (PBR卡通着色器 & 角色前向光照)：能够将基于物理的光照（PBR）计算与卡通风格化效果融合，并针对角色进行优化的特殊前向渲染路径。
-
-PreIntegrated FGD (预积分FGD)：常用于高端卡通渲染的皮肤、头发等材质，通过预计算好的查找表，高效模拟出光线在材质内部的复杂散射效果。
-
-🛠️ 工具链与开发体验
-Wizard for Default Presets (管线创建向导)：提供一个图形化界面工具，用于快速创建和配置DanbaidongRP的管线资源，简化了初始设置流程。
-
-基于RenderGraph的架构：整个管线基于现代图形API推崇的RenderGraph架构构建。这意味着它能够自动进行资源管理和屏障优化，简化多Pass渲染，并带来潜在的GPU性能提升。
+计划特性	说明
+Cluster Deferred Lighting	作者附注：Unity 已在 Forward+ 中实现了类似功能，此计划可能调整
+Atmosphere Fog	大气雾效
+PCSS/PCF Soft Shadows	高质量软阴影
+Gradient Shadows	渐变阴影
+Transparent Shadows	透明物体阴影
+High Quality SSR	高质量屏幕空间反射
+High Quality SSGI	高质量屏幕空间全局光照
+Idol Live	偶像 Live 演出效果（项目特色目标）
+📌 小结
+DanbaidongRP 当前的定位不是一个试图将 HDRP 全部特性搬到 URP 上的通用高保真管线，而是一个以卡通/动画风格渲染为核心、在 URP 基础上定向增强特定能力的自定义管线。它的已完成模块（Toon Shader、Toon Bloom、Anime Toonmapping、PerObjectShadow、Inserted GBuffer）都服务于同一个目标：在 URP 的性能基础上，为卡通风格项目提供更高品质的渲染表现。
