@@ -13,7 +13,6 @@ Thumbs.db          # Windows 缩略图缓存
 /Logs/
 /obj/
 /Temp/
-/Packages/
 /.vs/
 Assets/Configs
 Assets/Plugins

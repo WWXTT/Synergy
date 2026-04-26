@@ -1,0 +1,34 @@
+https://my.feishu.cn/docx/EXPtdrNmnox8hkx4mnCcy8QNn2b
+DanbaidongRP 核心思路是在 URP 的性能骨架中，逐个整合那些原本被视为 HDRP 才有的“独占”特性。它就像一个高保真渲染技术的集成平台，用 URP 的架构承载了这些功能：
+
+🚀 光照与阴影系统
+Clustered GPU Lights (集群GPU光照)：相比 URP 传统的逐像素或逐物体光源筛选，这种将视锥体切割成3D网格的算法，在处理成百上千动态光源时性能更好，而这正是 HDRP 等高端管线的核心技术之一。
+
+Compute Deferred Lighting (计算着色器延迟光照)：使用GPU的Compute Shader来加速完成延迟渲染管线中繁重的光照计算。
+
+高级阴影系统（PerObjectShadow, ScreenSpaceShadow, ShadowmapArray）：URP默认是全局统一阴影设置，而DanbaidongRP直接集成了定向光的屏幕空间阴影，并支持HDRP和UE5中常用的逐对象阴影（利于主角重点表现与性能优化）与阴影图数组（提升多阴影渲染效率）。
+
+🪞 反射与图像特效
+Screen Space Reflection：可大幅提升画面的真实感，而URP原生管线并不直接提供此功能。
+
+Ray Tracing Reflection：更是通常只有HDRP这类高端管线才支持的硬件加速特性。
+
+Spatiotemporal Blue Noise (时空蓝噪声)：通过利用帧间连续性提升采样质量，在相同性能下获得更干净的图像。
+
+📊 深度处理与历史帧系统
+Depth Pyramid (深度金字塔) & GPUCopyDepth (GPU深度拷贝)：是HDRP的核心优化技术，它生成的多级深度纹理能为屏幕空间反射（SSR）和环境光遮蔽（SSAO）等功能提供加速。GPUCopyDepth则是高效管理深度数据的基础。
+
+History Frame RT System (历史帧系统)：用于缓存多帧渲染数据，是实现高质量TAA等时域效果的技术基石。
+
+🌌 天空系统与基于图像的光照 (IBL)
+Sky System & FilterIBL (天空系统 & IBL过滤)：Sky System提供了可定制的天空渲染能力。FilterIBL让环境光（IBL）能随着物体表面粗糙度的变化而变化，使光影表现更自然，这也是PBR渲染的关键一环。
+
+🎨 卡通渲染专属管线
+PBRToon Shaders & Character Forward Lighting (PBR卡通着色器 & 角色前向光照)：能够将基于物理的光照（PBR）计算与卡通风格化效果融合，并针对角色进行优化的特殊前向渲染路径。
+
+PreIntegrated FGD (预积分FGD)：常用于高端卡通渲染的皮肤、头发等材质，通过预计算好的查找表，高效模拟出光线在材质内部的复杂散射效果。
+
+🛠️ 工具链与开发体验
+Wizard for Default Presets (管线创建向导)：提供一个图形化界面工具，用于快速创建和配置DanbaidongRP的管线资源，简化了初始设置流程。
+
+基于RenderGraph的架构：整个管线基于现代图形API推崇的RenderGraph架构构建。这意味着它能够自动进行资源管理和屏障优化，简化多Pass渲染，并带来潜在的GPU性能提升。

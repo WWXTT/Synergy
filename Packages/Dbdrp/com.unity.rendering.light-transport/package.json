@@ -1,0 +1,8 @@
+{
+  "name": "com.unity.rendering.light-transport",
+  "version": "1.0.1",
+  "unity": "6000.0",
+  "displayName": "Light Transport (Stub)",
+  "description": "Stub package for Unity 6.3 compatibility. Types are now engine built-in.",
+  "dependencies": {}
+}
