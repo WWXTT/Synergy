@@ -109,7 +109,7 @@ Shader "Universal Render Pipeline/Lit"
             AlphaToMask[_AlphaToMask]
 
             HLSLPROGRAM
-            #pragma target 2.0
+            #pragma target 4.5
 
             // -------------------------------------
             // Shader Stages
@@ -522,20 +522,20 @@ Shader "Universal Render Pipeline/Lit"
       
             // -------------------------------------
             // Material Keywords
-            #pragma shader_feature_local _NORMALMAP
-            #pragma shader_feature_local _PARALLAXMAP
-            #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
-            #pragma shader_feature_local _ _DETAIL_MULX2 _DETAIL_SCALED
-            #pragma shader_feature_local_fragment _SURFACE_TYPE_TRANSPARENT
-            #pragma shader_feature_local _ALPHATEST_ON
-            #pragma shader_feature_local_fragment _ _ALPHAPREMULTIPLY_ON _ALPHAMODULATE_ON
-            #pragma shader_feature_local _EMISSION
-            #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
-            #pragma shader_feature_local_fragment _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma shader_feature_local_fragment _OCCLUSIONMAP
-            #pragma shader_feature_local_fragment _SPECULARHIGHLIGHTS_OFF
-            #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
-            #pragma shader_feature_local_fragment _SPECULAR_SETUP
+            #pragma shader_feature_local_raytracing _NORMALMAP
+            #pragma shader_feature_local_raytracing _PARALLAXMAP
+            #pragma shader_feature_local_raytracing _RECEIVE_SHADOWS_OFF
+            #pragma shader_feature_local_raytracing _ _DETAIL_MULX2 _DETAIL_SCALED
+            #pragma shader_feature_local_raytracing _SURFACE_TYPE_TRANSPARENT
+            #pragma shader_feature_local_raytracing _ALPHATEST_ON
+            #pragma shader_feature_local_raytracing _ _ALPHAPREMULTIPLY_ON _ALPHAMODULATE_ON
+            #pragma shader_feature_local_raytracing _EMISSION
+            #pragma shader_feature_local_raytracing _METALLICSPECGLOSSMAP
+            #pragma shader_feature_local_raytracing _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            #pragma shader_feature_local_raytracing _OCCLUSIONMAP
+            #pragma shader_feature_local_raytracing _SPECULARHIGHLIGHTS_OFF
+            #pragma shader_feature_local_raytracing _ENVIRONMENTREFLECTIONS_OFF
+            #pragma shader_feature_local_raytracing _SPECULAR_SETUP
 
             // -------------------------------------
             // Universal Pipeline keywords
@@ -616,7 +616,7 @@ Shader "Universal Render Pipeline/Lit"
             // #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
             // #pragma shader_feature_local _ _DETAIL_MULX2 _DETAIL_SCALED
             // #pragma shader_feature_local_fragment _SURFACE_TYPE_TRANSPARENT
-            #pragma shader_feature_local _ALPHATEST_ON
+            #pragma shader_feature_local_raytracing _ALPHATEST_ON
             // #pragma shader_feature_local_fragment _ _ALPHAPREMULTIPLY_ON _ALPHAMODULATE_ON
             // #pragma shader_feature_local_fragment _EMISSION
             // #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
