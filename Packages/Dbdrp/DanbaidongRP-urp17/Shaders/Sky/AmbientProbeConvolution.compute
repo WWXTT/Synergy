@@ -7,7 +7,7 @@
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Sampling/Sampling.hlsl"
 #include "Packages/com.unity.render-pipelines.danbaidong/ShaderLibrary/Core.hlsl"
 
-#pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
+#pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch gles3
 
 // Regular ambient probe convolution
 // Always use mips and output separate diffuse buffer.

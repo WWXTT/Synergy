@@ -61,7 +61,7 @@ namespace UnityEngine.Rendering.Universal
         private Matrix4x4[] m_CameraRelativeViewMatrices = new Matrix4x4[6];
 
         private ComputeShader m_ComputeAmbientProbeCS;
-        private int m_ComputeAmbientProbeKernel;
+        private int m_ComputeAmbientProbeKernel = -1;
 
         public bool ambientProbeIsReady = false;
 
@@ -170,7 +170,8 @@ namespace UnityEngine.Rendering.Universal
             //lightingOverrideVolumeStack = VolumeManager.instance.CreateStack();
 
             m_ComputeAmbientProbeCS = runtimeShaders.ambientProbeConvolutionCS;
-            m_ComputeAmbientProbeKernel = m_ComputeAmbientProbeCS.FindKernel("AmbientProbeConvolutionDiffuse");
+            if (m_ComputeAmbientProbeCS != null)
+                m_ComputeAmbientProbeKernel = m_ComputeAmbientProbeCS.FindKernel("AmbientProbeConvolutionDiffuse");
 
             m_CubemapScreenSize = new Vector4(m_Resolution, m_Resolution, 1.0f / m_Resolution, 1.0f / m_Resolution);
             m_LowResCubemapScreenSize = new Vector4(m_LowResolution, m_LowResolution, 1.0f / m_LowResolution, 1.0f / m_LowResolution);
@@ -375,6 +376,9 @@ namespace UnityEngine.Rendering.Universal
 
         internal void UpdateAmbientProbe(RenderGraph renderGraph, TextureHandle skyCubemap, Action<AsyncGPUReadbackRequest> callback)
         {
+            if (m_ComputeAmbientProbeKernel < 0)
+                return;
+
             // Compute buffer storing the resulting SH from diffuse convolution. L2 SH => 9 float per component.
             if (m_AmbientProbeResult == null)
                 m_AmbientProbeResult = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 27, 4) { name = "ambientProbeResult" };

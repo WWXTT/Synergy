@@ -21,6 +21,9 @@ namespace UnityEngine.Rendering
         static Material s_BlitTexArraySingleSlice;
         static Material s_BlitColorAndDepth;
 
+        static Shader s_CurrentBlitPS;
+        static Shader s_CurrentBlitColorAndDepthPS;
+
         static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
 
         static Mesh s_TriangleMesh;
@@ -91,8 +94,13 @@ namespace UnityEngine.Rendering
         {
             if (s_Blit != null)
             {
-                throw new Exception("Blitter is already initialized. Please only initialize the blitter once or you will leak engine resources. If you need to re-initialize the blitter with different shaders destroy & recreate it.");
+                if (s_CurrentBlitPS == blitPS && s_CurrentBlitColorAndDepthPS == blitColorAndDepthPS)
+                    return;
+                Cleanup();
             }
+
+            s_CurrentBlitPS = blitPS;
+            s_CurrentBlitColorAndDepthPS = blitColorAndDepthPS;
 
             // NOTE NOTE NOTE NOTE NOTE NOTE
             // If you create something here you must also destroy it in Cleanup()
@@ -225,6 +233,8 @@ namespace UnityEngine.Rendering
             s_TriangleMesh = null;
             CoreUtils.Destroy(s_QuadMesh);
             s_QuadMesh = null;
+            s_CurrentBlitPS = null;
+            s_CurrentBlitColorAndDepthPS = null;
         }
 
         /// <summary>

@@ -14,7 +14,9 @@ public class MaterialShaderUpgradeTool : EditorWindow
     // Key: 源材质上的属性名, Value: 目标 Shader 上的属性名
     private Dictionary<string, string> texturePropertyMapping = new Dictionary<string, string>
     {
-        { "_MainTex", "_BaseMap" },           // 主纹理
+        { "_Albedo_Map", "_BaseMap" },           // 主纹理
+        //{ "_BumpMap", "_NormalMap" },           //法线
+        
     };
 
     [MenuItem("Tools/Upgrade Selected Materials")]
@@ -70,12 +72,6 @@ public class MaterialShaderUpgradeTool : EditorWindow
             Material material = obj as Material;
             if (material == null)
                 continue;
-
-            if (material.shader.name != sourceShaderName)
-            {
-                Debug.Log($"跳过 \"{material.name}\"：当前 Shader 不是 {sourceShaderName}。", material);
-                continue;
-            }
 
             // 记录 Undo，方便回退
             Undo.RecordObject(material, "Upgrade Material Shader");

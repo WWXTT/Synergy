@@ -45,14 +45,80 @@ MonoBehaviour:
     m_Value: 0
   top:
     m_OverrideState: 1
-    m_Value: {r: 0, g: 0.5425916, b: 1, a: 1}
+    m_Value: {r: 0.3584906, g: 0.6795498, b: 1, a: 1}
   middle:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
+    m_Value: {r: 0, g: 0.23814562, b: 0.8113208, a: 1}
   bottom:
     m_OverrideState: 1
-    m_Value: {r: 0.19339621, g: 0.19339621, b: 0.19339621, a: 1}
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
   gradientDiffusion:
+    m_OverrideState: 0
+    m_Value: 1
+--- !u!114 &-6176455150540750069
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8122adf7f8d6c8f44b1420d64206613d, type: 3}
+  m_Name: Shadows
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.Shadows
+  active: 1
+  rayTracing:
+    m_OverrideState: 0
+    m_Value: 0
+  dirShadowsRayLength:
+    m_OverrideState: 0
+    m_Value: 1000
+  dirShadowPenumbra:
+    m_OverrideState: 0
+    m_Value: 0
+  characterLayerMask:
+    m_OverrideState: 0
+    m_Value:
+      serializedVersion: 2
+      m_Bits: 0
+  characterNormalOffset:
+    m_OverrideState: 0
+    m_Value: 0.001
+  characterHalfDirScale:
+    m_OverrideState: 0
+    m_Value: 0.8
+  intensity:
+    m_OverrideState: 0
+    m_Value: 1
+  penumbra:
+    m_OverrideState: 0
+    m_Value: 1
+  perObjectShadowPenumbra:
+    m_OverrideState: 0
+    m_Value: 1
+  shadowScatterMode:
+    m_OverrideState: 1
+    m_Value: 1
+  shadowRampTex:
+    m_OverrideState: 0
+    m_Value: {fileID: 2800000, guid: afea1fed01220fc4491569f42c01f3f4, type: 3}
+  scatterR:
+    m_OverrideState: 0
+    m_Value: 0.3
+  scatterG:
+    m_OverrideState: 0
+    m_Value: 0.1
+  scatterB:
+    m_OverrideState: 0
+    m_Value: 0.07
+  occlusionPenumbra:
+    m_OverrideState: 0
+    m_Value: 1
+  denoiser:
+    m_OverrideState: 0
+    m_Value: 1
+  edgeAvoidingWaveletBlur:
     m_OverrideState: 0
     m_Value: 1
 --- !u!114 &-3222252968785058943
@@ -146,6 +212,7 @@ MonoBehaviour:
   - {fileID: 9028862664305459285}
   - {fileID: -3222252968785058943}
   - {fileID: -6836606510566540710}
+  - {fileID: -6176455150540750069}
 --- !u!114 &9028862664305459285
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -163,13 +230,13 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value: 1
   mode:
-    m_OverrideState: 0
-    m_Value: 0
+    m_OverrideState: 1
+    m_Value: 2
   threshold:
     m_OverrideState: 0
     m_Value: 0.7
   intensity:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.75
   lumRnageScale:
     m_OverrideState: 0
@@ -187,8 +254,8 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value: 65472
   tint:
-    m_OverrideState: 0
-    m_Value: {r: 1, g: 1, b: 1, a: 0}
+    m_OverrideState: 1
+    m_Value: {r: 0, g: 0, b: 0, a: 0}
   highQualityFiltering:
     m_OverrideState: 0
     m_Value: 0

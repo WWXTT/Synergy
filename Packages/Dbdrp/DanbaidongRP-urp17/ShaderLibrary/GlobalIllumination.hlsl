@@ -312,7 +312,10 @@ half3 SampleLightmap(float2 staticLightmapUV, half3 normalWS)
 // We either sample GI from baked lightmap or from probes.
 // If lightmap: sampleData.xy = lightmapUV
 // If probe: sampleData.xyz = L2 SH terms
-#if defined(LIGHTMAP_ON) && defined(DYNAMICLIGHTMAP_ON)
+#if defined(_SCREEN_SPACE_IRRADIANCE)
+#include "Packages/com.unity.render-pipelines.danbaidong/ShaderLibrary/DeclareScreenSpaceIrradianceTexture.hlsl"
+#define SAMPLE_GI(positionCS) SampleScreenSpaceIrradiance(positionCS)
+#elif defined(LIGHTMAP_ON) && defined(DYNAMICLIGHTMAP_ON)
 #define SAMPLE_GI(staticLmName, dynamicLmName, shName, normalWSName) SampleLightmap(staticLmName, dynamicLmName, normalWSName)
 #elif defined(DYNAMICLIGHTMAP_ON)
 #define SAMPLE_GI(staticLmName, dynamicLmName, shName, normalWSName) SampleLightmap(0, dynamicLmName, normalWSName)

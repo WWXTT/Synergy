@@ -1,4 +1,4 @@
-#pragma exclude_renderers gles
+#pragma exclude_renderers gles gles3 glcore vulkan
 
 #pragma kernel ResetDrawArgs
 #pragma kernel CopyInstances
@@ -105,7 +105,7 @@ void CopyInstances(uint dispatchIdx : SV_DispatchThreadID)
 
         uint argsBase = DRAW_ARGS_INDEX(dispatchIdx);
         _DrawArgs[argsBase + 0] = drawInfo.indexCount;   // IndirectDrawIndexedArgs.indexCountPerInstance
-        _DrawArgs[argsBase + 1] = drawInfo.maxInstanceCount << _InstanceMultiplierShift;  // IndirectDrawIndexedArgs.instanceCount
+        _DrawArgs[argsBase + 1] = (drawInfo.maxInstanceCountAndTopology >> 3) << _InstanceMultiplierShift;  // IndirectDrawIndexedArgs.instanceCount
         _DrawArgs[argsBase + 2] = drawInfo.firstIndex;   // IndirectDrawIndexedArgs.startIndex
         _DrawArgs[argsBase + 3] = drawInfo.baseVertex;   // IndirectDrawIndexedArgs.baseVertexIndex
         _DrawArgs[argsBase + 4] = 0;                     // IndirectDrawIndexedArgs.startInstance

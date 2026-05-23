@@ -85,6 +85,11 @@ namespace UnityEngine.Rendering.Universal
             if (m_refCounting[(int)index] == 0)
             {
                 Shader pixelShader = GetShaderForIndex(index);
+                if (pixelShader == null)
+                {
+                    m_refCounting[(int)index]++;
+                    return;
+                }
                 int res = (int)FGDTexture.Resolution;
                 m_PreIntegratedFGDMaterial[(int)index] = CoreUtils.CreateEngineMaterial(pixelShader);
                 m_PreIntegratedFGD[(int)index] = new RenderTexture(res, res, 0, GraphicsFormat.A2B10G10R10_UNormPack32)
@@ -109,6 +114,9 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="cmd"></param>
         public void RenderInit(FGDIndex index, CommandBuffer cmd)
         {
+            if (m_PreIntegratedFGDMaterial[(int)index] == null)
+                return;
+
             // Here we have to test IsCreated because in some circumstances (like loading RenderDoc), the texture is internally destroyed but we don't know from C# side.
             // In this case IsCreated will return false, allowing us to re-render the texture (setting the texture as current RT during DrawFullScreen will automatically re-create it internally)
             if (m_isInit[(int)index] && m_PreIntegratedFGD[(int)index].IsCreated())
@@ -137,7 +145,9 @@ namespace UnityEngine.Rendering.Universal
             if (m_refCounting[(int)index] == 0)
             {
                 CoreUtils.Destroy(m_PreIntegratedFGDMaterial[(int)index]);
+                m_PreIntegratedFGDMaterial[(int)index] = null;
                 CoreUtils.Destroy(m_PreIntegratedFGD[(int)index]);
+                m_PreIntegratedFGD[(int)index] = null;
 
                 m_isInit[(int)index] = false;
             }

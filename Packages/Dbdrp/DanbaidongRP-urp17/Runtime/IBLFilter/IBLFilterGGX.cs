@@ -54,20 +54,20 @@ namespace UnityEngine.Rendering.Universal
 
         public override void Initialize(UniversalRenderPipelineRuntimeShaders runtimeShaders)
         {
-            if (!m_ComputeGgxIblSampleDataCS)
+            if (!m_ComputeGgxIblSampleDataCS && runtimeShaders.computeGgxIblSampleDataCS != null)
             {
                 m_ComputeGgxIblSampleDataCS = runtimeShaders.computeGgxIblSampleDataCS;
                 m_ComputeGgxIblSampleDataKernel = m_ComputeGgxIblSampleDataCS.FindKernel("ComputeGgxIblSampleData");
             }
 
-            if (!m_BuildProbabilityTablesCS)
+            if (!m_BuildProbabilityTablesCS && runtimeShaders.buildProbabilityTablesCS != null)
             {
                 m_BuildProbabilityTablesCS = runtimeShaders.buildProbabilityTablesCS;
                 m_ConditionalDensitiesKernel = m_BuildProbabilityTablesCS.FindKernel("ComputeConditionalDensities");
                 m_MarginalRowDensitiesKernel = m_BuildProbabilityTablesCS.FindKernel("ComputeMarginalRowDensities");
             }
 
-            if (!m_convolveMaterial)
+            if (!m_convolveMaterial && runtimeShaders.GGXConvolvePS != null)
             {
                 m_convolveMaterial = CoreUtils.CreateEngineMaterial(runtimeShaders.GGXConvolvePS);
             }
@@ -151,6 +151,9 @@ namespace UnityEngine.Rendering.Universal
             Texture source, RenderTexture target,
             Matrix4x4[] worldToViewMatrices)
         {
+            if (m_convolveMaterial == null || m_GgxIblSampleData == null)
+                return;
+
             using (new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.FilterCubemapGGX)))
             {
                 int mipCount = 1 + (int)Mathf.Log(source.width, 2.0f);
