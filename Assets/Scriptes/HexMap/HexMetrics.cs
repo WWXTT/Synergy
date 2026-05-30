@@ -32,9 +32,25 @@ public static class HexMetrics
     public const float verticalTerraceStepSize = 1f / (terracesPerSlope + 1);
 
     //彩色噪点图的实例
-    //因为此脚本并未继承MonoBehaviour，不能拖拽赋值。
-    //所以在HexGrid中声明一个变量，并在Awake方法中初始化时为其赋值
     public static Texture2D noiseSource;
+
+    //缓存噪声图像素数据，避免每次 GetPixelBilinear 的 GPU→CPU 传输
+    private static Color[] noisePixels;
+    private static int noiseWidth;
+    private static int noiseHeight;
+
+    /// <summary>
+    /// 初始化噪声图缓存，必须在使用 SampleNoise 前调用
+    /// </summary>
+    public static void InitializeNoiseCache()
+    {
+        if (noiseSource != null)
+        {
+            noisePixels = noiseSource.GetPixels();
+            noiseWidth = noiseSource.width;
+            noiseHeight = noiseSource.height;
+        }
+    }
 
     //扰动强度
     //这个值是一个坐标点在每个轴向上的偏移强度
@@ -47,6 +63,13 @@ public static class HexMetrics
     //采样图覆盖地图的示例如图 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/4-5-1.png
     public const float noiseScale = 0.003f;
 
+    //噪声采样范围：把读取的纹理窗口缩小为原来的 noiseSampleRange 倍（<1 即缩小采样范围）
+    //缩小后纹理特征被放大、变化更平缓，且能与随机种子配合从纹理不同区域取样
+    public static float noiseSampleRange = 1f;
+
+    //随机种子决定的采样起点偏移（[0,1) 内），由 HexGrid 根据种子计算后写入
+    public static Vector2 noiseSampleOrigin = Vector2.zero;
+
     //海拔高度扰动强度系数
     //为了保持cell顶部六边形的平坦，这里不再对cell的每个顶点单独进行垂直方向的扰动
     //改为对一个cell整体海拔高度进行扰动，然后再乘以一个强度系数
@@ -57,9 +80,7 @@ public static class HexMetrics
     public const int chunkSizeX = 5;
     public const int chunkSizeZ = 5;
 
-    //河道最低点的偏移量
-    public const float streamBedElevationOffset = -1f;
-
+    
     //正六边形的六个顶点位置，其姿态为角朝上，从最上面一个顶点开始计算位置
     //根据正六边形中点的位置，顺时针依次定义6个顶点的位置
     private static Vector3[] corners =
@@ -208,20 +229,33 @@ public static class HexMetrics
     }
 
     /// <summary>
-    /// 对彩色噪点图进行采样
+    /// 对彩色噪点图进行采样（使用缓存）
     /// </summary>
     /// <param name="position">采样点位置坐标，世界坐标</param>
     /// <returns>RGBA四个值组成的4D向量</returns>
     public static Vector4 SampleNoise(Vector3 position)
     {
-        //由于入参是世界位置的vector3，而图片UV是二维的，这里忽略掉垂直方向的Y
-        //GetPixelBilinear获取的是指定点的RGBA值，转换为Vector4是隐式的。
-        //return noiseSource.GetPixelBilinear(position.x, position.z);
+        if (noisePixels == null || noiseWidth == 0)
+        {
+            return Vector4.zero;
+        }
 
-        //实际世界空间坐标乘以缩放系数，使得采样控制在一个比较小的范围内，这样就会比较连续
-        return noiseSource.GetPixelBilinear(
-            position.x * noiseScale,
-            position.z * noiseScale
-        );
+        // 计算 UV 坐标（在整张图上平铺）
+        float u = (position.x * noiseScale) % 1f;
+        float v = (position.z * noiseScale) % 1f;
+        if (u < 0) u += 1f;
+        if (v < 0) v += 1f;
+
+        // 缩小采样范围：把 [0,1) 平铺坐标映射到纹理上一个更小的窗口，
+        // 窗口宽度 = noiseSampleRange，起点由随机种子写入的 noiseSampleOrigin 决定
+        u = noiseSampleOrigin.x + u * noiseSampleRange;
+        v = noiseSampleOrigin.y + v * noiseSampleRange;
+
+        // 映射到像素索引
+        int px = Mathf.Clamp((int)(u * noiseWidth), 0, noiseWidth - 1);
+        int py = Mathf.Clamp((int)(v * noiseHeight), 0, noiseHeight - 1);
+
+        Color color = noisePixels[py * noiseWidth + px];
+        return new Vector4(color.r, color.g, color.b, color.a);
     }
 }

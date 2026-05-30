@@ -16,9 +16,6 @@ public class HexMapCamera : MonoBehaviour
     //camera视距控制，0最远，1最近
     private float zoom = 1f;
 
-    //摄像机移动速度
-    //[SerializeField] private float moveSpeed;
-
     //camera的两个移动值，分别对应视距最远和最近
     [SerializeField] private float moveSpeedMinZoom;
     [SerializeField] private float moveSpeedMaxZoom;
@@ -38,13 +35,6 @@ public class HexMapCamera : MonoBehaviour
     public float rotationSpeed;
     //用于记录旋转角度
     private float rotationAngle;
-
-    //private void Awake()
-    //{
-    //获取对应的实例
-    //swivel = transform.GetChild(0);
-    //stick = swivel.GetChild(0);
-    //}
 
     private void Update()
     {

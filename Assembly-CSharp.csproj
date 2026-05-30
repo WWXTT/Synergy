@@ -73,7 +73,6 @@
     <Compile Include="Assets\Scriptes\CardCore\Summon\SummonEngine.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\EffectTargeting.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Attribute\Handlers\GrantKeywordHandlers.cs" />
-    <Compile Include="Assets\Scriptes\FPSDisplay.cs" />
     <Compile Include="Assets\Synty\Epic Toon FX\Scripts\ETFXLightFade.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexCoordinates.cs" />
     <Compile Include="Assets\Scriptes\CardCore\BaseSystems\StateBasedActions\StateBasedActions.cs" />
@@ -163,17 +162,19 @@
     <None Include="Assets\Packages\System.Collections.Immutable.6.0.0\THIRD-PARTY-NOTICES.TXT" />
     <None Include="Assets\Packages\System.Collections.Immutable.6.0.0\LICENSE.TXT" />
     <None Include="Assets\Synty\Epic Toon FX\Prefabs\Environment\Environment FX.txt" />
-    <None Include="Assets\Performance\HexMap\_Materials\HexCell.shader" />
+    <None Include="Assets\Performance\HexMap\Shaders\HexTerrainForwardPass.hlsl" />
     <None Include="Assets\Synty\Epic Toon FX\Prefabs\Combat\Combat FX.txt" />
     <None Include="Assets\Packages\MemoryPack.Core.1.21.4\lib\netstandard2.1\MemoryPack.Core.dll" />
     <None Include="Assets\Packages\System.Collections.Immutable.6.0.0\lib\netstandard2.0\System.Collections.Immutable.dll" />
     <None Include="Assets\Packages\MemoryPack.Generator.1.21.4\analyzers\dotnet\cs\MemoryPack.Generator.dll" />
     <None Include="Assets\Synty\Epic Toon FX\Changelog.txt" />
     <None Include="Assets\Synty\PolygonMech\Materials\Base_Emissive.shader" />
+    <None Include="Assets\Performance\HexMap\Shaders\HexTerrainInput.hlsl" />
     <None Include="Assets\Synty\Epic Toon FX\ETFX_PowerboxLit.shader" />
     <None Include="Assets\Synty\Epic Toon FX\Prefabs\Interactive\Interactive FX.txt" />
     <None Include="Assets\Synty\Epic Toon FX\ETFX_PowerboxUnlit.shader" />
     <None Include="Assets\Packages\MemoryPack.Core.1.21.4\lib\netstandard2.1\MemoryPack.Core.xml" />
+    <None Include="Assets\Performance\HexMap\Shaders\HexTerrain.shader" />
     <None Include="Assets\Packages\System.Collections.Immutable.6.0.0\useSharedDesignerContext.txt" />
     <None Include="Assets\Packages\System.Collections.Immutable.6.0.0\lib\netstandard2.0\System.Collections.Immutable.xml" />
   </ItemGroup>

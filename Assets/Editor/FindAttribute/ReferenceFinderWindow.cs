@@ -22,7 +22,7 @@ public class ReferenceFinderWindow : EditorWindow
         public string fieldName;
     }
 
-    [MenuItem("Tools/Reference Finder")]
+    [MenuItem("Tools/找场景中谁引用了它")]
     private static void Open()
     {
         var window = GetWindow<ReferenceFinderWindow>("Reference Finder");
@@ -168,6 +168,10 @@ public class ReferenceFinderWindow : EditorWindow
                 // 检查是否直接引用了目标 GameObject
                 if (IsReferenceToTarget(objRef, targetInstanceID))
                 {
+                    // ★ 排除 Transform 组件的 m_Parent 引用（父子关系）
+                    if (comp is Transform && prop.name == "m_Parent")
+                        continue;
+
                     AddResult(go, comp, prop);
                 }
             }

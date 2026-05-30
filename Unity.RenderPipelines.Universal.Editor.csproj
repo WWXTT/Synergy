@@ -152,7 +152,6 @@
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\Selection\RectSelector.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\EditablePath\IUndoObject.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\Shapes\Spline.cs" />
-    <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DanbaidongGUI\DanbaidongGUI.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\Decal\CreateDecalProjector.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\Settings\PropertyDrawers\URPRenderGraphPropertyDrawer.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\GUIFramework\GenericControl.cs" />
@@ -182,7 +181,6 @@
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\RendererFeatures\NewPostProcessTemplateDropdownItems.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\Sky\HDRISky\HDRISkyEditor.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\ShaderGUI\ShaderGraphUnlitGUI.cs" />
-    <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DanbaidongGUI\GradientsRamp.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\Converter\ReadonlyMaterialConverter.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DefaultScene\UniversalProjectSettings.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\ShaderGraph\AssetCallbacks\CreateSixWayShaderGraph.cs" />
@@ -197,7 +195,6 @@
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\Settings\PropertyDrawers\URPShaderStrippingSettingsPropertyDrawer.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\EditablePath\EditablePathController.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\Selection\ISelector.cs" />
-    <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DanbaidongGUI\DanbaidongGUIShaderDrawer.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\Selection\ISelection.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\PixelPerfectCameraEditor.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DanbaidongWizard\DanbaidongWizardEditorUtils.cs" />
@@ -269,7 +266,6 @@
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\EditablePath\ControlPoint.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\ShaderGUI\ShadingModels\LitDetailGUI.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShapeEditor\EditorTool\GenericScriptablePath.cs" />
-    <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DanbaidongGUI\GradientsRampEditorWindow.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DanbaidongWizard\DanbaidongUserSettings.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\UniversalRenderPipelineAsset\SerializedUniversalRenderPipelineAsset.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\AssetPostProcessors\ThreeDSMaterialDescriptionPostprocessor.cs" />
@@ -344,7 +340,6 @@
     <None Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\ShaderGraph\Includes\CanvasPass.hlsl" />
     <None Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\VFXGraph\Shaders\Templates\VFXParticleCube.template" />
     <None Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\VFXGraph\Shaders\Templates\ParticleMeshesLit\PassGBuffer.template" />
-    <None Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\DanbaidongGUI\GUIExample\DanbaidongGUIShader.shader" />
     <None Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\VFXGraph\Shaders\VFXLitVaryings.template" />
     <None Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\ShaderGraph\Includes\UnlitPass.hlsl" />
     <None Include="Packages\Dbdrp\DanbaidongRP-urp17\Editor\2D\ShaderGraph\Includes\SpriteUnlitPass.hlsl" />
@@ -1509,12 +1504,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.Mathematics.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEditor.UI">
-      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEditor.UI">
+      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEditor.TestRunner">

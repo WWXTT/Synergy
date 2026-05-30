@@ -21,8 +21,21 @@ public class HexMesh : MonoBehaviour
     private MeshCollider meshCollider;
 
     //存储cell每个顶点的颜色信息
+    //splat 编码下，colors 的 RGB 通道存储 3 个地形的混合权重（可插值，和≈1）
     //private List<Color> colors;
     private static List<Color> colors = new List<Color>();
+
+    //splat 编码：每个顶点携带 3 个地形索引（归一化），存入 UV1。
+    //同一三角形 3 个顶点的索引三元组完全相同，插值后保持精确，不会出现索引被线性插值的错误。
+    private static List<Vector3> cellIndices = new List<Vector3>();
+
+    //权重基向量：对应索引三元组 (x,y,z) 的三个地形
+    private static readonly Color W100 = new Color(1f, 0f, 0f, 1f);
+    private static readonly Color W010 = new Color(0f, 1f, 0f, 1f);
+    private static readonly Color W001 = new Color(0f, 0f, 1f, 1f);
+
+    //按量化世界位置累加面法线，用于焊接平滑法线（避免合并顶点破坏 splat 数据）
+    private static readonly Dictionary<Vector3, Vector3> normalAccum = new Dictionary<Vector3, Vector3>();
 
     private void Awake()
     {
@@ -52,6 +65,7 @@ public class HexMesh : MonoBehaviour
         vertices.Clear();
         triangles.Clear();
         colors.Clear();
+        cellIndices.Clear();
 
         //依次读取数组中的Hex Cell实例，录入每个Hex Cell的顶点信息
         for (int i = 0; i < cells.Length; i++)
@@ -63,13 +77,58 @@ public class HexMesh : MonoBehaviour
         hexMesh.vertices = vertices.ToArray();
         hexMesh.triangles = triangles.ToArray();
 
-        //将所有顶点的颜色信息存储在colors链表中
+        //将所有顶点的颜色信息存储在colors链表中（splat 权重）
         hexMesh.colors = colors.ToArray();
 
-        //重新计算法线方向，使得三角面片可以正确的显示出来
+        //splat 地形索引存入 UV1 通道
+        hexMesh.SetUVs(1, cellIndices);
+
+        //重新计算法线
         hexMesh.RecalculateNormals();
 
         meshCollider.sharedMesh = hexMesh;
+    }
+
+    /// <summary>
+    /// 按量化世界位置焊接法线：同一位置的所有顶点共享一个由周围所有面累加得到的平滑法线。
+    /// 顶点本身不合并，故每个三角形的 UV1 地形索引与顶点色权重都被保留。
+    /// </summary>
+    private void RecalculateSmoothNormals()
+    {
+        normalAccum.Clear();
+
+        for (int t = 0; t < triangles.Count; t += 3)
+        {
+            Vector3 p0 = vertices[triangles[t]];
+            Vector3 p1 = vertices[triangles[t + 1]];
+            Vector3 p2 = vertices[triangles[t + 2]];
+
+            //与 Unity RecalculateNormals 同向：cross(p1-p0, p2-p0)，未归一化即面积加权
+            Vector3 fn = Vector3.Cross(p1 - p0, p2 - p0);
+            Accum(NormalKey(p0), fn);
+            Accum(NormalKey(p1), fn);
+            Accum(NormalKey(p2), fn);
+        }
+
+        Vector3[] normals = new Vector3[vertices.Count];
+        for (int i = 0; i < vertices.Count; i++)
+        {
+            normals[i] = normalAccum[NormalKey(vertices[i])].normalized;
+        }
+        hexMesh.normals = normals;
+    }
+
+    //量化到 0.01 单位栅格，足够细不会误并相邻顶点，又能容忍浮点误差归并同一逻辑点
+    private static Vector3 NormalKey(Vector3 p)
+    {
+        const float q = 100f;
+        return new Vector3(Mathf.Round(p.x * q), Mathf.Round(p.y * q), Mathf.Round(p.z * q));
+    }
+
+    private static void Accum(Vector3 key, Vector3 n)
+    {
+        normalAccum.TryGetValue(key, out Vector3 cur);
+        normalAccum[key] = cur + n;
     }
 
     /// <summary>
@@ -98,205 +157,14 @@ public class HexMesh : MonoBehaviour
         //这里是获cell扰动后的位置
         Vector3 center = cell.Position;
 
-        //这两个Vector3变量，是新的cell自身颜色区域中，两个新的顶点信息，其每个顶点距离cell中心为75%外接圆半径
-        //Vector3 v1 = center + HexMetrics.GetFirstSolidCorner(direction);
-        //Vector3 v2 = center + HexMetrics.GetSecondSolidCorner(direction);
-
         //通过六边形一条边上的两个端点信息，计算出细分的中间两个点的信息
         EdgeVertices e = new EdgeVertices(
             center + HexMetrics.GetFirstSolidCorner(direction),
             center + HexMetrics.GetSecondSolidCorner(direction)
         );
 
-        if (cell.HasRiver)
-        {
-            //检测当前边缘是否有河流穿过
-            if (cell.HasRiverThroughEdge(direction))
-            {
-                //如果有河流穿过，就降低中间顶点的高度，使其成为河床最低点
-                e.v3.y = cell.StreamBedY;
-
-                //使用带河流的构建方式
-                //TriangulateWithRiver(direction, cell, center, e);
-
-                //检测是否为河流的起点或者终点
-                //如果是起点或终点，那就使用特殊的方法构建
-                if (cell.HasRiverBeginOrEnd)
-                {
-                    TriangulateWithRiverBeginOrEnd(direction, cell, center, e);
-                }
-                else
-                {
-                    TriangulateWithRiver(direction, cell, center, e);
-                }
-            }
-        }
-        else
-        {
-            //在计算出各个点的位置信息后，直接构建三角面片
-            //这个是不带河流的构建方式
-            TriangulateEdgeFan(center, e, cell.Color);
-        }
-
-        //这两个Vector3变量，是原本构成cell一个三角面片的其中两个顶点位置。现在是颜色混合区域的两个顶点位置。
-        //Vector3 v4 = center + HexMetrics.GetFirstCorner(direction);
-        //Vector3 v5 = center + HexMetrics.GetSecondCorner(direction);
-
-        //颜色混合区域变为了矩形，V3和V4的位置，其实是通过V1和V2顶点分别加上矩形区域的高来计算得出的
-        //具体可以查看HexMetrics.GetBridge方法的说明
-        //Vector3 bridge = HexMetrics.GetBridge(direction);
-        //Vector3 v4 = v1 + bridge;
-        //Vector3 v5 = v2 + bridge;
-        //该段代码移至 TriangulateConnection 方法中
-
-        //为了增加地图的整体细节，这里在cell六边形每个边的中点上，增加一个顶点
-        //让原来的6个面片变为12个。
-        //Vector3 e1 = Vector3.Lerp(v1, v2, 0.5f);
-
-        //这里将正六边形的每个边均分为3份，面数是原来的3倍
-        //Vector3 e1 = Vector3.Lerp(v1, v2, 1f / 3f);
-        //Vector3 e2 = Vector3.Lerp(v1, v2, 2f / 3f);
-
-        //根据中点位置计算出其余两个顶点的信息
-        /*
-        AddTriangle(
-            center,
-            //center + HexMetrics.GetFirstCorner(direction),
-            //center + HexMetrics.GetSecondCorner(direction)
-
-            //因为将颜色混合区域、cell自身颜色区域分开了，这里首先构建cell自身颜色区域的三角面片
-            //center + HexMetrics.GetFirstSolidCorner(direction),
-            //center + HexMetrics.GetSecondSolidCorner(direction)
-
-            //使用声明的新变量，替换之前计算得出的结果
-            v1, v2
-        );
-        */
-
-        //这里添加的顶点也变为了一个边的中点
-        //这3个顶点是原来六边形一个三角面片的一半
-        //AddTriangle(center, v1, e1);
-
-        //将计算好的颜色混合区域定点位置信息，添加到添加到链表中
-        //AddQuad(v1, v2, v4, v5);
-        //该段代码移至 TriangulateConnection 方法中
-
-        //因为有了HexDirection，这里不再直接使用corners枚举来获取cell的顶点位置信息，而使用HexDirection方位来获取
-        //根据中点位置计算出其余的顶点位置信息，并按照顺序构建三角面片
-        //for (int i = 0; i < 6; i++)
-        //{
-        //    //构建三角面片
-        //    AddTriangle(
-        //        center,
-        //        center + HexMetrics.corners[i],
-        //        center + HexMetrics.corners[i + 1]
-        //    );
-        //}
-
-        //获取当前相邻方位cell，索引值-1相邻cell的实例
-        //HexCell prevNeighbor = cell.GetNeighbor(direction.Previous()) ?? cell;
-
-        //获取与自身当前相邻的cell的颜色值
-        //每个cell会在 Triangulate(HexCell cell) 方法中将与自身相邻的cell遍历一次
-        //?? 为 可空合并运算符，即cell.GetNeighbor(direction)的值为null时，使用 cell的值
-        //HexCell neighbor = cell.GetNeighbor(direction) ?? cell;
-        //该段代码移至 TriangulateConnection 方法中
-
-        //获取当前相邻方位cell，索引值+1相邻cell的实例
-        //HexCell nextNeighbor = cell.GetNeighbor(direction.Next()) ?? cell;
-
-        //将 ?? 替换为了 if/else 判断
-        //HexCell neighbor = null;
-        //if (cell.GetNeighbor(direction) != null)
-        //{
-        //    neighbor = cell.GetNeighbor(direction);
-        //}
-        //else
-        //{
-        //    neighbor = cell;
-        //}
-
-        //两个相邻的cell，其交界处的颜色应该是两个cell颜色的平均值
-        //Color edgeColor = (cell.color + neighbor.color) * 0.5f;
-
-        //为三角面片的顶点赋颜色值
-        //AddTriangleColor(cell.color, neighbor.color, neighbor.color);
-        //AddTriangleColor(cell.color, edgeColor, edgeColor);
-
-        //获取到相邻方位cell，以及相邻方位cell +1和-1 cell的实例，接下来进行颜色混合
-        //三角面片3个顶点颜色分别为
-        //自身颜色
-        //自身颜色，自身颜色+相邻cell方位减1颜色，相邻cell颜色
-        //自身颜色，自身颜色+相邻cell方位加1颜色，相邻cell颜色
-        //AddTriangleColor(
-        //    cell.color,
-        //    (cell.color + prevNeighbor.color + neighbor.color) / 3.0f,
-        //    (cell.color + nextNeighbor.color + neighbor.color) / 3.0f
-        //    );
-
-        //这里为cell的三角面片每个顶点赋值颜色，因为cell自身不再参与颜色混合，所以只有自身颜色
-        //AddTriangleColor(cell.color);
-
-        //这里构建原来六边形一个三角面片的另一半
-        //AddTriangle(center, e1, v2);
-        //AddTriangleColor(cell.color);
-
-        //添加新增顶点的的位置信息和颜色信息
-        //AddTriangle(center, e1, e2);
-        //AddTriangleColor(cell.color);
-        //AddTriangle(center, e2, v2);
-
-        //AddTriangleColor(cell.color);
-
-        //为颜色混合区域的4个顶点分别赋值颜色
-        //其中v1 v2是cell自身颜色，v4 v4是混合后的颜色
-        //AddQuadColor(
-        //    cell.color,
-        //    cell.color,
-        //    (cell.color + prevNeighbor.color + neighbor.color) / 3.0f,
-        //    (cell.color + nextNeighbor.color + neighbor.color) / 3.0f
-        //    );
-
-        //矩形两色混合区域的中间过渡色
-        //Color bridgeColor = (cell.color + neighbor.color) * 0.5f;
-
-        //新的矩形颜色混合区域顶点颜色赋值
-        //AddQuadColor(cell.color, bridgeColor);
-
-        //组成cell的每个三角形区域，有1个矩形混色区域和2个三角形三色混合区域
-        //生成其中一个三角形三色混合区域
-        //AddTriangle(v1, center + HexMetrics.GetFirstCorner(direction), v4);
-
-        //为第一个三角形三色混合区域赋值颜色
-        //自身颜色、三个相邻cell的平均色、矩形混合区域中间色
-        //AddTriangleColor(
-        //    cell.color,
-        //    (cell.color + prevNeighbor.color + neighbor.color) / 3f,
-        //    bridgeColor
-        //    );
-
-        //第二个三角形三色混合区域
-        //AddTriangle(v2, v5, center + HexMetrics.GetSecondCorner(direction));
-
-        //第二个三角形三色混合区域的颜色
-        //AddTriangleColor(
-        //    cell.color,
-        //    bridgeColor,
-        //    (cell.color + nextNeighbor.color + neighbor.color) / 3f
-        //    );
-
-        //只生成NE、E、SE这三个方位的连接
-        //if (direction <= HexDirection.SE)
-        //{
-        //    TriangulateConnection(direction, cell, v1, v2);
-        //}
-
-        //因为对六边形的每个边进行了细分，所以要把新的顶点也传入构建矩形连接区域的方法中
-        //这样矩形区域使用新增的顶点后边缘之间才能吻合
-        //if (direction <= HexDirection.SE)
-        //{
-        //    TriangulateConnection(direction, cell, v1, e1, e2, v2);
-        //}
+        //构建三角面片
+        TriangulateEdgeFan(center, e, cell.Color);
 
         //TriangulateConnection方法增加新的参数，自身不在进行顶点的计算了
         if (direction <= HexDirection.SE)
@@ -306,27 +174,32 @@ public class HexMesh : MonoBehaviour
     }
 
     /// <summary>
-    /// 为每个三角面片的3个顶点赋颜色值
+    /// splat：为三角面片的 3 个顶点写入相同的索引三元组 + 各自的权重
     /// </summary>
-    /// <param name="color">三角面片顶点的颜色信息</param>
-    private void AddTriangleColor(Color color)
+    private void AddTriangleCellData(Vector3 indices, Color w1, Color w2, Color w3)
     {
-        colors.Add(color);
-        colors.Add(color);
-        colors.Add(color);
+        cellIndices.Add(indices);
+        cellIndices.Add(indices);
+        cellIndices.Add(indices);
+        colors.Add(w1);
+        colors.Add(w2);
+        colors.Add(w3);
     }
 
     /// <summary>
-    /// 为每个三角面片的3个顶点分别赋予不同的颜色值
+    /// splat：三角面片 3 个顶点共用同一权重（单一地形）
     /// </summary>
-    /// <param name="c1">第一个顶点的颜色信息(中心点的颜色)</param>
-    /// <param name="c2">第二个顶点的颜色信息</param>
-    /// <param name="c3">第三个顶点的颜色信息</param>
-    private void AddTriangleColor(Color c1, Color c2, Color c3)
+    private void AddTriangleCellData(Vector3 indices, Color weight)
     {
-        colors.Add(c1);
-        colors.Add(c2);
-        colors.Add(c3);
+        AddTriangleCellData(indices, weight, weight, weight);
+    }
+
+    /// <summary>
+    /// splat：两条 A→B 混合权重，按 (1-b, b, 0) 编码
+    /// </summary>
+    private static Color WeightAB(float b)
+    {
+        return new Color(1f - b, b, 0f, 1f);
     }
 
     /// <summary>
@@ -375,7 +248,6 @@ public class HexMesh : MonoBehaviour
 
     /// <summary>
     /// 创建颜色混合区域的三角面片定点信息和索引，这个区域是一个四边形，所以有4个顶点
-    /// 参考图 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/2-7-1.png
     /// </summary>
     /// <param name="v1">三角面片第一个顶点位置信息</param>
     /// <param name="v2">三角面片第二个顶点位置信息</param>
@@ -409,48 +281,27 @@ public class HexMesh : MonoBehaviour
     }
 
     /// <summary>
-    /// 为四边形颜色混合区域的每个顶点赋值颜色
+    /// splat：四边形 4 个顶点共用同一索引三元组，各自的权重分别赋值
     /// </summary>
-    /// <param name="c1">第一个顶点的颜色信息</param>
-    /// <param name="c2">第二个顶点的颜色信息</param>
-    /// <param name="c3">第三个顶点的颜色信息</param>
-    /// <param name="c4">第四个顶点的颜色信息</param>
-
-    private void AddQuadColor(Color c1, Color c2, Color c3, Color c4)
+    private void AddQuadCellData(Vector3 indices, Color w1, Color w2, Color w3, Color w4)
     {
-        colors.Add(c1);
-        colors.Add(c2);
-        colors.Add(c3);
-        colors.Add(c4);
-    }
-
-
-    /// <summary>
-    /// 为四边形颜色混合区域的每个顶点赋值颜色
-    /// 因为该区域只负责混合2个cell的颜色，所以4个顶点只需要2个颜色
-    /// </summary>
-    /// <param name="c1">cell祖神颜色</param>
-    /// <param name="c2">混合后的颜色</param>
-    private void AddQuadColor(Color c1, Color c2)
-    {
-        colors.Add(c1);
-        colors.Add(c1);
-        colors.Add(c2);
-        colors.Add(c2);
+        cellIndices.Add(indices);
+        cellIndices.Add(indices);
+        cellIndices.Add(indices);
+        cellIndices.Add(indices);
+        colors.Add(w1);
+        colors.Add(w2);
+        colors.Add(w3);
+        colors.Add(w4);
     }
 
     /// <summary>
-    /// 使用一个颜色值构建四边形区域，河道在cell中心时候用到
+    /// splat：四边形混合区域只混合 2 个地形，4 个顶点用 2 个权重
     /// </summary>
-    /// <param name="color">cell自身的颜色值</param>
-    private void AddQuadColor(Color color)
+    private void AddQuadCellData(Vector3 indices, Color w1, Color w2)
     {
-        colors.Add(color);
-        colors.Add(color);
-        colors.Add(color);
-        colors.Add(color);
+        AddQuadCellData(indices, w1, w1, w2, w2);
     }
-
 
     /// <summary>
     /// 构建阶梯状连接区域
@@ -462,40 +313,28 @@ public class HexMesh : MonoBehaviour
     /// <param name="endCell">第二个cell的实例</param>
     private void TriangulateEdgeTerraces(EdgeVertices begin, HexCell beginCell, EdgeVertices end, HexCell endCell)
     {
-        //通过插值计算出相邻cell边的每个坐标点
+        float beginIdx = beginCell.Color.r;
+        float endIdx = endCell.Color.r;
+
+        // 第一段
         EdgeVertices e2 = EdgeVertices.TerraceLerp(begin, end, 1);
-        //通过插值计算出相邻cell边每个坐标点的颜色
-        Color c2 = HexMetrics.TerraceLerp(beginCell.Color, endCell.Color, 1);
+        float b2 = 1f * HexMetrics.horizontalTerraceStepSize;
+        TriangulateEdgeStrip(begin, 0f, e2, b2, beginIdx, endIdx);
 
-        //构建阶梯的第一段
-        TriangulateEdgeStrip(begin, beginCell.Color, e2, c2);
-
-        //循环生成中间部分
+        // 中间段
         for (int i = 2; i < HexMetrics.terraceSteps; i++)
         {
             EdgeVertices e1 = e2;
-            Color c1 = c2;
+            float b1 = b2;
             e2 = EdgeVertices.TerraceLerp(begin, end, i);
-            c2 = HexMetrics.TerraceLerp(beginCell.Color, endCell.Color, i);
-            TriangulateEdgeStrip(e1, c1, e2, c2);
+            b2 = i * HexMetrics.horizontalTerraceStepSize;
+            TriangulateEdgeStrip(e1, b1, e2, b2, beginIdx, endIdx);
         }
 
-        //构建阶梯的最后一段
-        TriangulateEdgeStrip(e2, c2, end, endCell.Color);
+        // 最后一段
+        TriangulateEdgeStrip(e2, b2, end, 1f, beginIdx, endIdx);
     }
 
-
-    /// <summary>
-    /// 构建cell其中一个三角面片的颜色混合区域
-    /// </summary>
-    /// <param name="direction">颜色混合区域的方位</param>
-    /// <param name="cell">cell自身实例，用于取得cell位置和颜色 也是三角面片的第一个顶点</param>
-    /// <param name="v1">自身颜色三角面片 的第二个顶点</param>
-    /// <param name="v2">自身颜色三角面片 的第三个顶点</param>
-    //private void TriangulateConnection(HexDirection direction, HexCell cell, Vector3 v1, Vector3 v2)
-
-    //六边形增加了新的顶点，这里要修改参数列表，接收新的顶点
-    //private void TriangulateConnection(HexDirection direction, HexCell cell, Vector3 v1, Vector3 e1, Vector3 e2, Vector3 v2)
 
     //这里不再使用单个顶点，而直接使用EdgeVertices进行顶点计算
     private void TriangulateConnection(HexDirection direction, HexCell cell, EdgeVertices e1)
@@ -510,7 +349,6 @@ public class HexMesh : MonoBehaviour
             return;
         }
 
-        //参考图 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/2-8-1.png
         //先计算出颜色混合区域的高度，在通过v1 v2计算出v3 v5，这样就知道了矩形颜色混合区域的四个顶点了
         Vector3 bridge = HexMetrics.GetBridge(direction);
         //Vector3 v4 = v1 + bridge;
@@ -531,13 +369,7 @@ public class HexMesh : MonoBehaviour
         //利用高度差和第一个cell的坐标，获得连接区域另外一边的4个顶点位置
         EdgeVertices e2 = new EdgeVertices(e1.v1 + bridge, e1.v5 + bridge);
 
-        //使得相邻地图单元的中间顶点坐标也下降到河床最低点位置，不然会有破面产生
-        if (cell.HasRiverThroughEdge(direction))
-        {
-            e2.v3.y = neighbor.StreamBedY;
-        }
-
-        //进行矩形颜色混合区域的三角面片构建和赋值顶点颜色
+        //进行矩形颜色混合区域的三角面片构建
         //AddQuad(v1, v2, v4, v5);
         //AddQuadColor(cell.color, neighbor.color);
         //以上方法注释掉，使用新的 TriangulateEdgeTerraces  进行替换
@@ -567,8 +399,8 @@ public class HexMesh : MonoBehaviour
             //AddQuad(e2, v2, e4, v5);
             //AddQuadColor(cell.color, neighbor.color);
 
-            //这里也使用EdgeVertices计算的顶点来构建矩形
-            TriangulateEdgeStrip(e1, cell.Color, e2, neighbor.Color);
+            //这里使用新增的顶点进行连接区域的构建
+            TriangulateEdgeStrip(e1, 0f, e2, 1f, cell.Color.r, neighbor.Color.r);
         }
 
         //获取相邻方位的下一个方位 的cell
@@ -764,10 +596,11 @@ public class HexMesh : MonoBehaviour
         }
         else
         {
-            //这里先使用旧的方法来构建三角形连接区域，也就是没有阶梯化的那种
-            //经过连接类型判断后，这个方法就会被代替掉
+            //纯三角形连接区域（无阶梯化）
+            //splat：三个 cell 的索引存入三元组，三个顶点各取对应基向量权重
             AddTriangle(bottom, left, right);
-            AddTriangleColor(bottomCell.Color, leftCell.Color, rightCell.Color);
+            Vector3 indices = new Vector3(bottomCell.Color.r, leftCell.Color.r, rightCell.Color.r);
+            AddTriangleCellData(indices, W100, W010, W001);
         }
     }
 
@@ -785,35 +618,36 @@ public class HexMesh : MonoBehaviour
     /// <param name="rightCell">右侧cell实例</param>
     private void TriangulateCornerTerraces(Vector3 begin, HexCell beginCell, Vector3 left, HexCell leftCell, Vector3 right, HexCell rightCell)
     {
+        //splat：索引三元组 (begin, left, right)；权重沿阶梯从 begin 分别插值到 left / right
+        Vector3 indices = new Vector3(beginCell.Color.r, leftCell.Color.r, rightCell.Color.r);
 
-        //计算出与begin相邻的两个cell，每个阶梯的顶点和其对应的颜色
         Vector3 v3 = HexMetrics.TerraceLerp(begin, left, 1);
         Vector3 v4 = HexMetrics.TerraceLerp(begin, right, 1);
-        Color c3 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, 1);
-        Color c4 = HexMetrics.TerraceLerp(beginCell.Color, rightCell.Color, 1);
 
-        //与矩形阶梯区域不同的是，阶梯三角形连接区域最下端是一个三角形，这里先构建这个三角形
+        float h = 1f * HexMetrics.horizontalTerraceStepSize;
+        Color w3 = Color.Lerp(W100, W010, h);
+        Color w4 = Color.Lerp(W100, W001, h);
+
         AddTriangle(begin, v3, v4);
-        AddTriangleColor(beginCell.Color, c3, c4);
+        AddTriangleCellData(indices, W100, w3, w4);
 
-        //循环获取中间部分的顶点位置和颜色信息
         for (int i = 2; i < HexMetrics.terraceSteps; i++)
         {
             Vector3 v1 = v3;
             Vector3 v2 = v4;
-            Color c1 = c3;
-            Color c2 = c4;
+            Color w1 = w3;
+            Color w2 = w4;
             v3 = HexMetrics.TerraceLerp(begin, left, i);
             v4 = HexMetrics.TerraceLerp(begin, right, i);
-            c3 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, i);
-            c4 = HexMetrics.TerraceLerp(beginCell.Color, rightCell.Color, i);
+            h = i * HexMetrics.horizontalTerraceStepSize;
+            w3 = Color.Lerp(W100, W010, h);
+            w4 = Color.Lerp(W100, W001, h);
             AddQuad(v1, v2, v3, v4);
-            AddQuadColor(c1, c2, c3, c4);
+            AddQuadCellData(indices, w1, w2, w3, w4);
         }
 
-        //构建剩余的部分
         AddQuad(v3, v4, left, right);
-        AddQuadColor(c3, c4, leftCell.Color, rightCell.Color);
+        AddQuadCellData(indices, w3, w4, W010, W001);
     }
 
     /// <summary>
@@ -828,46 +662,26 @@ public class HexMesh : MonoBehaviour
     /// <param name="rightCell">右侧cell实例</param>
     private void TriangulateCornerTerracesCliff(Vector3 begin, HexCell beginCell, Vector3 left, HexCell leftCell, Vector3 right, HexCell rightCell)
     {
-        //这里将Slope-Cliff类型的三角形连接区域拆分成两部分进行构建
-        //示意图 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/3-14-2.png
-        //即三角形一个边进行阶梯化，阶梯化后的端点，都与另一条边上的一点相连
-        //边上一点，是通过bottom与right高度差，在进行插值得到的
-        //float b = 1f / (rightCell.Elevation - beginCell.Elevation);
+        //splat：索引三元组 (begin, left, right)
+        Vector3 indices = new Vector3(beginCell.Color.r, leftCell.Color.r, rightCell.Color.r);
 
-        //这里注意，在进行CCSL和CCSR类型三角形连接区域构建时，上下翻转，插值就为负数
-        //这里将计算结构变为正数后再进行插值计算
         float b = 1f / (rightCell.Elevation - beginCell.Elevation);
-        if (b < 0)
-        {
-            b = -b;
-        }
+        if (b < 0) b = -b;
 
-        //Vector3 boundary = Vector3.Lerp(begin, right, b);
-        //这里使用扰动后的坐标点计算分界点
         Vector3 boundary = Vector3.Lerp(Perturb(begin), Perturb(right), b);
-        Color boundaryColor = Color.Lerp(beginCell.Color, rightCell.Color, b);
+        // boundary 位于 begin→right 之间，权重由 W100 向 W001 插值
+        Color boundaryWeights = Color.Lerp(W100, W001, b);
 
-        //测试通过插值找到的三角形上一点是否正确
-        //AddTriangle(begin, left, boundary);
-        //AddTriangleColor(beginCell.color, leftCell.color, boundaryColor);
+        TriangulateBoundaryTriangle(begin, W100, left, W010, boundary, boundaryWeights, indices);
 
-        //构建底部三角面片
-        TriangulateBoundaryTriangle(begin, beginCell, left, leftCell, boundary, boundaryColor);
-
-        //如果left和right的高度关系为Slope，也就是高度差1
-        //那么就使用构建底部构建三角面片的方法，只不过入参是上下翻转的
         if (leftCell.GetEdgeType(rightCell) == HexEdgeType.Slope)
         {
-            TriangulateBoundaryTriangle(left, leftCell, right, rightCell, boundary, boundaryColor);
+            TriangulateBoundaryTriangle(left, W010, right, W001, boundary, boundaryWeights, indices);
         }
-        //如果left和right的高度关系为Cliff，也就是高度差大于1
-        //那么直接只用一个三角面片填补这个区域即可
         else
         {
-            //AddTriangle(left, right, boundary);
-            //这里不再扰动分界点
             AddTriangleUnperturbed(Perturb(left), Perturb(right), boundary);
-            AddTriangleColor(leftCell.Color, rightCell.Color, boundaryColor);
+            AddTriangleCellData(indices, W010, W001, boundaryWeights);
         }
     }
 
@@ -885,52 +699,35 @@ public class HexMesh : MonoBehaviour
     /// <param name="leftCell">左侧cell实例</param>
     /// <param name="right">Cliff斜面的分界点位置</param>
     /// <param name="rightCell">Cliff斜面的分界点的颜色</param>
-    private void TriangulateBoundaryTriangle(Vector3 begin, HexCell beginCell, Vector3 left, HexCell leftCell, Vector3 boundary, Color boundaryColor)
+    private void TriangulateBoundaryTriangle(
+        Vector3 begin, Color beginWeights,
+        Vector3 left, Color leftWeights,
+        Vector3 boundary, Color boundaryWeights, Vector3 indices)
     {
-        //与构建其他阶梯状区域类似，首先构建第一个三角面片
-        //Vector3 v2 = HexMetrics.TerraceLerp(begin, left, 1);
-        //由于在此方法中，并没有用v2继续计算其他顶点，所以在这里先对v2进行扰动，之后代码中直接使用
         Vector3 v2 = Perturb(HexMetrics.TerraceLerp(begin, left, 1));
-        Color c2 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, 1);
+        float h = 1f * HexMetrics.horizontalTerraceStepSize;
+        Color w2 = Color.Lerp(beginWeights, leftWeights, h);
 
-        //AddTriangle(begin, v2, boundary);
-        //这里收束到边界点的时候，边界点不再进行扰动
-        //AddTriangleUnperturbed(Perturb(begin), Perturb(v2), boundary);
-        //使用扰动后的v2点
         AddTriangleUnperturbed(Perturb(begin), v2, boundary);
-        AddTriangleColor(beginCell.Color, c2, boundaryColor);
+        AddTriangleCellData(indices, beginWeights, w2, boundaryWeights);
 
-        //循环创建中间部分的三角面片
         for (int i = 2; i < HexMetrics.terraceSteps; i++)
         {
             Vector3 v1 = v2;
-            Color c1 = c2;
-            //v2 = HexMetrics.TerraceLerp(begin, left, i);
-            //先对V2进行扰动
+            Color w1 = w2;
             v2 = Perturb(HexMetrics.TerraceLerp(begin, left, i));
-            c2 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, i);
-            //AddTriangle(v1, v2, boundary);
-            //这里收束到边界点的时候，边界点不再进行扰动
-            //AddTriangleUnperturbed(Perturb(v1), Perturb(v2), boundary);
-            //使用扰动后的v2点
+            h = i * HexMetrics.horizontalTerraceStepSize;
+            w2 = Color.Lerp(beginWeights, leftWeights, h);
             AddTriangleUnperturbed(v1, v2, boundary);
-            AddTriangleColor(c1, c2, boundaryColor);
+            AddTriangleCellData(indices, w1, w2, boundaryWeights);
         }
 
-        //构建剩余区域
-        //AddTriangle(v2, left, boundary);
-        //这里收束到边界点的时候，边界点不再进行扰动
-        //AddTriangleUnperturbed(Perturb(v2), Perturb(left), boundary);
-        //使用扰动后的v2点
         AddTriangleUnperturbed(v2, Perturb(left), boundary);
-        AddTriangleColor(c2, leftCell.Color, boundaryColor);
+        AddTriangleCellData(indices, w2, leftWeights, boundaryWeights);
     }
 
     /// <summary>
     /// 针对Slope-Cliff连接 镜像 类型 创建三角形连接区域
-    /// 参考图 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/3-16-1.png
-    /// 这里镜像类型的构建与Slope-Cliff相似，只是调整了构建三角形的时候，顶点的顺序
-    /// 方法中注释掉的代码是 TriangulateCornerTerracesCliff 不同的部分
     /// </summary>
     /// <param name="begin">初始cell位置</param>
     /// <param name="beginCell">初始cell实例</param>
@@ -940,34 +737,26 @@ public class HexMesh : MonoBehaviour
     /// <param name="rightCell">右侧cell实例</param>
     private void TriangulateCornerCliffTerraces(Vector3 begin, HexCell beginCell, Vector3 left, HexCell leftCell, Vector3 right, HexCell rightCell)
     {
-        //float b = 1f / (rightCell.Elevation - beginCell.Elevation);
-        //Vector3 boundary = Vector3.Lerp(begin, right, b);
-        //Color boundaryColor = Color.Lerp(beginCell.color, rightCell.color, b);
+        //splat：索引三元组 (begin, left, right)
+        Vector3 indices = new Vector3(beginCell.Color.r, leftCell.Color.r, rightCell.Color.r);
 
         float b = 1f / (leftCell.Elevation - beginCell.Elevation);
-        if (b < 0)
-        {
-            b = -b;
-        }
+        if (b < 0) b = -b;
 
-        //Vector3 boundary = Vector3.Lerp(begin, left, b);
-        //这里使用扰动后的坐标点计算分界点
         Vector3 boundary = Vector3.Lerp(Perturb(begin), Perturb(left), b);
-        Color boundaryColor = Color.Lerp(beginCell.Color, leftCell.Color, b);
+        // boundary 位于 begin→left 之间，权重由 W100 向 W010 插值
+        Color boundaryWeights = Color.Lerp(W100, W010, b);
 
-        //TriangulateBoundaryTriangle(begin, beginCell, left, leftCell, boundary, boundaryColor);
-        TriangulateBoundaryTriangle(right, rightCell, begin, beginCell, boundary, boundaryColor);
+        TriangulateBoundaryTriangle(right, W001, begin, W100, boundary, boundaryWeights, indices);
 
         if (leftCell.GetEdgeType(rightCell) == HexEdgeType.Slope)
         {
-            TriangulateBoundaryTriangle(left, leftCell, right, rightCell, boundary, boundaryColor);
+            TriangulateBoundaryTriangle(left, W010, right, W001, boundary, boundaryWeights, indices);
         }
         else
         {
-            //AddTriangle(left, right, boundary);
-            //这里不再扰动分界点
             AddTriangleUnperturbed(Perturb(left), Perturb(right), boundary);
-            AddTriangleColor(leftCell.Color, rightCell.Color, boundaryColor);
+            AddTriangleCellData(indices, W010, W001, boundaryWeights);
         }
     }
 
@@ -981,16 +770,6 @@ public class HexMesh : MonoBehaviour
         //利用世界空间内一点，在彩色噪点图上进行采样，得到彩色噪点图内一点的RGBA信息
         Vector4 sample = HexMetrics.SampleNoise(position);
 
-        //使用原始坐标加上噪点图的采样坐标，得到扰动后坐标
-        //position.x += sample.x;
-        //position.y += sample.y;
-        //position.z += sample.z;
-
-        //将采样后的扰动结果控制在1到-1之间
-        //position.x += sample.x * 2f - 1f;
-        //position.y += sample.y * 2f - 1f;
-        //position.z += sample.z * 2f - 1f;
-
         //增加了每个点的扰动强度
         position.x += (sample.x * 2f - 1f) * HexMetrics.cellPerturbStrength;
         //为了让cell表面变得平坦，这里不再在垂直方向上进行扰动。
@@ -1002,160 +781,47 @@ public class HexMesh : MonoBehaviour
 
     /// <summary>
     /// 使用计算好的5个顶点，对cell的六边形其中一个三角面片进行细分
+    /// splat：单一地形，索引三元组 (idx,idx,idx)，权重恒为 (1,0,0)
     /// </summary>
     /// <param name="center">cell中心点位置</param>
     /// <param name="edge">一条边上细分后的5个顶点信息</param>
-    /// <param name="color">cell的颜色</param>
+    /// <param name="color">cell的颜色（R=地形索引）</param>
     private void TriangulateEdgeFan(Vector3 center, EdgeVertices edge, Color color)
     {
+        float idx = color.r;
+        Vector3 indices = new Vector3(idx, idx, idx);
+
         AddTriangle(center, edge.v1, edge.v2);
-        AddTriangleColor(color);
-        //AddTriangle(center, edge.v2, edge.v4);
-        //AddTriangleColor(color);
-        //加入了新的顶点信息
+        AddTriangleCellData(indices, W100);
+
         AddTriangle(center, edge.v2, edge.v3);
-        AddTriangleColor(color);
+        AddTriangleCellData(indices, W100);
         AddTriangle(center, edge.v3, edge.v4);
-        AddTriangleColor(color);
+        AddTriangleCellData(indices, W100);
 
         AddTriangle(center, edge.v4, edge.v5);
-        AddTriangleColor(color);
+        AddTriangleCellData(indices, W100);
     }
 
     /// <summary>
-    /// 创建2个cell之间细分后的的连接区域
+    /// 创建2个cell之间细分后的连接区域（splat 编码）
+    /// 索引三元组 = (idxA, idxB, idxB)；权重在 e1 边为 WeightAB(b1)，e2 边为 WeightAB(b2)。
+    /// 平地连接 b1=0、b2=1；阶梯连接由 TriangulateEdgeTerraces 传入各段的混合比例。
     /// </summary>
-    /// <param name="e1">第一个cell一条边上的4个顶点</param>
-    /// <param name="c1">第一个cell的颜色</param>
-    /// <param name="e2">第二个cell一条边上的4个顶点</param>
-    /// <param name="c2">第二个cell的颜色</param>
-    private void TriangulateEdgeStrip(EdgeVertices e1, Color c1, EdgeVertices e2, Color c2)
+    private void TriangulateEdgeStrip(EdgeVertices e1, float b1, EdgeVertices e2, float b2, float idxA, float idxB)
     {
+        Vector3 indices = new Vector3(idxA, idxB, idxB);
+        Color w1 = WeightAB(b1);
+        Color w2 = WeightAB(b2);
+
         AddQuad(e1.v1, e1.v2, e2.v1, e2.v2);
-        AddQuadColor(c1, c2);
-        //AddQuad(e1.v2, e1.v4, e2.v2, e2.v4);
-        //AddQuadColor(c1, c2);
-        //添加了新的顶点信息
+        AddQuadCellData(indices, w1, w2);
         AddQuad(e1.v2, e1.v3, e2.v2, e2.v3);
-        AddQuadColor(c1, c2);
+        AddQuadCellData(indices, w1, w2);
         AddQuad(e1.v3, e1.v4, e2.v3, e2.v4);
-        AddQuadColor(c1, c2);
-
+        AddQuadCellData(indices, w1, w2);
         AddQuad(e1.v4, e1.v5, e2.v4, e2.v5);
-        AddQuadColor(c1, c2);
+        AddQuadCellData(indices, w1, w2);
     }
 
-    /// <summary>
-    /// 当cell中有河流的时候，使用这个方法来进行构建
-    /// 参考图 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/6-13-1.png
-    /// </summary>
-    /// <param name="direction">河流方向</param>
-    /// <param name="cell">cell这身实例</param>
-    /// <param name="center">cell中心点实际位置</param>
-    /// <param name="e">河流穿过的这个边，在这条边上所有的顶点的位置信息</param>
-    private void TriangulateWithRiver(HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e)
-    {
-        //河流宽度为二分之一cell边长，又已知边长与外接圆半径(cell外径outerRadius)相同
-        //为了保持河道在cell中央的时候不会变形，且没有破面等现象产生
-        //所以要将当前河流穿过区域左右两侧的外径，之前顶点与中心重合，现在变为各自距离中心四分之一处
-        //Vector3 centerL = center + HexMetrics.GetFirstSolidCorner(direction.Previous()) * 0.25f;
-        //Vector3 centerR = center + HexMetrics.GetSecondSolidCorner(direction.Next()) * 0.25f;
-
-
-        Vector3 centerL, centerR;
-        //这里将河道情况分开讨论了
-        //1 笔直穿过cell的河道
-        //2 出入口相邻的河道
-        //3 出入口间隔一条边的河道
-        if (cell.HasRiverThroughEdge(direction.Opposite()))//先判断是否是笔直穿过
-        {
-            centerL = center + HexMetrics.GetFirstSolidCorner(direction.Previous()) * 0.25f;
-            centerR = center + HexMetrics.GetSecondSolidCorner(direction.Next()) * 0.25f;
-        }
-        else if (cell.HasRiverThroughEdge(direction.Next()))//出入口相邻的河道 出口在下面
-        {
-            centerL = center;
-            //centerR = Vector3.Lerp(center, e.v5, 0.5f);
-            //虽然河道宽度一直没有改变，但是因为弯道造成了一种挤压感
-            //这里将弯道内侧的顶点偏移量减小，环节视觉上的挤压感
-            centerR = Vector3.Lerp(center, e.v5, 2f / 3f);
-        }
-        else if (cell.HasRiverThroughEdge(direction.Previous()))//出入口相邻的河道 出口在上面
-        {
-            //centerL = Vector3.Lerp(center, e.v1, 0.5f);
-            centerL = Vector3.Lerp(center, e.v1, 2f / 3f);
-            centerR = center;
-        }
-        else
-        {
-            //如果不是笔直的河道，就将河流端点聚拢在cell中心
-            centerL = centerR = center;
-        }
-
-        //重新计算cell中心点的位置，让其偏离河道弯折处，这样河道在转弯的地方就不会显得狭窄了
-        center = Vector3.Lerp(centerL, centerR, 0.5f);
-
-        //根据两侧新的顶点位置，计算出其余顶点的位置
-        //EdgeVertices m = new EdgeVertices(
-        //    Vector3.Lerp(centerL, e.v1, 0.5f),
-        //    Vector3.Lerp(centerR, e.v5, 0.5f)
-        //);
-
-        //这里使用新的顶点计算方式，关键是两侧顶点的偏移量
-        //参考图 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/6-14-2.png
-        //注意梯形中位线部分，中间河道为 1/4+1/4，只看左侧顶点偏移，为1/4的一半，也就是1/8
-        //并且中位线是底边长的3/4，以中位线为计算基础，左右两个顶点其实各偏移了中位线的6/1
-        //可以这么理解： 1/4 + 1/4 + (1/8 +1/8) 这是中位线宽度，其中的1/4其实是中位线的1/3、而一侧偏移量是1/8，也就是中位线的1/6
-        EdgeVertices m = new EdgeVertices(
-            Vector3.Lerp(centerL, e.v1, 0.5f),
-            Vector3.Lerp(centerR, e.v5, 0.5f),
-            1f / 6f
-        );
-
-        //将河道中心的顶点高度下降
-        m.v3.y = center.y = e.v3.y;
-
-        //通过计算后的顶点构建连接区域
-        TriangulateEdgeStrip(m, cell.Color, e, cell.Color);
-
-        //之前构建的是梯形中位线到底边的部分
-        //这里构建中位线到顶边的部分
-        //由于之前所有方法均不适用于这里，所以手动添加顶点
-        //首先构建河道两侧三角形区域
-        AddTriangle(centerL, m.v1, m.v2);
-        AddTriangleColor(cell.Color);
-        AddTriangle(centerR, m.v4, m.v5);
-        AddTriangleColor(cell.Color);
-
-        //构建河道中央两个四边形
-        AddQuad(centerL, center, m.v2, m.v3);
-        AddQuadColor(cell.Color);
-        AddQuad(center, centerR, m.v3, m.v4);
-        AddQuadColor(cell.Color);
-    }
-
-    /// <summary>
-    /// 构建河流起点或终点的cell
-    /// </summary>
-    /// <param name="direction">河流进入或者流出的方向</param>
-    /// <param name="cell">cell自身实例</param>
-    /// <param name="center"></param>
-    /// <param name="e"></param>
-    private void TriangulateWithRiverBeginOrEnd(HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e)
-    {
-        //计算中位线上的5个顶点位置
-        //这里注意，由于是河流的终点或起点，所以河流整体是向内聚拢的，5个顶点对中位线进行等分
-        EdgeVertices m = new EdgeVertices(
-            Vector3.Lerp(center, e.v1, 0.5f),
-            Vector3.Lerp(center, e.v5, 0.5f)
-        );
-
-        //依然保持河道高度
-        m.v3.y = e.v3.y;
-
-        //构建中位线到cell边缘的梯形，这里是由4个矩形组成的，跟连接区域类似，所以使用了构建连接区域的方法
-        TriangulateEdgeStrip(m, cell.Color, e, cell.Color);
-        //构建顶点到中位线的区域
-        TriangulateEdgeFan(center, m, cell.Color);
-    }
 }

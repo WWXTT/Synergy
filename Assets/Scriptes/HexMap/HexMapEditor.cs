@@ -25,14 +25,6 @@ public class HexMapEditor : MonoBehaviour
     //是否启用修改cell高度的功能
     private bool applyElevation = true;
 
-    //河流编辑器的状态
-    private enum OptionalToggle
-    {
-        Ignore, Yes, No
-    }
-
-    //当前河流编辑器选中的状态
-    private OptionalToggle riverMode;
 
     //判断当前是否处于拖拽状态
     private bool isDrag;
@@ -99,24 +91,6 @@ public class HexMapEditor : MonoBehaviour
 
         //在设置笔刷大小的同时，更新显示的文字信息
         brushSizeText.text = "Brush Size: " + size.ToString();
-    }
-
-    /// <summary>
-    /// 设置河流编辑器的状态
-    /// </summary>
-    /// <param name="mode">状态枚举索引值</param>
-    public void SetRiverMode(int mode)
-    {
-        riverMode = (OptionalToggle)mode;
-    }
-
-    /// <summary>
-    /// 通过UI组件修改坐标UI的显示/隐藏
-    /// </summary>
-    /// <param name="visible">UI坐标显示的状态</param>
-    public void ShowUI(bool visible)
-    {
-        hexGrid.ShowUI(visible);
     }
 
     private void Awake()
@@ -274,23 +248,14 @@ public class HexMapEditor : MonoBehaviour
             {
                 cell.Elevation = activeElevation;
             }
-
-            //当移除河流勾选时，删除cell上的河流
-            if (riverMode == OptionalToggle.No)
-            {
-                cell.RemoveRiver();
-            }
-            //当拖拽发生，并且是创建河流勾选时，鼠标拖拽会创建河流
-            else if (isDrag && riverMode == OptionalToggle.Yes)
-            {
-                //检测当前cell的拖拽方位上，是否有相邻cell 的实例
-                //如果有实例，就创建相应的河流信息
-                HexCell otherCell = cell.GetNeighbor(dragDirection.Opposite());
-                if (otherCell)
-                {
-                    otherCell.SetOutgoingRiver(dragDirection);
-                }
-            }
         }
+    }
+
+    /// <summary>
+    /// 通过编辑器按钮触发生成噪声地形
+    /// </summary>
+    public void GenerateTerrain()
+    {
+        hexGrid.GenerateTerrain();
     }
 }

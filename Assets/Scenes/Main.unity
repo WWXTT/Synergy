@@ -251,8 +251,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 63413614}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.009553787, y: -0.8898381, z: 0.01736359, w: 0.45584583}
-  m_LocalPosition: {x: 8.81419, y: 1.3152604, z: 6.3337345}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -447,12 +447,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cellPrefab: {fileID: 3764777292931497851, guid: deb8a8b782a234a828614f11050e4c9f,
     type: 3}
-  cellLabelPrefab: {fileID: 9029589587053216593, guid: ea3db1046ea710d4b9f9f0c28904d5da,
-    type: 3}
-  defaultColor: {r: 1, g: 1, b: 1, a: 1}
   noiseSource: {fileID: 2800000, guid: 0d4a0a08cb4038643ba193bfc7910bda, type: 3}
-  chunkCountX: 4
-  chunkCountZ: 3
+  noiseSampleRange: 0.1
+  noiseSeed: 0
+  chunkCountX: 10
+  chunkCountZ: 10
+  maxElevation: 10
+  terrainTypeCount: 8
+  terrainTypeColors:
+  - {r: 0.2, g: 0.5, b: 0.1, a: 1}
+  - {r: 0.4, g: 0.3, b: 0.1, a: 1}
+  - {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  - {r: 0.8, g: 0.75, b: 0.5, a: 1}
+  - {r: 0.9, g: 0.9, b: 0.95, a: 1}
+  - {r: 0.1, g: 0.3, b: 0.6, a: 1}
+  - {r: 0.3, g: 0.2, b: 0.1, a: 1}
+  - {r: 0.6, g: 0.6, b: 0.3, a: 1}
   chunkPrefab: {fileID: 3327030219185371730, guid: 3932d55d58af97440bf42b154810ff95,
     type: 3}
 --- !u!4 &413633939
@@ -467,7 +477,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1524956150}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1080065510
@@ -519,6 +530,105 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1571237540}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1524956149
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1524956150}
+  - component: {fileID: 1524956152}
+  - component: {fileID: 1524956151}
+  m_Layer: 0
+  m_Name: CinemachineCamera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1524956150
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1524956149}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 413633939}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1524956151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1524956149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca68cbeb08dc03f46a128fd4f6a8d3d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HexMapCamera
+  grid: {fileID: 413633938}
+  swivel: {fileID: 0}
+  stick: {fileID: 0}
+  moveSpeedMinZoom: 0
+  moveSpeedMaxZoom: 0
+  stickMinZoom: 0
+  stickMaxZoom: 0
+  swivelMinZoom: 0
+  swivelMaxZoom: 0
+  zoomSensitivity: 4
+  rotationSpeed: 0
+--- !u!114 &1524956152
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1524956149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
+  Priority:
+    Enabled: 0
+    m_Value: 0
+  OutputChannel: 1
+  StandbyUpdate: 2
+  m_StreamingVersion: 20241001
+  m_LegacyPriority: 0
+  Target:
+    TrackingTarget: {fileID: 0}
+    LookAtTarget: {fileID: 0}
+    CustomLookAtTarget: 0
+  Lens:
+    FieldOfView: 60.000004
+    OrthographicSize: 10
+    NearClipPlane: 0.1
+    FarClipPlane: 1000
+    Dutch: 0
+    ModeOverride: 0
+    PhysicalProperties:
+      GateFit: 2
+      SensorSize: {x: 21.946, y: 16.002}
+      LensShift: {x: 0, y: 0}
+      FocusDistance: 10
+      Iso: 200
+      ShutterSpeed: 0.005
+      Aperture: 16
+      BladeCount: 5
+      Curvature: {x: 2, y: 11}
+      BarrelClipping: 0.25
+      Anamorphism: 0
+  BlendHint: 0
 --- !u!1 &1571237539
 GameObject:
   m_ObjectHideFlags: 0

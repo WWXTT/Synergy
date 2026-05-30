@@ -54,7 +54,11 @@
     <Compile Include="Assets\Editor\TextureArrayGeneratorEditor.cs" />
     <Compile Include="Assets\Editor\CreateConfig.cs" />
     <Compile Include="Assets\Editor\RefreshMemoryPackOrder.cs" />
+    <Compile Include="Assets\Editor\DanbaidongGUI\DanbaidongGUIShaderDrawer.cs" />
     <Compile Include="Assets\Editor\FindAttribute\MissingReferenceChecker.cs" />
+    <Compile Include="Assets\Editor\DanbaidongGUI\DanbaidongGUI.cs" />
+    <Compile Include="Assets\Editor\DanbaidongGUI\GradientsRampEditorWindow.cs" />
+    <Compile Include="Assets\Editor\DanbaidongGUI\GradientsRamp.cs" />
     <Compile Include="Assets\Editor\DanbaidongShaderConverter\DanbaidongShaderConverterWindow.cs" />
     <Compile Include="Assets\Editor\DanbaidongShaderConverter\ShaderScanEngine.cs" />
     <Compile Include="Assets\Editor\FindAttribute\AllowNullAttribute.cs" />
@@ -62,6 +66,9 @@
     <Compile Include="Assets\Editor\DanbaidongShaderConverter\ShaderConversionEngine.cs" />
     <Compile Include="Assets\Editor\MeshCreator.cs" />
     <Compile Include="Assets\Editor\DanbaidongShaderConverter\ShaderConversionReport.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Editor\DanbaidongGUI\GUIExample\DanbaidongGUIShader.shader" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

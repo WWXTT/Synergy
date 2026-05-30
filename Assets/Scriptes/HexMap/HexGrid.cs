@@ -1,17 +1,10 @@
 ﻿using UnityEngine;
-using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
 
 #pragma warning disable 649
 
 public class HexGrid : MonoBehaviour
 {
-
-    //表示每一行有多少个地图单元
-    //public int height = 6;
-    //表示每一列有多少个地图单元
-    //public int width = 6;
-
-    //这里使用新的变量来初始化cells的尺寸
     //这两个变量的值可以通过地图中有几个chunk和每个chunk的尺寸计算出来
     private int cellCountX;
     private int cellCountZ;
@@ -22,26 +15,41 @@ public class HexGrid : MonoBehaviour
     //存放所有实例化的地图单元
     private HexCell[] cells;
 
-    //存放显示地图单元坐标的Text Prefab
-    [SerializeField] private Text cellLabelPrefab;
-
-    //Text Prefab的父级Canvas
-    //private Canvas gridCanvas;
-
-    //存储Hex Mesh物体上的hexMesh脚本组件
-    //private HexMesh hexMesh;
-
-    //cell的默认颜色
-    public Color defaultColor = Color.white;
-    //cell被点击后的颜色
-    //public Color touchedColor = Color.magenta;
-
     //彩色噪点图的实例，直接将图片拖拽至Inspector面板对应位置赋初始值
     public Texture2D noiseSource;
 
+    //噪声采样设置
+    [Header("Noise Sampling")]
+    //采样范围：读取噪声图的窗口宽度（<1 即缩小采样范围，纹理特征被放大）
+    [Range(0.05f, 1f)] public float noiseSampleRange = 1f;
+    //随机种子：决定在噪声图上的采样起点位置
+    public int noiseSeed = 0;
+
     //定义整个地图长宽各有多少个chunk
-    public int chunkCountX = 4;
-    public int chunkCountZ = 3;
+    public int chunkCountX = 1;
+    public int chunkCountZ = 1;
+
+    //地形生成高低落差参数
+    [Header("Terrain Generation")]
+    public int maxElevation = 6;
+
+    //地形类型参数
+    [Header("Terrain Types")]
+    public int terrainTypeCount = 8;
+
+    //颜色查找表 — 每种地形的参考颜色，Inspector 中配置
+    [Header("Terrain Color Lookup")]
+    public Color[] terrainTypeColors = new Color[]
+    {
+        new Color(0.2f, 0.5f, 0.1f),  // 0: 草地
+        new Color(0.4f, 0.3f, 0.1f),  // 1: 泥土
+        new Color(0.5f, 0.5f, 0.5f),  // 2: 岩石
+        new Color(0.8f, 0.75f, 0.5f), // 3: 沙地
+        new Color(0.9f, 0.9f, 0.95f), // 4: 雪地
+        new Color(0.1f, 0.3f, 0.6f),  // 5: 水域
+        new Color(0.3f, 0.2f, 0.1f),  // 6: 深土
+        new Color(0.6f, 0.6f, 0.3f),  // 7: 干草
+    };
 
     //逻辑变成了 地图初始化 -> 创建chunk ->创建cell
     //这里要先引用Chunk的Prefab
@@ -52,63 +60,47 @@ public class HexGrid : MonoBehaviour
 
     private void Awake()
     {
-        //为HexMetrics的静态变量赋值
-        //由于此脚本最先被调用，所以在这里赋初始值
         HexMetrics.noiseSource = noiseSource;
+        ApplyNoiseSampling();
+        HexMetrics.InitializeNoiseCache();
 
-        //获取Hex Mesh物体上的hexMesh脚本组件实例
-        //hexMesh = GetComponentInChildren<HexMesh>();
-
-        //获取Hex Grid子物体下d Canvas组件
-        //gridCanvas = GetComponentInChildren<Canvas>();
-
-        //根据长度和宽度，初始化数组大小
-        //cells = new HexCell[cellCountZ * cellCountX];
-
-        //从左下角开始，依次往右，每一行为 width 个单元后，上移一行
-        //for (int z = 0, i = 0; z < cellCountZ; z++)
-        //{
-        //    for (int x = 0; x < cellCountX; x++)
-        //    {
-        //        CreateCell(x, z, i++);
-        //    }
-        //}
-
-        //计算出整个地图横向和纵向cell的个数，也就是二维数组的长和宽
         cellCountX = chunkCountX * HexMetrics.chunkSizeX;
         cellCountZ = chunkCountZ * HexMetrics.chunkSizeZ;
 
-        CreateChunks();
+        // 写入 chunk 世界尺寸全局常量，shader 据此让贴图整图铺满一个 chunk
+        float chunkWorldX = HexMetrics.chunkSizeX * (HexMetrics.innerRadius * 2f);
+        float chunkWorldZ = HexMetrics.chunkSizeZ * (HexMetrics.outerRadius * 1.5f);
+        Shader.SetGlobalVector("_ChunkWorldSize", new Vector4(chunkWorldX, chunkWorldZ, 0f, 0f));
 
-        CreateCells();
+        InitializeAsync().Forget();
     }
 
-
-    /// <summary>
-    /// 创建地图块，并将创建的实例循环添加至数组chunks中
-    /// </summary>
-    private void CreateChunks()
+    private async UniTaskVoid InitializeAsync()
     {
-        //设置数组长宽
-        chunks = new HexGridChunk[chunkCountX * chunkCountZ];
+        await CreateChunksAsync();
+        await CreateCellsAsync();
+        GenerateTerrain();
+    }
 
-        //双循环，将创建的chunk实例添加到chunks数组中
+    private async UniTask CreateChunksAsync()
+    {
+        chunks = new HexGridChunk[chunkCountX * chunkCountZ];
         for (int z = 0, i = 0; z < chunkCountZ; z++)
         {
             for (int x = 0; x < chunkCountX; x++)
             {
                 HexGridChunk chunk = chunks[i++] = Instantiate(chunkPrefab);
                 chunk.transform.SetParent(transform);
+                chunk.gameObject.SetActive(true);
+                // 禁用脚本，防止 LateUpdate 在 cells 填充前执行
+                chunk.enabled = false;
             }
+            await UniTask.Yield();
         }
     }
 
-    /// <summary>
-    /// 初始化存储cell实例的数组
-    /// </summary>
-    private void CreateCells()
+    private async UniTask CreateCellsAsync()
     {
-        //通过计算出来的长和宽，对数组进行初始化
         cells = new HexCell[cellCountZ * cellCountX];
 
         for (int z = 0, i = 0; z < cellCountZ; z++)
@@ -117,7 +109,87 @@ public class HexGrid : MonoBehaviour
             {
                 CreateCell(x, z, i++);
             }
+            // 每创建一行cell等待一帧
+            await UniTask.Yield();
         }
+    }
+
+    public void GenerateTerrain()
+    {
+        if (noiseSource == null)
+        {
+            Debug.LogWarning("Noise source texture is not assigned!");
+            return;
+        }
+
+        // 应用当前采样范围/种子（编辑器内改参数后点生成即可生效）
+        ApplyNoiseSampling();
+
+        for (int i = 0; i < cells.Length; i++)
+        {
+            HexCell cell = cells[i];
+            Vector3 cellPosition = cell.transform.localPosition;
+
+            // 使用已缓存的 SampleNoise（避免 GPU→CPU 传输）
+            Vector4 noiseSample = HexMetrics.SampleNoise(cellPosition);
+
+            // 透明通道映射到 [minElevation, maxElevation]
+            int elevation = Mathf.RoundToInt(noiseSample.w * (maxElevation));
+            elevation = Mathf.Clamp(elevation, 0, maxElevation);
+
+            cell.SetElevationNoRefresh(elevation);
+
+            // 将噪声颜色映射为地形类型索引，原始索引存入 cell（splat：UV1 直接取用，无需解码）
+            int terrainIdx = ColorToTerrainIndex(noiseSample.x, noiseSample.y, noiseSample.z);
+            cell.SetColorNoRefresh(new Color(terrainIdx, terrainIdx, 0f, 1f));
+        }
+
+        // 标记所有 chunk 需要刷新
+        for (int i = 0; i < chunks.Length; i++)
+        {
+            chunks[i].Refresh();
+        }
+    }
+
+    /// <summary>
+    /// 把采样范围与随机种子写入 HexMetrics：缩小采样窗口，并由种子决定窗口在噪声图上的起点
+    /// </summary>
+    private void ApplyNoiseSampling()
+    {
+        float range = Mathf.Clamp(noiseSampleRange, 0.05f, 1f);
+        HexMetrics.noiseSampleRange = range;
+
+        // 窗口必须落在 [0,1) 内，故起点上限为 (1 - range)。用种子做确定性随机。
+        float span = 1f - range;
+        var rng = new System.Random(noiseSeed);
+        float ox = (float)rng.NextDouble() * span;
+        float oy = (float)rng.NextDouble() * span;
+        HexMetrics.noiseSampleOrigin = new Vector2(ox, oy);
+    }
+
+    /// <summary>
+    /// 通过最近颜色匹配，将噪声颜色映射为地形类型索引
+    /// </summary>
+    private int ColorToTerrainIndex(float r, float g, float b)
+    {
+        if (terrainTypeColors == null || terrainTypeColors.Length == 0) return 0;
+
+        // terrainTypeCount 限制可产生的最大地形索引：只在前 N 个参考颜色中匹配
+        int usable = Mathf.Clamp(terrainTypeCount, 1, terrainTypeColors.Length);
+        float minDist = float.MaxValue;
+        int bestIdx = 0;
+        for (int i = 0; i < usable; i++)
+        {
+            Color c = terrainTypeColors[i];
+            float dr = r - c.r, dg = g - c.g, db = b - c.b;
+            float dist = dr * dr + dg * dg + db * db;
+            if (dist < minDist)
+            {
+                minDist = dist;
+                bestIdx = i;
+            }
+        }
+        return bestIdx;
     }
 
     private void OnEnable()
@@ -274,15 +346,6 @@ public class HexGrid : MonoBehaviour
         //声明一个Vector3，根据这个Cell在数组中的位置，计算其在游戏场景中的实际位置
         Vector3 position;
 
-        //position.x = x * 10f;//正方形Cell时，两个cell的水平间距
-        //position.x = x * (HexMetrics.innerRadius * 2f);//两个正六边形Cell中点的水平间距
-        //增加了Offset，每一行偏移量为行数*内切圆半径
-        //position.x = x * (HexMetrics.innerRadius * 2f) + z * (HexMetrics.innerRadius * 2f) * 0.5f;
-        //由上一个等式提取公因式得出：
-        //position.x = (x + z * 0.5f) * (HexMetrics.innerRadius * 2f);
-        //上一步中，生成的Cell会排列成菱形
-        //要排列成正方形，需要在偶数行去掉偏移量
-        //这里注意，Z/2只是取商，舍掉余数
         //所以在偶数行正好抵消了偏移量，而在奇数行，z * 0.5f - z / 2 * (HexMetrics.innerRadius * 2f)正好是一个内切圆半径长度
         position.x = (x + z * 0.5f - z / 2) * (HexMetrics.innerRadius * 2f);
 
@@ -305,9 +368,6 @@ public class HexGrid : MonoBehaviour
         //在不改变cell排列的情况下，重新计算每个cell的坐标位置
         cell.coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
 
-        //为每个cell赋颜色初始值
-        cell.Color = defaultColor;
-
         //以下为将 周围cell与自身相链接的代码部分----------------------------------------
         //判断cell是否为每一行第一个
         //如果不是第一个，则cell会有W方位相邻的cell，就可以建立E-W链接
@@ -317,12 +377,9 @@ public class HexGrid : MonoBehaviour
             cell.SetNeighbor(HexDirection.W, cells[i - 1]);
         }
 
-        //因为偶数行和奇数行的链接关系不同，所以要分开进行判断
         //注意，这里行数索引是从0开始，也就是说，实际看到的第一行索引是0，也就是说起始是偶数行
         //在使用SetNeighbor方法进行cell的链接时，自身和对应cell会相互建立连接
         //所以，这里选择除了第一行，其他行都只进行SE和SW方向的链接，再加上之前的W方向，其实就完成了所有6个方向的相互链接
-        //图片参考 http://magi-melchiorl.gitee.io/pages/Pics/Hexmap/2-2-3.png
-        //这里还有一点，要注意cell的“索引”和“坐标”！这两个数值是计算链接的关键数值！
         if (z > 0)
         {
             //这里的&为位运算符 MSDN：https://docs.microsoft.com/zh-cn/dotnet/csharp/language-reference/operators/bitwise-and-shift-operators
@@ -355,25 +412,6 @@ public class HexGrid : MonoBehaviour
             }
         }
 
-        //该变量用来存储被实例化的cellLabelPrefab预置
-        Text label = Instantiate<Text>(cellLabelPrefab);
-
-        //设置该label的父级，也就是canvas
-        //这里不再设置label的父级，而是将其分配到对应chunk中，由chunk进行父级的设置
-        //label.rectTransform.SetParent(gridCanvas.transform, false);
-
-        //设置label的位置，与被实例化的cell位置相同
-        label.rectTransform.anchoredPosition = new Vector2(position.x, position.z);
-
-        //设置label的文字，就是cell在数组中的位置
-        //label.text = x.ToString() + "\n" + z.ToString();
-
-        //将转换后的坐标值复制给UGUI的Text组件，将它显示出来
-        label.text = cell.coordinates.ToStringOnSeparateLines();
-
-        //获取cell对应UI的rectTransform组件实例
-        cell.uiRect = label.rectTransform;
-
         //在地图初始状态下，每个cell的海拔高度都经过扰动
         cell.Elevation = 0;
 
@@ -403,15 +441,4 @@ public class HexGrid : MonoBehaviour
         chunk.AddCell(localX + localZ * HexMetrics.chunkSizeX, cell);
     }
 
-    /// <summary>
-    /// 控制所有地图块的坐标显示UI的 显示/隐藏
-    /// </summary>
-    /// <param name="visible">所有UI的显示状态</param>
-    public void ShowUI(bool visible)
-    {
-        for (int i = 0; i < chunks.Length; i++)
-        {
-            chunks[i].ShowUI(visible);
-        }
     }
-}

@@ -12,7 +12,7 @@ namespace CardCore.Tools
         private const string OUTPUT_PATH = "Assets/Core/Serialization/TagTable.cs";
         private const uint SYNERGY_TAG_SEED = 0x53796E67;
 
-        [MenuItem("Tools/刷新MemoryPackOrder")]
+        [MenuItem("Tools/刷新属性排序（新增序列化字段时使用）")]
         public static void GenerateTagTable()
         {
             var tags = GetTagDefinitions();
