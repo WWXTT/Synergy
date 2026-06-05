@@ -116,34 +116,10 @@ namespace CardCore
         public float BaseDrawValue = 1.5f;
         public float BaseDestroyValue = 2.0f;
 
-        private static Dictionary<AtomicEffectType, float> _baseValues = new Dictionary<AtomicEffectType, float>
-        {
-            { AtomicEffectType.DealDamage, 1.0f },
-            { AtomicEffectType.Heal, 0.8f },
-            { AtomicEffectType.DrawCard, 1.5f },
-            { AtomicEffectType.Destroy, 2.0f },
-            { AtomicEffectType.Exile, 2.5f },
-            { AtomicEffectType.DiscardCard, 1.2f },
-            { AtomicEffectType.MillCard, 0.5f },
-            { AtomicEffectType.GainControl, 3.0f },
-            { AtomicEffectType.CreateToken, 1.5f },
-            { AtomicEffectType.ModifyPower, 0.5f },
-            { AtomicEffectType.ModifyLife, 0.5f },
-            { AtomicEffectType.Tap, 0.3f },
-            { AtomicEffectType.Untap, 0.3f },
-            { AtomicEffectType.AddMana, 1.0f },
-            { AtomicEffectType.PreventDamage, 0.8f },
-            { AtomicEffectType.CounterSpell, 2.0f },
-            { AtomicEffectType.FreezePermanent, 0.6f },
-            { AtomicEffectType.AddCounters, 0.4f }
-        };
-
         public float GetAtomicEffectBaseValue(AtomicEffectType type, int value = 1, bool applyValue = true)
         {
-            if (!_baseValues.TryGetValue(type, out var baseValue))
-            {
-                baseValue = 1.0f; // 默认基础价值
-            }
+            // 基础价值来自配置表（AttributeValueConfig.json 的 BaseCost），不再维护第二份硬编码
+            float baseValue = AtomicEffectTable.GetByType(type)?.BaseCost ?? 1.0f;
 
             if (applyValue && value > 0)
             {

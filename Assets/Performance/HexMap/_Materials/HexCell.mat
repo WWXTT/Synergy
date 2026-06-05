@@ -191,7 +191,7 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _HeightBlendOffset: 1
-    - _HeightBlendStrength: 0.01
+    - _HeightBlendStrength: 1
     - _INDIR_CUBEMAP: 0
     - _IndirDiffIntensity: 1
     - _IndirDiffUpDirSH: 0
@@ -200,7 +200,7 @@ Material:
     - _MacroVariationScale: 0.001
     - _MacroVariationStrength: 0
     - _MainLightColorLerp: 0.5
-    - _Metallic: 0
+    - _Metallic: 1
     - _Mode: 0
     - _NormalScale: 1
     - _Occlusion: 1
@@ -220,7 +220,7 @@ Material:
     - _ShadowSmoothScene: 0.1
     - _ShadowStrength: 1
     - _Shininess: 0.2
-    - _Smoothness: 0.5
+    - _Smoothness: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1

@@ -84,6 +84,11 @@ namespace CardCore
             stackEngine.Initialize(_player1);
             _subSystems.Register(stackEngine);
 
+            // 注册全局内置效果/代价处理器（幂等）+ 预热原子效果配置表，
+            // 确保本核心自建的 executor 能在首次结算前找到处理器与配置
+            BuiltinHandlerBootstrap.EnsureRegistered();
+            _ = CardCore.Attribute.AtomicEffectTable.Count;
+
             // 初始化回合引擎
             var turnEngine = new TurnEngine();
             turnEngine.Initialize(_player1);
@@ -150,6 +155,19 @@ namespace CardCore
                 turnEngine, stackEngine, triggerEngine,
                 sbaEngine, layerEngine, combatSystem,
                 durationTracker, controlChangeLayer, textChangeLayer);
+
+            // 回合开始接线：重置栈优先权持有者 + 清零「每回合一次」使用计数
+            // （TurnEngine.StartNewTurn 发布 TurnStartEvent，此处统一消费）
+            EventManager.Instance.Subscribe<TurnStartEvent>(OnTurnStarted);
+        }
+
+        /// <summary>
+        /// 回合开始：重置栈优先权与每回合使用计数
+        /// </summary>
+        private void OnTurnStarted(TurnStartEvent e)
+        {
+            StackEngine.OnTurnStart(e.TurnPlayer);
+            StackEngine.GetExecutor().OnNewTurn(e.TurnNumber);
         }
 
         #region 游戏生命周期
@@ -307,8 +325,10 @@ namespace CardCore
 
         /// <summary>
         /// 发布事件到事件总线并通知子系统
+        /// internal：供 GameActions 等同程序集逻辑统一走此路径，
+        /// 保证 TriggerEngine/LayerEngine 都能观察到（修复事件绕过子系统的双引擎问题）
         /// </summary>
-        private void PublishEvent<T>(T e) where T : IGameEvent
+        internal void PublishEvent<T>(T e) where T : IGameEvent
         {
             EventManager.Instance.Publish(e);
             TriggerEngine.OnEvent(e);

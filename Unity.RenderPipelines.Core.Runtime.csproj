@@ -108,8 +108,8 @@
     <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\Debugging\DebugDisplaySettings.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\XR\XRLayoutStack.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\Common\ObservableList.cs" />
-    <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\CommandBuffers\CommandBufferHelpers.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\Debugging\DebugUI.cs" />
+    <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\CommandBuffers\CommandBufferHelpers.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\PostProcessing\LensFlareDataSRP.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\Lighting\ProbeVolume\ProbeReferenceVolume.Debug.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRPCore-core17\Runtime\XR\XRLayout.cs" />
@@ -1427,12 +1427,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.Burst.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEditor.UI">
       <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

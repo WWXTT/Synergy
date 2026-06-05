@@ -176,177 +176,32 @@ namespace CardCore
 
     /// <summary>
     /// 预定义的元素倾向（仅红蓝绿灰）
+    /// 颜色来源：配置表 AttributeValueConfig.json 的 EffectColor（经 AtomicEffectTable 加载，存于 Tags）。
     /// </summary>
     public static class ElementAffinities
     {
-        #region 红色 - 伤害与破坏
-
-        /// <summary>伤害效果</summary>
-        public static ElementAffinity Damage => ElementAffinity.Single(ManaType.Red);
-
-        /// <summary>燃烧效果</summary>
-        public static ElementAffinity Burn => ElementAffinity.Single(ManaType.Red);
-
-        /// <summary>破坏效果</summary>
-        public static ElementAffinity Destruction => ElementAffinity.Single(ManaType.Red);
-
-        /// <summary>敏捷效果</summary>
-        public static ElementAffinity Haste => ElementAffinity.Single(ManaType.Red);
-
-        /// <summary>突袭效果</summary>
-        public static ElementAffinity Rush => ElementAffinity.Single(ManaType.Red);
-
-        /// <summary>双击效果</summary>
-        public static ElementAffinity DoubleStrike => ElementAffinity.Single(ManaType.Red);
-
-        /// <summary>多次攻击效果</summary>
-        public static ElementAffinity MultiAttack => ElementAffinity.Single(ManaType.Red);
-
-        #endregion
-
-        #region 蓝色 - 控制与知识
-
-        /// <summary>抽卡效果</summary>
-        public static ElementAffinity Draw => ElementAffinity.Single(ManaType.Blue);
-
-        /// <summary>弹回手牌效果</summary>
-        public static ElementAffinity Bounce => ElementAffinity.Single(ManaType.Blue);
-
-        /// <summary>反制效果</summary>
-        public static ElementAffinity Counter => ElementAffinity.Single(ManaType.Blue);
-
-        /// <summary>横置效果</summary>
-        public static ElementAffinity Tap => ElementAffinity.Single(ManaType.Blue);
-
-        /// <summary>冻结效果</summary>
-        public static ElementAffinity Freeze => ElementAffinity.Single(ManaType.Blue);
-
-        /// <summary>复制效果</summary>
-        public static ElementAffinity Copy => ElementAffinity.Single(ManaType.Blue);
-
-        /// <summary>重定向效果</summary>
-        public static ElementAffinity Redirect => ElementAffinity.Single(ManaType.Blue);
-
-        /// <summary>偷取控制权效果</summary>
-        public static ElementAffinity StealControl => ElementAffinity.Single(ManaType.Blue);
-
-        #endregion
-
-        #region 绿色 - 成长与恢复
-
-        /// <summary>法力加速效果</summary>
-        public static ElementAffinity Ramp => ElementAffinity.Single(ManaType.Green);
-
-        /// <summary>增益效果</summary>
-        public static ElementAffinity Buff => ElementAffinity.Single(ManaType.Green);
-
-        /// <summary>召唤效果</summary>
-        public static ElementAffinity Summon => ElementAffinity.Single(ManaType.Green);
-
-        /// <summary>治疗效果</summary>
-        public static ElementAffinity Heal => ElementAffinity.Single(ManaType.Green);
-
-        /// <summary>重置效果</summary>
-        public static ElementAffinity Untap => ElementAffinity.Single(ManaType.Green);
-
-        /// <summary>践踏效果</summary>
-        public static ElementAffinity Trample => ElementAffinity.Single(ManaType.Green);
-
-        /// <summary>指示物效果</summary>
-        public static ElementAffinity Counters => ElementAffinity.Single(ManaType.Green);
-
-        #endregion
-
-        #region 灰色 - 通用效果
-
         /// <summary>通用效果（可用任意颜色支付）</summary>
         public static ElementAffinity Generic => ElementAffinity.Generic;
 
-        /// <summary>检索效果</summary>
-        public static ElementAffinity Search => ElementAffinity.Generic;
-
-        /// <summary>洗牌效果</summary>
-        public static ElementAffinity Shuffle => ElementAffinity.Generic;
-
-        /// <summary>流放效果</summary>
-        public static ElementAffinity Exile => ElementAffinity.Generic;
-
-        /// <summary>移动卡牌效果</summary>
-        public static ElementAffinity MoveCard => ElementAffinity.Generic;
-
-        #endregion
-
         /// <summary>
-        /// 根据原子效果类型获取默认元素倾向
+        /// 根据原子效果类型获取默认元素倾向（颜色由配置表驱动）
         /// </summary>
         public static ElementAffinity GetAffinityForEffect(AtomicEffectType effectType)
         {
-            return effectType switch
+            var config = CardCore.Attribute.AtomicEffectTable.GetByType(effectType);
+            if (config == null) return Generic;
+
+            foreach (var tag in config.GetTagList())
             {
-                // 红色效果
-                AtomicEffectType.DealDamage => Damage,
-                AtomicEffectType.DealCombatDamage => Damage,
-                AtomicEffectType.AoEDamage => Damage,
-                AtomicEffectType.SplitDamage => Damage,
-                AtomicEffectType.TrampleDamage => Damage,
-                AtomicEffectType.DamageCannotBePrevented => Damage,
-                AtomicEffectType.GrantHaste => Haste,
-                AtomicEffectType.GrantRush => Rush,
-                AtomicEffectType.GrantDoubleStrike => DoubleStrike,
-                AtomicEffectType.GrantMultiAttack => MultiAttack,
-                AtomicEffectType.DestroyArtifact => Destruction,
-                AtomicEffectType.DestroyRandom => Destruction,
-
-                // 蓝色效果
-                AtomicEffectType.DrawCard => Draw,
-                AtomicEffectType.DrawThenDiscard => Draw,
-                AtomicEffectType.ScryCards => Draw,
-                AtomicEffectType.ReturnToHand => Bounce,
-                AtomicEffectType.BounceToTop => Bounce,
-                AtomicEffectType.BounceToBottom => Bounce,
-                AtomicEffectType.CounterSpell => Counter,
-                AtomicEffectType.CounterTargetSpell => Counter,
-                AtomicEffectType.NegateActivation => Counter,
-                AtomicEffectType.RedirectTarget => Redirect,
-                AtomicEffectType.Tap => Tap,
-                AtomicEffectType.FreezePermanent => Freeze,
-                AtomicEffectType.CopyCard => Copy,
-                AtomicEffectType.CopyExact => Copy,
-                AtomicEffectType.StealControl => StealControl,
-                AtomicEffectType.SwapController => StealControl,
-
-                // 绿色效果
-                AtomicEffectType.RampMana => Ramp,
-                AtomicEffectType.SearchLand => Ramp,
-                AtomicEffectType.UntapAll => Untap,
-                AtomicEffectType.ModifyPower => Buff,
-                AtomicEffectType.ModifyLife => Buff,
-                AtomicEffectType.AddKeyword => Buff,
-                AtomicEffectType.PutToBattlefield => Summon,
-                AtomicEffectType.CreateToken => Summon,
-                AtomicEffectType.Heal => Heal,
-                AtomicEffectType.RestoreToFullLife => Heal,
-                AtomicEffectType.RemoveDebuffs => Heal,
-                AtomicEffectType.AddCounters => Counters,
-                AtomicEffectType.DoubleCounters => Counters,
-                AtomicEffectType.FightTarget => Buff,
-                AtomicEffectType.GrantTrample => Trample,
-                AtomicEffectType.GrantReach => Buff,
-
-                // 灰色效果
-                AtomicEffectType.SearchDeck => Search,
-                AtomicEffectType.SearchAndReveal => Search,
-                AtomicEffectType.SearchAndPlay => Search,
-                AtomicEffectType.ShuffleIntoDeck => Shuffle,
-                AtomicEffectType.Exile => Exile,
-                AtomicEffectType.MoveToAnyZone => MoveCard,
-                AtomicEffectType.ExchangePosition => MoveCard,
-                AtomicEffectType.TransformInto => Generic,
-                AtomicEffectType.MoveCard => MoveCard,
-
-                // 默认灰色
-                _ => Generic
-            };
+                switch (tag)
+                {
+                    case "Red": return ElementAffinity.Single(ManaType.Red);
+                    case "Blue": return ElementAffinity.Single(ManaType.Blue);
+                    case "Green": return ElementAffinity.Single(ManaType.Green);
+                    case "Gray": return ElementAffinity.Generic;
+                }
+            }
+            return Generic;
         }
     }
 }

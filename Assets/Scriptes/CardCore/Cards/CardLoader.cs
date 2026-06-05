@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace CardCore
@@ -18,7 +19,12 @@ namespace CardCore
         public string color;
         public string description;
         public bool isPassive;
-        public string atomicEffect;
+        public string atomicEffect;     // 被动授予的关键词原子效果（GrantXxx）
+        public string triggerTiming;    // 触发式：TriggerTiming 枚举名，空=被动
+        public string triggeredEffect;  // 触发时执行的原子效果（区别于 atomicEffect 的授予）
+        public int value;               // 触发效果数值
+        public int value2;              // 触发效果第二数值
+        public string duration;         // DurationType 枚举名
     }
 
     /// <summary>
@@ -85,23 +91,31 @@ namespace CardCore
     {
         private static Dictionary<string, KeywordDefinition> _keywordCache;
 
+        // 相对 Application.dataPath 的关键词配置路径（非 Resources 目录，需用 System.IO 读取）
+        private const string KeywordConfigRelativePath = "Configs/KeywordsConfig.json";
+
         /// <summary>
-        /// 加载关键词配置
+        /// 加载关键词配置（从 Assets/Configs/KeywordsConfig.json）
         /// </summary>
-        public static Dictionary<string, KeywordDefinition> LoadKeywords(string jsonPath)
+        public static Dictionary<string, KeywordDefinition> LoadKeywords()
         {
-            var json = Resources.Load<TextAsset>(jsonPath);
-            if (json == null)
+            if (_keywordCache != null) return _keywordCache;
+
+            _keywordCache = new Dictionary<string, KeywordDefinition>();
+            string path = Path.Combine(Application.dataPath, KeywordConfigRelativePath);
+            if (!File.Exists(path))
             {
-                Debug.LogWarning($"[CardLoader] 关键词配置未找到: {jsonPath}");
-                return new Dictionary<string, KeywordDefinition>();
+                Debug.LogWarning($"[CardLoader] 关键词配置未找到: {path}");
+                return _keywordCache;
             }
 
-            var wrapper = JsonUtility.FromJson<KeywordsConfigWrapper>(json.text);
-            _keywordCache = new Dictionary<string, KeywordDefinition>();
+            var wrapper = JsonUtility.FromJson<KeywordsConfigWrapper>(File.ReadAllText(path));
+            if (wrapper?.keywords == null) return _keywordCache;
+
             foreach (var kw in wrapper.keywords)
             {
-                _keywordCache[kw.id] = kw;
+                if (kw != null && !string.IsNullOrEmpty(kw.id))
+                    _keywordCache[kw.id] = kw;
             }
             return _keywordCache;
         }

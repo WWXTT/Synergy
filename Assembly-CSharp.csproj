@@ -101,6 +101,7 @@
     <Compile Include="Assets\Scriptes\CardCore\Layers\TextChangeLayer.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexCell.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\CardEffectConverter.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Attribute\Handlers\FirstBatchEffectHandlers.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\KeywordEffectMapper.cs" />
     <Compile Include="Assets\Scriptes\CardCore\BaseSystems\StateBasedActions\SBACheckers.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Layers\LayerEngine.cs" />

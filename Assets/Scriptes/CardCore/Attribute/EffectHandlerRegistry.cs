@@ -56,24 +56,32 @@ namespace CardCore.Attribute
                 return false;
             }
 
-            // 根据原子效果的配置解析目标
-            var config = AtomicEffectTable.GetByType(effect.Type);
-            if (config != null && config.TargetType != EffectTargetType.None)
+            // 目标解析：调用方已预选目标（如玩家施放法术时指定）则直接沿用，
+            // 否则按原子效果配置自动解析。触发式效果不预选 → 走自动解析。
+            bool hasPreselectedTargets = context.Targets != null && context.Targets.Count > 0;
+            if (!hasPreselectedTargets)
             {
-                if (config.TargetType == EffectTargetType.Self)
+                var config = AtomicEffectTable.GetByType(effect.Type);
+                if (config != null && config.TargetType != EffectTargetType.None)
                 {
-                    context.Targets = new List<Entity> { context.Source };
-                }
-                else
-                {
-                    var resolver = new TargetResolver(context.ZoneManager);
-                    var candidates = resolver.GetCandidates(config, context);
-                    if (!string.IsNullOrEmpty(config.TargetFilter))
+                    if (config.TargetType == EffectTargetType.Self)
                     {
-                        var filters = resolver.ParseFilters(config.TargetFilter);
-                        candidates = resolver.ApplyFilters(candidates, filters, context);
+                        context.Targets = new List<Entity> { context.Source };
                     }
-                    context.Targets = candidates.Take(config.TargetCount).ToList();
+                    else
+                    {
+                        var resolver = new TargetResolver(context.ZoneManager);
+                        var candidates = resolver.GetCandidates(config, context);
+                        if (!string.IsNullOrEmpty(config.TargetFilter))
+                        {
+                            var filters = resolver.ParseFilters(config.TargetFilter);
+                            candidates = resolver.ApplyFilters(candidates, filters, context);
+                        }
+                        // TargetCount: 0=全部, <0=任意（全部）, >0=取前 N 个
+                        context.Targets = config.TargetCount > 0
+                            ? candidates.Take(config.TargetCount).ToList()
+                            : candidates;
+                    }
                 }
             }
 

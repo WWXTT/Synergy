@@ -653,48 +653,24 @@ namespace CardCore
 
     #endregion
 
-    #region 效果系统管理器
+    #region 内置处理器引导
 
     /// <summary>
-    /// 效果系统管理器
-    /// 统一管理所有效果相关组件
+    /// 内置效果/代价处理器引导
+    /// EffectHandlerRegistry 与 CostHandlerRegistry 都是全局 static，只需注册一次。
+    /// 抽成共享幂等引导，任何引擎初始化时都可安全调用，确保自建的 EffectExecutor
+    /// 在首次结算前能找到已注册的处理器（避免"未注册的效果处理器"）。
     /// </summary>
-    public class EffectSystemManager
+    public static class BuiltinHandlerBootstrap
     {
-        private static EffectSystemManager _instance;
-        public static EffectSystemManager Instance => _instance ??= new EffectSystemManager();
+        private static bool _registered = false;
 
-        private ZoneManager _zoneManager;
-        private ElementPoolSystem _elementPool;
-        private EffectExecutor _executor;
-        private StackEngine _stackEngine;
-        private TriggerEngine _triggerEngine;
-
-        public ZoneManager ZoneManager => _zoneManager;
-        public ElementPoolSystem ElementPool => _elementPool;
-        public EffectExecutor Executor => _executor;
-        public StackEngine StackEngine => _stackEngine;
-        public TriggerEngine TriggerEngine => _triggerEngine;
-
-        private EffectSystemManager()
+        /// <summary>注册所有内置处理器（幂等，多次调用安全）</summary>
+        public static void EnsureRegistered()
         {
-            Initialize();
-        }
+            if (_registered) return;
+            _registered = true;
 
-        private void Initialize()
-        {
-            _zoneManager = new ZoneManager();
-            _elementPool = new ElementPoolSystem();
-            _executor = new EffectExecutor(_zoneManager, _elementPool);
-            _stackEngine = new StackEngine(_executor);
-            _triggerEngine = new TriggerEngine(_stackEngine);
-
-            RegisterBuiltinHandlers();
-            BuiltinCostHandlers.RegisterAll();
-        }
-
-        private void RegisterBuiltinHandlers()
-        {
             // 基础效果处理器
             var handlers = new IAtomicEffectHandler[]
             {
@@ -707,6 +683,31 @@ namespace CardCore
                 new HealHandler(),
                 new ModifyPowerHandler(),
                 new CreateTokenHandler(),
+
+                // 第一批补齐 — 伤害类
+                new AoEDamageHandler(),
+                new SplitDamageHandler(),
+                new DamageCannotBePreventedHandler(),
+                new DrainLifeHandler(),
+                new PoisonousDamageHandler(),
+                new RestoreToFullLifeHandler(),
+
+                // 第一批补齐 — 卡牌移动 / 牌库
+                new DiscardCardHandler(),
+                new ExileHandler(),
+                new ShuffleIntoDeckHandler(),
+                new SearchDeckHandler(),
+                new BounceToTopHandler(),
+                new BounceToBottomHandler(),
+                new ReturnFromGraveyardHandler(),
+                new LookAtTopCardsHandler(),
+                new RevealHandHandler(),
+
+                // 第一批补齐 — 状态变更
+                new ModifyLifeHandler(),
+                new SetPowerHandler(),
+                new SetLifeHandler(),
+                new ModifyCostHandler(),
             };
             foreach (var handler in handlers)
                 EffectHandlerRegistry.Register(handler);
@@ -714,90 +715,9 @@ namespace CardCore
             // 注册所有关键词授予处理器
             foreach (var handler in GrantKeywordHandlerFactory.CreateAll())
                 EffectHandlerRegistry.Register(handler);
-        }
 
-        /// <summary>
-        /// 初始化玩家
-        /// </summary>
-        public void InitializePlayer(Player player)
-        {
-            _zoneManager.InitializePlayer(player);
-            _elementPool.InitializePlayer(player);
-        }
-
-        /// <summary>
-        /// 游戏开始
-        /// </summary>
-        public void StartGame(Player firstPlayer)
-        {
-            _stackEngine.Initialize(firstPlayer);
-        }
-
-        /// <summary>
-        /// 新回合开始
-        /// </summary>
-        public void OnTurnStart(Player turnPlayer, int turnNumber)
-        {
-            _stackEngine.OnTurnStart(turnPlayer);
-            _executor.OnNewTurn(turnNumber);
-        }
-
-        /// <summary>
-        /// 注册卡牌效果（含关键词触发效果）
-        /// </summary>
-        public void RegisterCardEffects(Card card, List<EffectDefinition> effects, Player controller)
-        {
-            foreach (var effect in effects)
-            {
-                _triggerEngine.RegisterEffect(effect, card, controller);
-            }
-
-            // 注册关键词触发的效果（狂暴、成长、再生等）
-            var keywordEffects = KeywordEffectMapper.CreateAllTriggeredEffects(card);
-            foreach (var kwEffect in keywordEffects)
-            {
-                _triggerEngine.RegisterEffect(kwEffect, card, controller);
-            }
-        }
-
-        /// <summary>
-        /// 注销卡牌效果
-        /// </summary>
-        public void UnregisterCardEffects(Card card)
-        {
-            _triggerEngine.UnregisterEntityEffects(card);
-        }
-
-        /// <summary>
-        /// 处理游戏事件
-        /// </summary>
-        public void OnGameEvent(IGameEvent gameEvent)
-        {
-            _triggerEngine.OnEvent(gameEvent);
-        }
-
-        /// <summary>
-        /// 主循环更新
-        /// </summary>
-        public void Update()
-        {
-            // 处理待发效果
-            _stackEngine.ProcessPendingEffects();
-
-            // 如果等待玩家选择，不自动推进
-            if (_stackEngine.WaitingForPlayer)
-                return;
-        }
-
-        /// <summary>
-        /// 重置系统
-        /// </summary>
-        public void Reset()
-        {
-            _stackEngine.Clear();
-            _triggerEngine.Clear();
-            _executor.Reset();
-            _elementPool.Reset();
+            // 注册内置代价处理器
+            BuiltinCostHandlers.RegisterAll();
         }
     }
 

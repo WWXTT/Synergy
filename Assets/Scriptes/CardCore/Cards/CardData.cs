@@ -443,6 +443,13 @@ namespace CardCore
             // 设置费用
             (this as IHasCost).Cost = data.Cost;
 
+            // 同步内部战斗字段 — EntityEffectExtensions/handler 全部读 _power/_life/_maxLife/_baseCost，
+            // 仅设接口属性会导致加载的生物血量恒为默认 1
+            _power = data.Power ?? 0;
+            _life = data.Life ?? 1;
+            _maxLife = _life;
+            _baseCost = ComputeBaseCost(data.Cost);
+
             // 设置效果列表（Editor路径使用 Effect_table，运行时由 CardEffectConverter 转换）
             (this as IHasEffects).Effects = new List<Effect_table>();
 
@@ -460,6 +467,15 @@ namespace CardCore
         /// 获取原始数据
         /// </summary>
         public CardData GetData() => _data;
+
+        /// <summary>费用字典求和作为内部 _baseCost（用于 GetCost/ModifyCost 原语）</summary>
+        private static int ComputeBaseCost(Dictionary<int, float> cost)
+        {
+            if (cost == null) return 0;
+            float total = 0f;
+            foreach (var kvp in cost) total += kvp.Value;
+            return (int)total;
+        }
     }
 
     /// <summary>

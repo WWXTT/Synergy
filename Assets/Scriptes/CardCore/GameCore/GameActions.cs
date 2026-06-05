@@ -71,8 +71,11 @@ namespace CardCore
 
         /// <summary>
         /// 主阶段：打出一张牌
+        /// 生物 → 进战场并把触发式效果注册到本核心的 TriggerEngine；
+        /// 法术 → 经本核心的 StackEngine/executor 立即结算后移入墓地。
+        /// targets：可选的预选目标（如指向性法术）；为空时由各原子效果按配置自动解析。
         /// </summary>
-        public static bool PlayCard(GameCore core, Player player, Card card)
+        public static bool PlayCard(GameCore core, Player player, Card card, List<Entity> targets = null)
         {
             if (core == null || player == null || card == null) return false;
             if (core.TurnEngine.TurnPlayer != player) return false;
@@ -92,43 +95,88 @@ namespace CardCore
             // 支付费用
             elementPool.PayCost(cost, player);
 
-            // 移动卡牌到战场
-            core.ZoneManager.MoveCard(card, player, Zone.Hand, Zone.Battlefield);
-
             // 设置控制者
             card.SetController(player);
 
-            // 设置战场属性
-            if (card is IHasPower hasPower && card is CardDataWrapper cdw)
+            bool isSpell = card is IHasSupertype hasType && hasType.Supertype == Cardtype.Spell;
+
+            if (isSpell)
             {
-                // 属性从 CardData 继承，已在 CardWrapper 构造器中设置
+                // 法术：从手牌移除，结算其效果，然后进墓地（不留在战场）
+                core.ZoneManager.MoveCard(card, player, Zone.Hand, Zone.Graveyard);
+
+                core.PublishEvent(new CardPlayEvent
+                {
+                    Player = player,
+                    PlayedCard = card
+                });
+
+                ResolveSpellEffects(core, player, card, targets);
             }
-
-            // 注册卡牌效果（含关键词触发效果）
-            var cardEffects = new List<EffectDefinition>();
-            var cardDataEffects = GetCardEffectDefinitions(card);
-            if (cardDataEffects != null)
-                cardEffects.AddRange(cardDataEffects);
-
-            // 注册关键词触发的效果
-            var keywordEffects = KeywordEffectMapper.CreateAllTriggeredEffects(card);
-            if (keywordEffects != null)
-                cardEffects.AddRange(keywordEffects);
-
-            if (cardEffects.Count > 0)
+            else
             {
-                var effectSystem = EffectSystemManager.Instance;
-                effectSystem.RegisterCardEffects(card, cardEffects, player);
+                // 永久物（生物等）：进战场，注册触发式效果到本核心的触发引擎
+                core.ZoneManager.MoveCard(card, player, Zone.Hand, Zone.Battlefield);
+
+                var cardEffects = new List<EffectDefinition>();
+                var cardDataEffects = GetCardEffectDefinitions(card);
+                if (cardDataEffects != null)
+                    cardEffects.AddRange(cardDataEffects);
+
+                var keywordEffects = KeywordEffectMapper.CreateAllTriggeredEffects(card);
+                if (keywordEffects != null)
+                    cardEffects.AddRange(keywordEffects);
+
+                foreach (var effect in cardEffects)
+                    core.TriggerEngine.RegisterEffect(effect, card, player);
+
+                core.PublishEvent(new CardPlayEvent
+                {
+                    Player = player,
+                    PlayedCard = card
+                });
+
+                core.PublishEvent(new CardPutToBattlefieldEvent
+                {
+                    Card = card,
+                    Controller = player,
+                    Tapped = false
+                });
             }
-
-            // 触发出场事件
-            EventManager.Instance.Publish(new CardPlayEvent
-            {
-                Player = player,
-                PlayedCard = card
-            });
 
             return true;
+        }
+
+        /// <summary>
+        /// 立即结算法术的施放效果（经本核心的 EffectExecutor）。
+        /// 法术一次性结算：OnPlay 等触发时点在此即是「施放即生效」，直接执行；
+        /// 仅手动激活式能力（Activate_*）不随施放自动结算。
+        /// 通过 EffectInstance 走与栈结算一致的执行路径，保证目标解析/事件一致。
+        /// </summary>
+        private static void ResolveSpellEffects(GameCore core, Player player, Card card, List<Entity> targets)
+        {
+            var defs = GetCardEffectDefinitions(card);
+            if (defs == null) return;
+
+            var executor = core.StackEngine.GetExecutor();
+
+            foreach (var def in defs)
+            {
+                // 法术施放即结算：其全部效果（含 OnPlay 施放效果）立即执行后入墓地。
+                // 仅手动激活式能力（Activate_*）不随施放自动结算。
+                if (def.IsActivatedEffect)
+                    continue;
+
+                var instance = new EffectInstance
+                {
+                    Definition = def,
+                    Source = card,
+                    Controller = player,
+                    Targets = targets != null ? new List<Entity>(targets) : new List<Entity>(),
+                };
+
+                executor.Execute(instance);
+            }
         }
 
         /// <summary>
