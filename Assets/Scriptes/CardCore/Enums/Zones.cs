@@ -449,48 +449,55 @@ namespace CardCore
     {
         public Player Owner { get; }
 
-        private Dictionary<Zone, HashSet<Card>> zones = new Dictionary<Zone, HashSet<Card>>();
+        // 区域使用「有序」列表存储：牌库/坟墓/放逐等区域的顺序具有规则意义
+        // （抽牌/磨牌/检索/牌库顶操作均依赖 index 0 = 牌库顶的约定）。
+        private Dictionary<Zone, List<Card>> zones = new Dictionary<Zone, List<Card>>();
+
+        private static readonly System.Random _rng = new System.Random();
 
         public ZoneContainer(Player owner)
         {
             Owner = owner;
             foreach (Zone zone in Enum.GetValues(typeof(Zone)))
             {
-                zones[zone] = new HashSet<Card>();
+                zones[zone] = new List<Card>();
             }
         }
 
         /// <summary>
-        /// 移动卡牌到新区域
+        /// 移动卡牌到新区域（追加到目标区域末尾 / 牌库底）
         /// </summary>
         public void Move(Card card, Zone from, Zone to)
         {
-            if (zones[from].Contains(card))
-            {
-                zones[from].Remove(card);
-            }
-            zones[to].Add(card);
+            zones[from].Remove(card);
+            if (!zones[to].Contains(card))
+                zones[to].Add(card);
         }
 
         /// <summary>
-        /// 移动卡牌到新区域（带位置参数）
+        /// 移动卡牌到新区域（带位置参数，用于牌库顶/底/随机插入）
         /// </summary>
         public void Move(Card card, Zone from, Zone to, DeckPosition position)
         {
-            if (zones[from].Contains(card))
-            {
-                zones[from].Remove(card);
-            }
-            // 目前 DeckPosition 仅用于 Deck 区域，实际排序逻辑可后续实现
-            zones[to].Add(card);
+            zones[from].Remove(card);
+            InsertByPosition(zones[to], card, position);
         }
 
         /// <summary>
-        /// 将卡牌添加到指定区域
+        /// 将卡牌添加到指定区域（追加到末尾 / 牌库底）
         /// </summary>
         public void Add(Card card, Zone zone)
         {
-            zones[zone].Add(card);
+            if (!zones[zone].Contains(card))
+                zones[zone].Add(card);
+        }
+
+        /// <summary>
+        /// 将卡牌添加到指定区域的指定位置（牌库顶/底/随机）
+        /// </summary>
+        public void Add(Card card, Zone zone, DeckPosition position)
+        {
+            InsertByPosition(zones[zone], card, position);
         }
 
         /// <summary>
@@ -502,7 +509,7 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 获取区域中的所有卡牌
+        /// 获取区域中的所有卡牌（按区域顺序，index 0 = 牌库顶）
         /// </summary>
         public List<Card> GetCards(Zone zone)
         {
@@ -531,6 +538,44 @@ namespace CardCore
         public void Clear(Zone zone)
         {
             zones[zone].Clear();
+        }
+
+        /// <summary>
+        /// 就地洗乱指定区域顺序（Fisher-Yates）。
+        /// 必须作用于内部列表本身，否则洗牌不生效。
+        /// </summary>
+        public void Shuffle(Zone zone, System.Random rng = null)
+        {
+            rng ??= _rng;
+            var list = zones[zone];
+            int n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+                (list[k], list[n]) = (list[n], list[k]);
+            }
+        }
+
+        /// <summary>按 DeckPosition 将卡牌插入列表（Top=index0 牌库顶，Bottom=末尾，Random=随机）</summary>
+        private static void InsertByPosition(List<Card> list, Card card, DeckPosition position)
+        {
+            if (list.Contains(card))
+                return;
+
+            switch (position)
+            {
+                case DeckPosition.Top:
+                    list.Insert(0, card);
+                    break;
+                case DeckPosition.Random:
+                    list.Insert(_rng.Next(list.Count + 1), card);
+                    break;
+                case DeckPosition.Bottom:
+                default:
+                    list.Add(card);
+                    break;
+            }
         }
     }
 
@@ -625,19 +670,8 @@ namespace CardCore
             var container = zm.GetZoneContainer(player);
             if (container == null) return;
 
-            var deck = container.GetCards(Zone.Deck);
-            // Fisher-Yates shuffle
-            var rng = new System.Random();
-            int n = deck.Count;
-            while (n > 1)
-            {
-                n--;
-                int k = rng.Next(n + 1);
-                // 交换 - 通过重新排列来实现
-                var temp = deck[k];
-                deck[k] = deck[n];
-                deck[n] = temp;
-            }
+            // 必须洗乱区域内部列表本身：GetCards 返回的是副本，洗它不会影响牌库
+            container.Shuffle(Zone.Deck);
         }
     }
 }

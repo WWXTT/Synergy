@@ -207,20 +207,17 @@ namespace CardCore
                     switch (mod.Duration)
                     {
                         case DurationType.Permanent:
-                            // 永久，只要卡牌在场就有效
-                            // TODO: 检查卡牌是否离开战场
+                            // 永久：只要卡牌仍在战场即有效，离场则失效
+                            expired = !IsCardInPlay(card);
                             break;
 
                         case DurationType.UntilEndOfTurn:
-                            // TODO: 检查回合是否结束
-                            break;
-
                         case DurationType.UntilLeaveBattlefield:
-                            // TODO: 检查阶段是否结束
+                            // 事件驱动失效（OnTurnEnd / OnPhaseEnd）；此处仅在卡牌离场时即时失效
+                            expired = !IsCardInPlay(card);
                             break;
 
                         case DurationType.WhileCondition:
-                            // TODO: 检查条件
                             expired = !CheckCondition(mod.EndCondition, card);
                             break;
                     }
@@ -251,12 +248,77 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 检查条件
+        /// 检查条件。
+        /// EndCondition 约定为「结束谓词」Func&lt;bool&gt;：返回 true 表示结束条件已满足 → 修改失效。
+        /// 无显式谓词时视为条件持续成立。
         /// </summary>
         private bool CheckCondition(object condition, Card card)
         {
-            // TODO: 实现条件检查逻辑
+            if (condition is Func<bool> endPredicate)
+                return !endPredicate();
             return true;
+        }
+
+        /// <summary>
+        /// 检查卡牌是否在场（位于其控制者的战场区域）
+        /// </summary>
+        private bool IsCardInPlay(Card card)
+        {
+            if (card == null) return false;
+
+            var controller = card.GetController();
+            var zm = GameCore.Instance?.ZoneManager;
+            if (controller == null || zm == null)
+                return card.IsAlive;
+
+            return zm.IsCardInZone(card, controller, Zone.Battlefield);
+        }
+
+        /// <summary>
+        /// 回合结束：失效本回合玩家的「直到回合结束」文本修改
+        /// </summary>
+        public void OnTurnEnd(Player player)
+        {
+            ExpireByDuration(DurationType.UntilEndOfTurn, player);
+        }
+
+        /// <summary>
+        /// 阶段结束：失效「直到离场/阶段结束」文本修改
+        /// </summary>
+        public void OnPhaseEnd(PhaseType phase)
+        {
+            ExpireByDuration(DurationType.UntilLeaveBattlefield, null);
+        }
+
+        private void ExpireByDuration(DurationType duration, Player ownerFilter)
+        {
+            foreach (var kvp in _cardTextChanges)
+            {
+                foreach (var mod in kvp.Value)
+                {
+                    if (!mod.IsActive || mod.Duration != duration)
+                        continue;
+
+                    if (ownerFilter != null)
+                    {
+                        var controller = mod.SourceEffect?.Controller
+                            ?? mod.SourceEffect?.Source?.GetController();
+                        if (controller != null && controller != ownerFilter)
+                            continue;
+                    }
+
+                    mod.IsActive = false;
+
+                    var card = mod.TargetCard;
+                    PublishEvent(new StateChangeEvent
+                    {
+                        Type = StateChangeType.Text,
+                        Target = card,
+                        OldValue = mod.ModifiedText,
+                        NewValue = GetCurrentText(card)
+                    });
+                }
+            }
         }
 
         /// <summary>
@@ -308,7 +370,11 @@ namespace CardCore
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            EventManager.Instance.Publish(e);
+            // 优先经 GameCore 统一路由，使 Trigger/Layer 引擎能观察到文本变更事件
+            if (GameCore.Instance != null)
+                GameCore.Instance.PublishEvent(e);
+            else
+                EventManager.Instance.Publish(e);
         }
     }
 

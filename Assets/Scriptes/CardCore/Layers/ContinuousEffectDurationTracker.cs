@@ -45,20 +45,33 @@ namespace CardCore
 
         /// <summary>
         /// 检查条件
+        /// EndCondition 约定为「结束谓词」Func&lt;bool&gt;：返回 true 表示结束条件已满足 → 效果失效。
+        /// 无显式谓词时视为条件持续成立。
         /// </summary>
         private bool CheckCondition()
         {
-            // TODO: 实现条件检查逻辑
+            if (EndCondition is Func<bool> endPredicate)
+                return !endPredicate();
             return true;
         }
 
         /// <summary>
-        /// 检查实体是否在场
+        /// 检查实体是否在场（位于其控制者的战场区域）
         /// </summary>
         private bool IsEntityInPlay(Entity entity)
         {
-            // TODO: 通过 ZoneManager 检查
-            return entity?.IsAlive ?? false;
+            if (entity == null) return false;
+
+            // 非卡牌实体（如玩家）无战场归属，退化为存活判定
+            if (!(entity is Card card))
+                return entity.IsAlive;
+
+            var controller = card.GetController();
+            var zm = GameCore.Instance?.ZoneManager;
+            if (controller == null || zm == null)
+                return card.IsAlive;
+
+            return zm.IsCardInZone(card, controller, Zone.Battlefield);
         }
     }
 
@@ -192,29 +205,16 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 计算结束时间
+        /// 计算结束时间。
+        /// 本引擎为回合制：UntilEndOfTurn / UntilLeaveBattlefield 的失效由
+        /// <see cref="OnTurnEnd"/> / <see cref="OnPhaseEnd"/> 等回合/阶段事件驱动，
+        /// 而非挂钟时间（DateTime）。因此除非将来引入真实计时效果，
+        /// 这些时长均返回 null（无挂钟到期时间），由事件钩子负责失效。
         /// </summary>
         private DateTime? CalculateEndTime(DurationType duration)
         {
-            switch (duration)
-            {
-                case DurationType.Permanent:
-                    return null; // 永久效果没有结束时间
-
-                case DurationType.UntilEndOfTurn:
-                    // TODO: 获取当前回合玩家的回合结束时间
-                    return null;
-
-                case DurationType.UntilLeaveBattlefield:
-                    // TODO: 获取当前阶段的结束时间
-                    return null;
-
-                case DurationType.WhileCondition:
-                    return null; // 条件持续时间由条件决定
-
-                default:
-                    return null;
-            }
+            // 所有时长均不使用挂钟到期：永久=无到期；回合/阶段=事件驱动；条件=谓词驱动。
+            return null;
         }
 
         /// <summary>
@@ -293,7 +293,12 @@ namespace CardCore
             {
                 if (effect.Duration == DurationType.UntilEndOfTurn && effect.IsActive)
                 {
-                    // TODO: 检查是否为指定玩家的效果
+                    // 仅结束归属于该回合玩家的「直到回合结束」效果
+                    var controller = GetEffectController(effect.SourceEffect)
+                        ?? effect.SourceEntity?.GetController();
+                    if (player != null && controller != null && controller != player)
+                        continue;
+
                     effect.IsActive = false;
 
                     // 触发效果结束事件
@@ -342,8 +347,8 @@ namespace CardCore
         /// </summary>
         private Player GetEffectController(Effect effect)
         {
-            // TODO: 从效果获取控制者
-            return null;
+            if (effect == null) return null;
+            return effect.Controller ?? effect.Source?.GetController();
         }
 
         /// <summary>
@@ -359,7 +364,11 @@ namespace CardCore
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            EventManager.Instance.Publish(e);
+            // 优先经 GameCore 统一路由，使 Trigger/Layer 引擎能观察到持续效果生命周期事件
+            if (GameCore.Instance != null)
+                GameCore.Instance.PublishEvent(e);
+            else
+                EventManager.Instance.Publish(e);
         }
     }
 

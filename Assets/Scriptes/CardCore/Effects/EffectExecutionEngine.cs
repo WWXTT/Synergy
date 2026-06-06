@@ -83,6 +83,11 @@ namespace CardCore
 
             var effect = instance.Definition;
 
+            // 解析上下文：承载无效化(Negate)/逻辑替换(ReplaceLogic)/撤销(Undo) 状态，
+            // 贯穿本次结算并随结算事件发布。
+            var resolution = instance.EContext ?? new EffectResolutionContext();
+            instance.EContext = resolution;
+
             // 创建执行上下文
             var context = new EffectExecutionContext
             {
@@ -163,11 +168,11 @@ namespace CardCore
             // 记录使用次数
             _usageTracker.RecordActivation(effect.Id);
 
-            // 触发效果结算事件
+            // 触发效果结算事件（关联来源 Effect 与解析上下文）
             EventManager.Instance.Publish(new EffectResolveEvent
             {
-                ResolvedEffect = null, // TODO: 需要关联到 Effect
-                Context = null // TODO: 创建 EffectResolutionContext
+                ResolvedEffect = instance.SourceEffect,
+                Context = resolution
             });
         }
 
@@ -526,11 +531,25 @@ namespace CardCore
         private List<RegisteredEffect> _registeredEffects = new List<RegisteredEffect>();
         private StackEngine _stackEngine;
 
+        // 触发条件校验（由 GameCore 注入 ZoneManager 后可用）。未注入时跳过条件校验，
+        // 便于在缺少区域系统的独立测试中仅按时点匹配。
+        private ConditionChecker _conditionChecker;
+        private ZoneManager _zoneManager;
+
         public List<RegisteredEffect> RegisteredEffects => _registeredEffects;
 
         public TriggerEngine(StackEngine stackEngine)
         {
             _stackEngine = stackEngine;
+        }
+
+        /// <summary>
+        /// 注入区域系统以启用触发条件校验。
+        /// </summary>
+        public void AttachConditionContext(ZoneManager zoneManager)
+        {
+            _zoneManager = zoneManager;
+            _conditionChecker = new ConditionChecker(zoneManager);
         }
 
         /// <summary>
@@ -609,7 +628,23 @@ namespace CardCore
                 if (registered.Source != null && !registered.Source.IsAlive)
                     continue;
 
-                // TODO: 检查触发条件
+                // 检查触发条件（intervening "if" 条件）：仅在已注入区域系统时校验。
+                if (_conditionChecker != null &&
+                    effect.TriggerConditions != null && effect.TriggerConditions.Count > 0)
+                {
+                    var conditionContext = new ConditionCheckContext
+                    {
+                        Activator = registered.Controller,
+                        ActivePlayer = _stackEngine.ActivePlayer,
+                        CurrentPhase = _stackEngine.CurrentPhase,
+                        TurnNumber = GameCore.Instance?.TurnEngine?.TurnNumber ?? 0,
+                        Source = registered.Source,
+                        ZoneManager = _zoneManager
+                    };
+
+                    if (!_conditionChecker.CheckAll(effect.TriggerConditions, conditionContext))
+                        continue;
+                }
 
                 result.Add(registered);
             }
@@ -714,6 +749,10 @@ namespace CardCore
 
             // 注册所有关键词授予处理器
             foreach (var handler in GrantKeywordHandlerFactory.CreateAll())
+                EffectHandlerRegistry.Register(handler);
+
+            // 注册第二批规则原语处理器（状态/控制/反制/战斗/特殊）
+            foreach (var handler in SecondBatchHandlerFactory.CreateAll())
                 EffectHandlerRegistry.Register(handler);
 
             // 注册内置代价处理器

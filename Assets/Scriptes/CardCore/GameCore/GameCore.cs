@@ -43,8 +43,6 @@ namespace CardCore
         public TextChangeLayer TextChangeLayer => _subSystems.Get<TextChangeLayer>();
         public CopyEffectsEngine CopyEffectsEngine => _subSystems.Get<CopyEffectsEngine>();
         public ContinuousEffectDurationTracker DurationTracker => _subSystems.Get<ContinuousEffectDurationTracker>();
-        public ModifierSystem ModifierSystem => _subSystems.Get<ModifierSystem>();
-        public AttributeCalculator AttributeCalculator => _subSystems.Get<AttributeCalculator>();
         public CombatSystem CombatSystem => _subSystems.Get<CombatSystem>();
         public SummonEngine SummonEngine => _subSystems.Get<SummonEngine>();
 
@@ -92,6 +90,8 @@ namespace CardCore
             // 初始化回合引擎
             var turnEngine = new TurnEngine();
             turnEngine.Initialize(_player1);
+            // 接线：事件经 GameCore 统一路由 + 栈空守卫阶段推进/结束
+            turnEngine.AttachRuntime(this, () => stackEngine.IsEmpty);
             _subSystems.Register(turnEngine);
 
             // 初始化层引擎
@@ -103,6 +103,9 @@ namespace CardCore
             sbaEngine.Initialize(this);
             sbaEngine.RegisterChecker(new ZeroLifeChecker());
             sbaEngine.RegisterChecker(new ZeroToughnessChecker());
+            sbaEngine.RegisterChecker(new ZoneChangeChecker());
+            sbaEngine.RegisterChecker(new CharacteristicChangeChecker());
+            // TextChangeChecker 暂不注册：当前 Card 模型无文本字段可对比（见 SBACheckers.cs）。
             _subSystems.Register(sbaEngine);
 
             // 初始化替代引擎
@@ -111,6 +114,8 @@ namespace CardCore
 
             // 初始化触发引擎
             var triggerEngine = new TriggerEngine(stackEngine);
+            // 注入区域系统以启用触发条件（intervening "if"）校验
+            triggerEngine.AttachConditionContext(zoneManager);
             _subSystems.Register(triggerEngine);
 
             // 初始化控制变更层
@@ -131,16 +136,9 @@ namespace CardCore
             var durationTracker = new ContinuousEffectDurationTracker();
             _subSystems.Register(durationTracker);
 
-            // 初始化修改器系统
-            var modifierSystem = new ModifierSystem();
-            _subSystems.Register(modifierSystem);
-
-            // 初始化属性计算器
-            var attributeCalculator = new AttributeCalculator(modifierSystem);
-            _subSystems.Register(attributeCalculator);
-
-            // 初始化战斗系统
+            // 初始化战斗系统（接入层引擎，使战斗按计算后的当前力量结算）
             var combatSystem = new CombatSystem(zoneManager);
+            combatSystem.AttachLayerEngine(layerEngine);
             _subSystems.Register(combatSystem);
 
             // 初始化召唤引擎
@@ -159,15 +157,58 @@ namespace CardCore
             // 回合开始接线：重置栈优先权持有者 + 清零「每回合一次」使用计数
             // （TurnEngine.StartNewTurn 发布 TurnStartEvent，此处统一消费）
             EventManager.Instance.Subscribe<TurnStartEvent>(OnTurnStarted);
+
+            // 回合/阶段结束接线：驱动持续效果时长追踪的失效
+            // （UntilEndOfTurn / UntilLeaveBattlefield 为事件驱动失效，非挂钟到期）
+            EventManager.Instance.Subscribe<TurnEndEvent>(OnTurnEnded);
+            EventManager.Instance.Subscribe<PhaseEndEvent>(OnPhaseEnded);
         }
 
         /// <summary>
-        /// 回合开始：重置栈优先权与每回合使用计数
+        /// 回合结束：结束本回合玩家的「直到回合结束」持续效果
+        /// </summary>
+        private void OnTurnEnded(TurnEndEvent e)
+        {
+            DurationTracker.OnTurnEnd(e.TurnPlayer);
+            TextChangeLayer.OnTurnEnd(e.TurnPlayer);
+        }
+
+        /// <summary>
+        /// 阶段结束：结束「直到离场/阶段结束」类持续效果
+        /// </summary>
+        private void OnPhaseEnded(PhaseEndEvent e)
+        {
+            DurationTracker.OnPhaseEnd(e.Phase);
+            TextChangeLayer.OnPhaseEnd(e.Phase);
+        }
+
+        /// <summary>
+        /// 回合开始（准备阶段）：重置栈优先权与每回合使用计数 → 横置恢复 → 重置元素池 → 抽1张
         /// </summary>
         private void OnTurnStarted(TurnStartEvent e)
         {
             StackEngine.OnTurnStart(e.TurnPlayer);
             StackEngine.GetExecutor().OnNewTurn(e.TurnNumber);
+
+            var player = e.TurnPlayer;
+            if (player == null)
+                return;
+
+            // 重置步：横置恢复回合玩家的战场卡牌
+            foreach (var card in ZoneManager.GetCards(player, Zone.Battlefield))
+            {
+                if (card.IsTapped())
+                {
+                    card.Untap();
+                    PublishEvent(new UntapEvent { UntappedEntity = card });
+                }
+            }
+
+            // 重置元素池「每回合一次」标记
+            ElementPool.ResetTurnUsage(player);
+
+            // 抽一张牌
+            ZoneManagerExtensions.DrawCard(ZoneManager, player);
         }
 
         #region 游戏生命周期
@@ -282,7 +323,7 @@ namespace CardCore
         /// </summary>
         public void ResolveStack()
         {
-            _loopController.ResolveStack(ReplacementEngine);
+            _loopController.ResolveStack();
         }
 
         #endregion
@@ -308,7 +349,6 @@ namespace CardCore
             TextChangeLayer.ClearAll();
             CopyEffectsEngine.ClearAll();
             DurationTracker.ClearAll();
-            ModifierSystem.Clear();
         }
 
         #endregion
@@ -330,6 +370,23 @@ namespace CardCore
         /// </summary>
         internal void PublishEvent<T>(T e) where T : IGameEvent
         {
+            // 替代效果（Replacement）在事件「发生前」拦截：若存在可替代当前事件类型的效果，
+            // 用替代后的最终事件继续派发。替代可能产出不同的具体类型（如 CardDestroyEvent → CardBanishEvent），
+            // 此时必须按运行时类型分发（PublishDynamic），否则以静态类型 T 为键会漏掉真实订阅者。
+            var repl = ReplacementEngine;
+            if (repl != null && repl.HasReplacementEffect(e.GetType()))
+            {
+                var ctx = repl.CheckReplacements(e);
+                var finalEvent = ctx.GetFinalEvent();
+                if (!ReferenceEquals(finalEvent, e))
+                {
+                    EventManager.Instance.PublishDynamic(finalEvent);
+                    TriggerEngine.OnEvent(finalEvent);
+                    LayerEngine?.OnEvent(finalEvent);
+                    return;
+                }
+            }
+
             EventManager.Instance.Publish(e);
             TriggerEngine.OnEvent(e);
             LayerEngine?.OnEvent(e);

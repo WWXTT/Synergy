@@ -53,6 +53,7 @@ namespace CardCore
         private Player _attackingPlayer;
         private Player _defendingPlayer;
         private ZoneManager _zoneManager;
+        private LayerEngine _layerEngine;
 
         /// <summary>
         /// 当前战斗阶段
@@ -87,6 +88,15 @@ namespace CardCore
         public CombatSystem(ZoneManager zoneManager)
         {
             _zoneManager = zoneManager;
+        }
+
+        /// <summary>
+        /// 注入层引擎：战斗伤害与攻击资格按 LayerEngine 计算的当前力量结算，
+        /// 使连续/静态 P/T 效果（光环、增益）在战斗中生效。
+        /// </summary>
+        public void AttachLayerEngine(LayerEngine layerEngine)
+        {
+            _layerEngine = layerEngine;
         }
 
         /// <summary>
@@ -130,8 +140,8 @@ namespace CardCore
             if (attacker is ITappable tappable && tappable.IsTapped)
                 return false;
 
-            // 检查是否有攻击力
-            if (attacker is IHasPower hasPower && hasPower.Power <= 0)
+            // 检查是否有攻击力（按层引擎计算的当前力量）
+            if (attacker is IHasPower && GetPower(attacker) <= 0)
                 return false;
 
             // 检查是否已经攻击
@@ -330,6 +340,8 @@ namespace CardCore
         /// </summary>
         private int GetPower(Entity entity)
         {
+            if (_layerEngine != null)
+                return _layerEngine.CalculatePower(entity);
             if (entity is IHasPower hasPower)
                 return hasPower.Power;
             return 0;

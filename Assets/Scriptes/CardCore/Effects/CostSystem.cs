@@ -133,10 +133,20 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 支付所有代价（不回滚：如果中途失败，已支付的不退回）
+        /// 支付所有代价（原子：先确认可支付「全部」代价，再逐项支付）。
+        /// 遵循 MTG 601.2 的「确定总代价 → 不可撤销地支付」模型：
+        /// 任一代价不可支付则整体失败且不支付任何代价，从而避免「部分支付」造成的资源丢失。
+        /// （不采用支付后回滚：代价事件一旦发布即可能触发观察者，真正的撤销并不安全。）
         /// </summary>
         public static bool PayAll(List<CostInstance> costs, CostContext context)
         {
+            if (costs == null || costs.Count == 0)
+                return true;
+
+            // 预检：未能确认可支付全部代价时，不开始任何支付
+            if (!CanPayAll(costs, context))
+                return false;
+
             foreach (var cost in costs)
             {
                 if (!Pay(cost, context))

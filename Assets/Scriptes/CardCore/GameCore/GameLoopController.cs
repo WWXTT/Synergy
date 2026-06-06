@@ -96,9 +96,11 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 结算栈
+        /// 结算栈。
+        /// 替代效果（Replacement）已在事件发布路径 GameCore.PublishEvent 处统一拦截，
+        /// 不在此处重复检查。
         /// </summary>
-        public void ResolveStack(ReplacementEngine replacementEngine)
+        public void ResolveStack()
         {
             while (_stackEngine.StackSize > 0)
             {
@@ -107,10 +109,6 @@ namespace CardCore
 
                 if (top == null)
                     break;
-
-                // 替代引擎检查
-                var replacementContext = new ReplacementContext();
-                IGameEvent finalEvent = replacementContext.GetFinalEvent();
 
                 // 状态动作检查
                 _sbaEngine.CheckAndExecute();

@@ -213,6 +213,56 @@ namespace CardCore
             }
         }
 
+        /// <summary>
+        /// 按运行时类型广播发布事件。
+        /// 当事件被替代效果替换为另一具体类型（例如 CardDestroyEvent → CardBanishEvent）时，
+        /// 泛型 Publish&lt;T&gt; 会以静态类型 T 作为键而漏掉真实订阅者；此方法以 eventData.GetType() 为键分发。
+        /// </summary>
+        public bool PublishDynamic(IEventData eventData)
+        {
+            if (eventData == null) return false;
+
+            var eventType = eventData.GetType();
+            List<Func<IEventData, bool>> handlersToInvoke = GetHandlerListFromPool();
+            bool allSuccess = true;
+
+            try
+            {
+                if (_broadcastHandlers.TryGetValue(eventType, out var handlers))
+                {
+                    handlersToInvoke.AddRange(handlers);
+                }
+
+                if (handlersToInvoke.Count == 0) return false;
+
+                foreach (var handler in handlersToInvoke)
+                {
+                    try
+                    {
+                        if (!IsHandlerValid(handler)) continue;
+                        if (!handler(eventData))
+                        {
+                            allSuccess = false;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Event handler error: {e}");
+                        allSuccess = false;
+                    }
+                }
+                return allSuccess;
+            }
+            finally
+            {
+                handlersToInvoke.Clear();
+                if (_listPool.Count < 16)
+                {
+                    _listPool.Push(handlersToInvoke);
+                }
+            }
+        }
+
         #endregion
 
         #region 维护

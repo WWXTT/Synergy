@@ -27,6 +27,34 @@ namespace CardCore.Serialization
         public const int EffectData_ManaType = 1186904746;
         public const int EffectData_Description = 32483303;
         public const int EffectData_EffectTag = 142036358;
+        public const int EffectData_DisplayName = 702727069;
+        public const int EffectData_IsOptional = 1782308357;
+        public const int EffectData_Duration = 41851234;
+        public const int EffectData_Tags = 1179894075;
+        public const int EffectData_Costs = 1734743378;
+        public const int EffectData_ActivationConditions = 1900780975;
+        public const int EffectData_TriggerConditions = 1513029761;
+        public const int EffectData_Steps = 2041515697;
+
+        // ---- ActivationConditionData ----
+        public const int ActivationConditionData_Type = 1100210516;
+        public const int ActivationConditionData_Value = 1932353973;
+        public const int ActivationConditionData_Value2 = 1768808773;
+        public const int ActivationConditionData_StringValue = 1142407955;
+        public const int ActivationConditionData_Negate = 1185546117;
+
+        // ---- EffectCostEntry ----
+        public const int EffectCostEntry_CostType = 195771993;
+        public const int EffectCostEntry_Value = 1722419697;
+        public const int EffectCostEntry_ManaType = 1936670076;
+        public const int EffectCostEntry_TurnDuration = 2020030928;
+
+        // ---- EffectStepData ----
+        public const int EffectStepData_Kind = 1310020535;
+        public const int EffectStepData_Atomic = 1312599287;
+        public const int EffectStepData_Condition = 912000955;
+        public const int EffectStepData_ThenSteps = 1582440487;
+        public const int EffectStepData_ElseSteps = 885670630;
 
         // ---- CostEntryDTO ----
         public const int CostEntryDTO_ManaType = 724021260;
@@ -123,6 +151,6 @@ namespace CardCore.Serialization
         public const int PS_DeckCount = 1940827978;
         public const int PS_HandCount = 38995153;
 
-        // 共 89 个标签
+        // 共 111 个标签
     }
 }

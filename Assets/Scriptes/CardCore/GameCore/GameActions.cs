@@ -189,6 +189,13 @@ namespace CardCore
             if (core.TurnEngine.TurnPlayer != player) return false;
 
             var combat = core.CombatSystem;
+
+            // 战斗按需开启（主阶段随时可攻击，无独立战斗阶段）：
+            // 若尚未处于本玩家的战斗会话，则进入攻击者选择状态，否则 CanDeclareAttack 因
+            // _attackingPlayer 为空/不符而恒为 false。
+            if (!combat.InCombat || combat.AttackingPlayer != player)
+                combat.StartCombat(player, player.Opponent);
+
             if (!combat.CanDeclareAttack(attacker, player))
                 return false;
 

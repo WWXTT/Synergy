@@ -329,6 +329,23 @@ namespace CardCore
         {
             return timing switch
             {
+                // 旧式命名（0-18）映射到与下划线变体相同的事件类型，
+                // 否则这些时点的触发式会因 GetEventType 返回 null 而静默失效。
+                TriggerTiming.OnPlay => typeof(CardPlayEvent),
+                TriggerTiming.OnDeath => typeof(CardDestroyEvent),
+                TriggerTiming.OnDraw => typeof(CardDrawEvent),
+                TriggerTiming.OnDealDamage => typeof(DamageEvent),
+                TriggerTiming.OnTakeDamage => typeof(DamageEvent),
+                TriggerTiming.OnTurnStart => typeof(TurnStartEvent),
+                TriggerTiming.OnTurnEnd => typeof(TurnEndEvent),
+                TriggerTiming.OnAttack => typeof(AttackDeclarationEvent),
+                TriggerTiming.OnSummon => typeof(CardPutToBattlefieldEvent),
+                TriggerTiming.OnOtherCreatureEnter => typeof(CardPutToBattlefieldEvent),
+                TriggerTiming.OnSpellCast => typeof(CardPlayEvent),
+                TriggerTiming.OnTap => typeof(TapEvent),
+                TriggerTiming.OnUntap => typeof(UntapEvent),
+                TriggerTiming.OnDestroy => typeof(CardDestroyEvent),
+
                 TriggerTiming.On_EnterBattlefield => typeof(CardPutToBattlefieldEvent),
                 TriggerTiming.On_LeaveBattlefield => typeof(CardLeaveBattlefieldEvent),
                 TriggerTiming.On_Death => typeof(CardDestroyEvent),

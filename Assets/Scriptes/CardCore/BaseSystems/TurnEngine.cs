@@ -50,6 +50,14 @@ namespace CardCore
         private PhaseInfo _currentPhase;
         private Player _turnPlayer;
         private int _turnNumber = 0;
+
+        // 运行时接线（由 GameCore 注入）：事件路由 + 栈空查询
+        private GameCore _gameCore;
+        private Func<bool> _isStackEmpty;
+
+        // 额外回合 / 跳过回合（由原子效果 TakeExtraTurn / SkipTurn 驱动）
+        private int _extraTurnsForCurrent = 0;
+        private readonly HashSet<Player> _skipNextTurn = new HashSet<Player>();
         private List<PhaseType> _phaseOrder = new List<PhaseType>
         {
             PhaseType.Standby,
@@ -80,6 +88,16 @@ namespace CardCore
             _turnPlayer = startingPlayer;
             _turnNumber = 1;
             _currentPhase = null;
+        }
+
+        /// <summary>
+        /// 注入运行时依赖：通过 GameCore 统一发布事件（使 Trigger/Layer 引擎可观察到回合/阶段事件），
+        /// 并提供栈空查询以守卫阶段推进/结束。
+        /// </summary>
+        public void AttachRuntime(GameCore gameCore, Func<bool> isStackEmpty)
+        {
+            _gameCore = gameCore;
+            _isStackEmpty = isStackEmpty;
         }
 
         /// <summary>
@@ -149,18 +167,9 @@ namespace CardCore
         /// </summary>
         private void OnStandbyPhaseStarted()
         {
-            // 1. 重置回合使用标记
-            // TODO: 遍历战场卡牌重置一回合一次计数
-
-            // 2. 抽一张牌
-            // 由 GameCore 调用 ZoneManagerExtensions.DrawCard
-
-            // 3. 重置元素池每回合一次标记
-            // 由 GameCore 调用 ElementPool.ResetTurnUsage
-
-            // 4. 准备阶段自动完成后进入主阶段
-            // 玩家在准备阶段的操作（放元素池）由 GameActions 处理
-            // 完成后调用 AdvanceFromStandby()
+            // 横置恢复 / 抽牌 / 元素池与「每回合一次」计数重置由 GameCore.OnTurnStarted 统一处理
+            // （订阅 TurnStartEvent，在准备阶段开始前完成）。
+            // 玩家在准备阶段的操作（放元素池）由 GameActions 处理，完成后调用 AdvanceFromStandby()。
         }
 
         /// <summary>
@@ -198,7 +207,9 @@ namespace CardCore
             });
 
             CheckGameOver();
-            PrepareNextTurn();
+            // 主动玩家轮换由 GoToNextPhase 在 End→Standby 折返时统一处理（StartNewTurn(_turnPlayer.Opponent)）。
+            // 不在此处预先切换 _turnPlayer，否则会与折返时的 .Opponent 叠加导致回合不交替，
+            // 且会污染随后 EndCurrentPhase 发布的 PhaseEndEvent.ActivePlayer。
         }
 
         /// <summary>
@@ -209,6 +220,9 @@ namespace CardCore
             if (_currentPhase?.Phase != PhaseType.Main)
                 return;
             if (_currentPhase?.State != PhaseState.Active)
+                return;
+            // 栈未结算完毕时不能结束回合
+            if (_isStackEmpty != null && !_isStackEmpty())
                 return;
 
             EndCurrentPhase();
@@ -224,8 +238,9 @@ namespace CardCore
             if (_currentPhase?.State != PhaseState.Active)
                 return;
 
-            // TODO: 检查是否有未结算的栈
-            // 如果栈不为空，不能进入下一阶段
+            // 栈不为空时不能进入下一阶段
+            if (_isStackEmpty != null && !_isStackEmpty())
+                return;
 
             EndCurrentPhase();
             GoToNextPhase();
@@ -265,17 +280,6 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 准备下一回合
-        /// </summary>
-        private void PrepareNextTurn()
-        {
-            // 切换回合玩家
-            _turnPlayer = _turnPlayer.Opponent;
-
-            // TODO: 重置玩家状态（横置恢复等）
-        }
-
-        /// <summary>
         /// 进入下一阶段
         /// </summary>
         public void GoToNextPhase()
@@ -293,12 +297,56 @@ namespace CardCore
             // 特殊情况：结束阶段后直接开始下一回合的准备阶段
             if (nextPhase == PhaseType.Standby)
             {
-                StartNewTurn(_turnPlayer.Opponent);
+                StartNewTurn(ResolveNextTurnPlayer());
             }
             else
             {
                 StartPhase(nextPhase);
             }
+        }
+
+        /// <summary>
+        /// 授予额外回合（仅支持当前回合玩家叠加额外回合）
+        /// </summary>
+        public void GrantExtraTurn(Player player)
+        {
+            if (player != null && player == _turnPlayer)
+                _extraTurnsForCurrent++;
+        }
+
+        /// <summary>
+        /// 标记某玩家跳过其下一个回合
+        /// </summary>
+        public void SkipNextTurnFor(Player player)
+        {
+            if (player != null)
+                _skipNextTurn.Add(player);
+        }
+
+        /// <summary>
+        /// 计算 End→Standby 折返时的下一位回合玩家：
+        /// 优先消耗当前玩家的额外回合，再按被跳过标记顺延到对手。
+        /// </summary>
+        private Player ResolveNextTurnPlayer()
+        {
+            Player next;
+            if (_extraTurnsForCurrent > 0)
+            {
+                _extraTurnsForCurrent--;
+                next = _turnPlayer;
+            }
+            else
+            {
+                next = _turnPlayer.Opponent;
+            }
+
+            // 跳过回合：被标记者的回合作废，顺延到其对手
+            while (next != null && _skipNextTurn.Contains(next))
+            {
+                _skipNextTurn.Remove(next);
+                next = next.Opponent;
+            }
+            return next;
         }
 
         /// <summary>
@@ -355,11 +403,15 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 发布事件
+        /// 发布事件：优先经由 GameCore 统一路由（保证 Trigger/Layer 引擎能观察到），
+        /// 未接线时退化为直接走事件总线（便于独立测试）。
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            EventManager.Instance.Publish(e);
+            if (_gameCore != null)
+                _gameCore.PublishEvent(e);
+            else
+                EventManager.Instance.Publish(e);
         }
     }
 

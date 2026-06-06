@@ -99,13 +99,26 @@ namespace CardCore
         /// </summary>
         private Card CreateCopiedCard(Card original, CopySource source)
         {
-            // TODO: 创建新的卡牌实例
-            // 需要根据具体卡牌类型实现
+            var copy = new Card { ID = GenerateCopyID(original.ID) };
 
-            return new Card
+            // MTG：复制仅拷贝「可复制特征值」（印刷/基础特征），不含指示物、横置、伤害、控制权等运行时状态。
+            if (source.CopyStats)
             {
-                ID = GenerateCopyID(original.ID)
-            };
+                copy._power = original._power;
+                copy._life = original._life;
+                copy._maxLife = original._maxLife;
+            }
+            if (source.CopyCost)
+            {
+                copy._baseCost = original._baseCost;
+            }
+            if (source.CopyText || source.CopyEffects)
+            {
+                // 能力关键词属于可复制特征
+                copy._keywords = new HashSet<string>(original._keywords);
+            }
+
+            return copy;
         }
 
         /// <summary>
@@ -270,29 +283,40 @@ namespace CardCore
         /// </summary>
         private Player GetOriginalController(Card card)
         {
-            // TODO: 通过 ControlChangeLayer 获取
-            return null;
+            return card?.GetController();
         }
 
         /// <summary>
-        /// 检查卡牌是否在场
+        /// 检查卡牌是否在场（位于其控制者的战场区域）
         /// </summary>
         private bool IsCardInPlay(Card card)
         {
-            // TODO: 通过 ZoneManager 检查
-            return false;
+            if (card == null) return false;
+
+            var controller = card.GetController();
+            var zm = GameCore.Instance?.ZoneManager;
+            if (controller == null || zm == null)
+                return card.IsAlive;
+
+            return zm.IsCardInZone(card, controller, Zone.Battlefield);
         }
 
         /// <summary>
-        /// 获取复制继承的效果
+        /// 获取复制继承的效果：当配置复制文本/效果时，继承原卡的运行时效果。
         /// </summary>
         public List<IEffect> GetInheritedEffects(CopySource source)
         {
-            if (source == null || source.CopiedCard == null)
-                return new List<IEffect>();
+            var result = new List<IEffect>();
+            if (source == null || source.OriginalCard == null)
+                return result;
 
-            // TODO: 根据复制配置返回继承的效果
-            return new List<IEffect>();
+            if (!source.CopyEffects && !source.CopyText)
+                return result;
+
+            if (source.OriginalCard is IHasRuntimeEffects hasEffects && hasEffects.RuntimeEffects != null)
+                result.AddRange(hasEffects.RuntimeEffects);
+
+            return result;
         }
 
         /// <summary>
@@ -309,8 +333,11 @@ namespace CardCore
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            // 通过事件总线发布
-            EventManager.Instance.Publish(e);
+            // 优先经 GameCore 统一路由，使 Trigger/Layer 引擎能观察到复制创建事件
+            if (GameCore.Instance != null)
+                GameCore.Instance.PublishEvent(e);
+            else
+                EventManager.Instance.Publish(e);
         }
     }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CardCore.Attribute;
 
 namespace CardCore
 {
@@ -224,43 +225,76 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 执行区域变更动作
+        /// 执行区域变更动作：补发区域变更事件，使离开/进入区域触发式可观察。
         /// </summary>
         private void ExecuteZoneChange(SBAActionRecord action)
         {
             var card = action.AffectedEntity as Card;
             if (card == null) return;
 
-            // 处理区域离开/进入触发
-            // 触发相关事件
+            Zone oldZone = action.OldValue is Zone oz ? oz : Zone.None;
+            Zone newZone = action.NewValue is Zone nz ? nz : Zone.None;
+
+            PublishEvent(new CardZoneChangeEvent
+            {
+                Card = card,
+                OldZone = oldZone,
+                NewZone = newZone,
+                Controller = card.GetController()
+            });
         }
 
         /// <summary>
-        /// 执行文本变更动作
+        /// 执行文本变更动作。当前数据模型无文本源，留空（对应 TextChangeChecker 的空实现）。
         /// </summary>
         private void ExecuteTextChange(SBAActionRecord action)
+        {
+        }
+
+        /// <summary>
+        /// 执行特征变化动作：+1/+1 与 -1/-1 指示物成对湮灭（MTG 704.5q）。
+        /// 两类指示物在加入时已分别把 P/T 净改抵消，移除成对指示物对 P/T 无净影响，
+        /// 仅需递减计数并补发移除事件。
+        /// </summary>
+        private void ExecuteCharacteristicChange(SBAActionRecord action)
         {
             var card = action.AffectedEntity as Card;
             if (card == null) return;
 
-            // 处理文本变化触发
+            int annihilate = Math.Min(card.GetCounterCount("+1/+1"), card.GetCounterCount("-1/-1"));
+            if (annihilate <= 0) return;
+
+            card.RemoveCounters("+1/+1", annihilate);
+            card.RemoveCounters("-1/-1", annihilate);
+
+            PublishEvent(new CounterEvent
+            {
+                Target = card,
+                CounterType = "+1/+1",
+                Amount = annihilate,
+                IsAdd = false,
+                Source = null
+            });
+            PublishEvent(new CounterEvent
+            {
+                Target = card,
+                CounterType = "-1/-1",
+                Amount = annihilate,
+                IsAdd = false,
+                Source = null
+            });
         }
 
         /// <summary>
-        /// 执行特征变化动作
-        /// </summary>
-        private void ExecuteCharacteristicChange(SBAActionRecord action)
-        {
-            // 处理特征变化触发
-            // 例如：攻击力变化触发 "当攻击力变化时"
-        }
-
-        /// <summary>
-        /// 发布事件
+        /// 发布事件：优先经由 GameCore 统一路由（使 Trigger/Layer 引擎能观察到 SBA 产生的
+        /// 销毁/区域/指示物事件），未注入时退化为直接走事件总线。
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            EventManager.Instance.Publish(e);
+            if (_gameCore != null)
+                _gameCore.PublishEvent(e);
+            else
+                EventManager.Instance.Publish(e);
         }
 
         /// <summary>

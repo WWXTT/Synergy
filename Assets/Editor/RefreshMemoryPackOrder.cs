@@ -9,7 +9,7 @@ namespace CardCore.Tools
 {
     public static class RefreshMemoryPackOrder
     {
-        private const string OUTPUT_PATH = "Assets/Core/Serialization/TagTable.cs";
+        private const string OUTPUT_PATH = "Assets/Scriptes/CardCore/Serialization/TagTable.cs";
         private const uint SYNERGY_TAG_SEED = 0x53796E67;
 
         [MenuItem("Tools/刷新属性排序（新增序列化字段时使用）")]
@@ -60,6 +60,22 @@ namespace CardCore.Tools
                 ("EffectData", "Abbreviation"), ("EffectData", "Initiative"), ("EffectData", "Parameters"),
                 ("EffectData", "Speed"), ("EffectData", "ManaType"), ("EffectData", "Description"),
                 ("EffectData", "EffectTag"),
+                ("EffectData", "DisplayName"), ("EffectData", "IsOptional"), ("EffectData", "Duration"),
+                ("EffectData", "Tags"), ("EffectData", "Costs"), ("EffectData", "ActivationConditions"),
+                ("EffectData", "TriggerConditions"), ("EffectData", "Steps"),
+
+                // ---- ActivationConditionData ----
+                ("ActivationConditionData", "Type"), ("ActivationConditionData", "Value"),
+                ("ActivationConditionData", "Value2"), ("ActivationConditionData", "StringValue"),
+                ("ActivationConditionData", "Negate"),
+
+                // ---- EffectCostEntry ----
+                ("EffectCostEntry", "CostType"), ("EffectCostEntry", "Value"),
+                ("EffectCostEntry", "ManaType"), ("EffectCostEntry", "TurnDuration"),
+
+                // ---- EffectStepData ----
+                ("EffectStepData", "Kind"), ("EffectStepData", "Atomic"), ("EffectStepData", "Condition"),
+                ("EffectStepData", "ThenSteps"), ("EffectStepData", "ElseSteps"),
 
                 // ---- CostEntryDTO ----
                 ("CostEntryDTO", "ManaType"), ("CostEntryDTO", "Value"),

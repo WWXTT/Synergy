@@ -131,18 +131,54 @@ namespace CardCore.Serialization
         [MemoryPackOrder(TagTable.EffectData_ManaType)]
         public SerializableAtomicEffectEntry[] AtomicEffects;
 
+        [MemoryPackOrder(TagTable.EffectData_DisplayName)]
+        public string DisplayName;
+
+        [MemoryPackOrder(TagTable.EffectData_IsOptional)]
+        public bool IsOptional;
+
+        [MemoryPackOrder(TagTable.EffectData_Duration)]
+        public int Duration;
+
+        [MemoryPackOrder(TagTable.EffectData_Tags)]
+        public string[] Tags;
+
+        [MemoryPackOrder(TagTable.EffectData_Costs)]
+        public SerializableEffectCostEntry[] Costs;
+
+        [MemoryPackOrder(TagTable.EffectData_ActivationConditions)]
+        public SerializableActivationConditionData[] ActivationConditions;
+
+        [MemoryPackOrder(TagTable.EffectData_TriggerConditions)]
+        public SerializableActivationConditionData[] TriggerConditions;
+
+        [MemoryPackOrder(TagTable.EffectData_Steps)]
+        public SerializableEffectStepData[] Steps;
+
         public static SerializableCardEffectData FromCardEffectData(CardEffectData data)
         {
             var dto = new SerializableCardEffectData
             {
                 Id = data.Id,
+                DisplayName = data.DisplayName,
                 Description = data.Description,
                 TriggerTiming = data.TriggerTiming,
                 ActivationType = data.ActivationType,
                 BaseSpeed = data.BaseSpeed,
+                IsOptional = data.IsOptional,
+                Duration = data.Duration,
             };
             dto.AtomicEffects = data.AtomicEffects?.Select(SerializableAtomicEffectEntry.FromEntry).ToArray()
                                 ?? Array.Empty<SerializableAtomicEffectEntry>();
+            dto.Tags = data.Tags?.ToArray() ?? Array.Empty<string>();
+            dto.Costs = data.Costs?.Select(SerializableEffectCostEntry.FromEntry).ToArray()
+                        ?? Array.Empty<SerializableEffectCostEntry>();
+            dto.ActivationConditions = data.ActivationConditions?.Select(SerializableActivationConditionData.FromData).ToArray()
+                                       ?? Array.Empty<SerializableActivationConditionData>();
+            dto.TriggerConditions = data.TriggerConditions?.Select(SerializableActivationConditionData.FromData).ToArray()
+                                    ?? Array.Empty<SerializableActivationConditionData>();
+            dto.Steps = data.Steps?.Select(SerializableEffectStepData.FromData).ToArray()
+                        ?? Array.Empty<SerializableEffectStepData>();
             return dto;
         }
 
@@ -151,11 +187,145 @@ namespace CardCore.Serialization
             return new CardEffectData
             {
                 Id = Id,
+                DisplayName = DisplayName,
                 Description = Description,
                 TriggerTiming = TriggerTiming,
                 ActivationType = ActivationType,
                 BaseSpeed = BaseSpeed,
+                IsOptional = IsOptional,
+                Duration = Duration,
                 AtomicEffects = AtomicEffects?.Select(e => e.ToEntry()).ToList() ?? new List<AtomicEffectEntry>(),
+                Tags = Tags?.ToList() ?? new List<string>(),
+                Costs = Costs?.Select(e => e.ToEntry()).ToList() ?? new List<CostEntry>(),
+                ActivationConditions = ActivationConditions?.Select(e => e.ToData()).ToList() ?? new List<ActivationConditionData>(),
+                TriggerConditions = TriggerConditions?.Select(e => e.ToData()).ToList() ?? new List<ActivationConditionData>(),
+                Steps = Steps?.Select(e => e.ToData()).ToList() ?? new List<EffectStepData>(),
+            };
+        }
+    }
+
+    [MemoryPackable]
+    public partial class SerializableActivationConditionData
+    {
+        [MemoryPackOrder(TagTable.ActivationConditionData_Type)]
+        public int Type;
+
+        [MemoryPackOrder(TagTable.ActivationConditionData_Value)]
+        public int Value;
+
+        [MemoryPackOrder(TagTable.ActivationConditionData_Value2)]
+        public int Value2;
+
+        [MemoryPackOrder(TagTable.ActivationConditionData_StringValue)]
+        public string StringValue;
+
+        [MemoryPackOrder(TagTable.ActivationConditionData_Negate)]
+        public bool Negate;
+
+        public static SerializableActivationConditionData FromData(ActivationConditionData data)
+        {
+            return new SerializableActivationConditionData
+            {
+                Type = data.Type,
+                Value = data.Value,
+                Value2 = data.Value2,
+                StringValue = data.StringValue,
+                Negate = data.Negate,
+            };
+        }
+
+        public ActivationConditionData ToData()
+        {
+            return new ActivationConditionData
+            {
+                Type = Type,
+                Value = Value,
+                Value2 = Value2,
+                StringValue = StringValue,
+                Negate = Negate,
+            };
+        }
+    }
+
+    [MemoryPackable]
+    public partial class SerializableEffectCostEntry
+    {
+        [MemoryPackOrder(TagTable.EffectCostEntry_CostType)]
+        public int CostType;
+
+        [MemoryPackOrder(TagTable.EffectCostEntry_Value)]
+        public int Value;
+
+        [MemoryPackOrder(TagTable.EffectCostEntry_ManaType)]
+        public int ManaType;
+
+        [MemoryPackOrder(TagTable.EffectCostEntry_TurnDuration)]
+        public int TurnDuration;
+
+        public static SerializableEffectCostEntry FromEntry(CostEntry data)
+        {
+            return new SerializableEffectCostEntry
+            {
+                CostType = data.CostType,
+                Value = data.Value,
+                ManaType = data.ManaType,
+                TurnDuration = data.TurnDuration,
+            };
+        }
+
+        public CostEntry ToEntry()
+        {
+            return new CostEntry
+            {
+                CostType = CostType,
+                Value = Value,
+                ManaType = ManaType,
+                TurnDuration = TurnDuration,
+            };
+        }
+    }
+
+    [MemoryPackable]
+    public partial class SerializableEffectStepData
+    {
+        [MemoryPackOrder(TagTable.EffectStepData_Kind)]
+        public int Kind;
+
+        [MemoryPackOrder(TagTable.EffectStepData_Atomic)]
+        public SerializableAtomicEffectEntry Atomic;
+
+        [MemoryPackOrder(TagTable.EffectStepData_Condition)]
+        public SerializableActivationConditionData Condition;
+
+        [MemoryPackOrder(TagTable.EffectStepData_ThenSteps)]
+        public SerializableAtomicEffectEntry[] ThenSteps;
+
+        [MemoryPackOrder(TagTable.EffectStepData_ElseSteps)]
+        public SerializableAtomicEffectEntry[] ElseSteps;
+
+        public static SerializableEffectStepData FromData(EffectStepData data)
+        {
+            return new SerializableEffectStepData
+            {
+                Kind = data.kind,
+                Atomic = data.atomic != null ? SerializableAtomicEffectEntry.FromEntry(data.atomic) : null,
+                Condition = data.condition != null ? SerializableActivationConditionData.FromData(data.condition) : null,
+                ThenSteps = data.thenSteps?.Select(SerializableAtomicEffectEntry.FromEntry).ToArray()
+                            ?? Array.Empty<SerializableAtomicEffectEntry>(),
+                ElseSteps = data.elseSteps?.Select(SerializableAtomicEffectEntry.FromEntry).ToArray()
+                            ?? Array.Empty<SerializableAtomicEffectEntry>(),
+            };
+        }
+
+        public EffectStepData ToData()
+        {
+            return new EffectStepData
+            {
+                kind = Kind,
+                atomic = Atomic?.ToEntry(),
+                condition = Condition?.ToData(),
+                thenSteps = ThenSteps?.Select(e => e.ToEntry()).ToList() ?? new List<AtomicEffectEntry>(),
+                elseSteps = ElseSteps?.Select(e => e.ToEntry()).ToList() ?? new List<AtomicEffectEntry>(),
             };
         }
     }

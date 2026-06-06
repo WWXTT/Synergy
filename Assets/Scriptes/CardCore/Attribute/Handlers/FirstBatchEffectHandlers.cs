@@ -294,7 +294,7 @@ namespace CardCore.Attribute.Handlers
                     var owner = card.GetOwner() ?? card.GetController();
                     var fromZone = card.GetZone();
                     if (context.ZoneManager != null && owner != null)
-                        context.ZoneManager.GetZoneContainer(owner).Move(card, fromZone, Zone.Deck);
+                        context.ZoneManager.GetZoneContainer(owner).Move(card, fromZone, Zone.Deck, DeckPosition.Top);
                     PublishEvent(new CardReturnToHandEvent { Card = card, Source = context.Source });
                 }
             }
@@ -317,7 +317,7 @@ namespace CardCore.Attribute.Handlers
                     var owner = card.GetOwner() ?? card.GetController();
                     var fromZone = card.GetZone();
                     if (context.ZoneManager != null && owner != null)
-                        context.ZoneManager.GetZoneContainer(owner).Move(card, fromZone, Zone.Deck);
+                        context.ZoneManager.GetZoneContainer(owner).Move(card, fromZone, Zone.Deck, DeckPosition.Bottom);
                     PublishEvent(new CardReturnToHandEvent { Card = card, Source = context.Source });
                 }
             }

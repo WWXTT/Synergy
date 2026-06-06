@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,39 +6,42 @@ using System.Linq;
 namespace CardCore
 {
     /// <summary>
-    /// 持续效果层类型（简化版，3-5层）
+    /// MTG 标准 7 语义层（连续效果按层序应用，层内再按子层/时间戳排序）。
+    /// L7（力量/防御）通过 <see cref="PowerToughnessSublayer"/> 细分子层。
     /// </summary>
     public enum LayerType
     {
-        /// <summary>
-        /// Layer 1: 特征定义能力（CDAs）
-        /// 优先级最高
-        /// </summary>
-        Layer1 = 1,
+        /// <summary>L1 复制效果</summary>
+        Copy = 1,
+        /// <summary>L2 控制变更</summary>
+        Control = 2,
+        /// <summary>L3 文本变更</summary>
+        Text = 3,
+        /// <summary>L4 类型变更</summary>
+        Type = 4,
+        /// <summary>L5 颜色变更</summary>
+        Color = 5,
+        /// <summary>L6 能力增删</summary>
+        Ability = 6,
+        /// <summary>L7 力量与防御</summary>
+        PowerToughness = 7
+    }
 
-        /// <summary>
-        /// Layer 2: 内部效果顺序
-        /// 同一来源的效果按添加顺序排序
-        /// </summary>
-        Layer2 = 2,
-
-        /// <summary>
-        /// Layer 3: 按时间戳排序
-        /// 先入场的优先
-        /// </summary>
-        Layer3 = 3,
-
-        /// <summary>
-        /// Layer 4: 状态修改效果
-        /// 修改对象特征的效果
-        /// </summary>
-        Layer4 = 4,
-
-        /// <summary>
-        /// Layer 5: 状态检查后效果
-        /// 状态检查后添加的效果
-        /// </summary>
-        Layer5 = 5
+    /// <summary>
+    /// L7（力量/防御）子层顺序（MTG 613.4）。
+    /// </summary>
+    public enum PowerToughnessSublayer
+    {
+        /// <summary>7a 特征定义能力（CDA）</summary>
+        CDA = 0,
+        /// <summary>7b 设定为固定值</summary>
+        Set = 1,
+        /// <summary>7c 指示物（+1/+1 等）</summary>
+        Counters = 2,
+        /// <summary>7d 其他增减效果</summary>
+        Modify = 3,
+        /// <summary>7e 力量/防御互换</summary>
+        Switch = 4
     }
 
     /// <summary>
@@ -108,6 +111,16 @@ namespace CardCore
     }
 
     /// <summary>
+    /// 力量/防御互换修饰器（L7e）。值由 LayerEngine 在计算时整体互换处理，
+    /// 此类仅作标记，Apply 不改变单值。
+    /// </summary>
+    public sealed class SwitchPowerToughnessModification : ICharacteristicModification
+    {
+        // 以 Power 作为登记键；实际互换在 LayerEngine.ComputePowerToughness 中执行。
+        public CharacteristicType TargetCharacteristic => CharacteristicType.Power;
+    }
+
+    /// <summary>
     /// 费用修饰器（修改费用字典）
     /// </summary>
     public sealed class CostAddModification : ICharacteristicModification
@@ -170,10 +183,12 @@ namespace CardCore
         public Entity SourceEntity { get; set; }
         public Entity TargetEntity { get; set; } // 可以为空（全局效果）
         public LayerType Layer { get; set; }
+        /// <summary>仅当 Layer == PowerToughness 时有意义，决定 L7 子层顺序</summary>
+        public PowerToughnessSublayer PTSublayer { get; set; } = PowerToughnessSublayer.Modify;
         public DateTime StartTime { get; set; }
         public int SequenceNumber { get; set; }
         public DurationType Duration { get; set; }
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = true;
         public Dictionary<CharacteristicType, ICharacteristicModification> Modifications { get; set; }
             = new Dictionary<CharacteristicType, ICharacteristicModification>();
 
@@ -192,6 +207,13 @@ namespace CardCore
         {
             return Modifications.TryGetValue(type, out var mod) ? mod : null;
         }
+
+        /// <summary>
+        /// 是否为力量/防御互换效果（L7e）
+        /// </summary>
+        public bool IsSwitchEffect =>
+            PTSublayer == PowerToughnessSublayer.Switch ||
+            Modifications.Values.Any(m => m is SwitchPowerToughnessModification);
 
         /// <summary>
         /// 对整数特征应用修饰（Power/Toughness）
@@ -251,9 +273,10 @@ namespace CardCore
     }
 
     /// <summary>
-    /// 层引擎（简化版）
-    /// 负责重新计算所有对象的当前状态、按层排序、时间戳排序
-    /// 使用脏标记缓存机制，仅在修饰器变更时重算
+    /// 层引擎（MTG 7 语义层）
+    /// 负责按层/子层/时间戳计算实体的当前特征（力量/防御/费用/颜色），
+    /// 使用脏标记缓存，仅在修饰器变更时重算。
+    /// 计算结果按需读取，绝不写回实体基础字段（基础值仅由指示物/永久效果改变）。
     /// </summary>
     public class LayerEngine
     {
@@ -282,6 +305,7 @@ namespace CardCore
         /// </summary>
         private class CharacteristicCache
         {
+            public bool PTValid;
             public int Power;
             public int Toughness;
             public Dictionary<int, float> Cost;
@@ -328,43 +352,42 @@ namespace CardCore
             return cache;
         }
 
-        /// <summary>
-        /// 计算实体最终攻击力（带缓存）
-        /// </summary>
-        public int CalculatePower(Entity entity)
+        private void ClearDirtyIfResolved(Entity entity)
         {
-            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached))
-                return cached.Power;
-
-            int value = CalculatePowerInternal(entity);
-
-            var cache = GetOrCreateCache(entity);
-            cache.Power = value;
-
-            // 如果这个特征已重算且全局不脏，从脏集合中移除
             if (!_globalDirty)
                 _dirtyEntities.Remove(entity);
-
-            return value;
         }
 
         /// <summary>
-        /// 计算实体最终生命值（带缓存）
+        /// 计算实体最终力量（带缓存）。L7 子层联合计算（含力量/防御互换）。
+        /// </summary>
+        public int CalculatePower(Entity entity)
+        {
+            if (entity == null) return 0;
+            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached) && cached.PTValid)
+                return cached.Power;
+
+            var cache = GetOrCreateCache(entity);
+            ComputePowerToughness(entity, out cache.Power, out cache.Toughness);
+            cache.PTValid = true;
+            ClearDirtyIfResolved(entity);
+            return cache.Power;
+        }
+
+        /// <summary>
+        /// 计算实体最终防御（带缓存）。
         /// </summary>
         public int CalculateToughness(Entity entity)
         {
-            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached))
+            if (entity == null) return 0;
+            if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached) && cached.PTValid)
                 return cached.Toughness;
 
-            int value = CalculateToughnessInternal(entity);
-
             var cache = GetOrCreateCache(entity);
-            cache.Toughness = value;
-
-            if (!_globalDirty)
-                _dirtyEntities.Remove(entity);
-
-            return value;
+            ComputePowerToughness(entity, out cache.Power, out cache.Toughness);
+            cache.PTValid = true;
+            ClearDirtyIfResolved(entity);
+            return cache.Toughness;
         }
 
         /// <summary>
@@ -372,6 +395,7 @@ namespace CardCore
         /// </summary>
         public Dictionary<int, float> CalculateCost(Entity entity)
         {
+            if (entity == null) return new Dictionary<int, float>();
             if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached) && cached.Cost != null)
                 return cached.Cost;
 
@@ -379,10 +403,7 @@ namespace CardCore
 
             var cache = GetOrCreateCache(entity);
             cache.Cost = value;
-
-            if (!_globalDirty)
-                _dirtyEntities.Remove(entity);
-
+            ClearDirtyIfResolved(entity);
             return value;
         }
 
@@ -391,6 +412,7 @@ namespace CardCore
         /// </summary>
         public List<ManaType> CalculateColors(Entity entity)
         {
+            if (entity == null) return new List<ManaType>();
             if (!IsDirty(entity) && _cache.TryGetValue(entity, out var cached) && cached.Colors != null)
                 return cached.Colors;
 
@@ -398,10 +420,7 @@ namespace CardCore
 
             var cache = GetOrCreateCache(entity);
             cache.Colors = value;
-
-            if (!_globalDirty)
-                _dirtyEntities.Remove(entity);
-
+            ClearDirtyIfResolved(entity);
             return value;
         }
 
@@ -417,48 +436,52 @@ namespace CardCore
 
         #region 内部计算方法（无缓存，由带缓存的公有方法调用）
 
-        private int CalculatePowerInternal(Entity entity)
+        /// <summary>
+        /// L7 联合计算力量与防御。子层顺序：7a CDA → 7b Set → 7c Counters → 7d Modify → 7e Switch。
+        /// 互换（7e）需同时持有两值，故力量与防御必须联合求解。
+        /// </summary>
+        private void ComputePowerToughness(Entity entity, out int power, out int toughness)
         {
-            int baseValue = GetBasePower(entity);
+            power = GetBasePower(entity);
+            toughness = GetBaseToughness(entity);
 
-            var allEffects = GetSortedEffectsForEntity(entity);
-            foreach (var effect in allEffects)
+            // 7a：特征定义能力（DefinesStats）覆盖基础数值
+            var statsCda = GetHighestPriorityCDA(entity, CharacteristicType.Toughness);
+            if (statsCda != null)
             {
+                switch (statsCda.DefinedValue)
+                {
+                    case ValueTuple<int, int> pt:
+                        power = pt.Item1;
+                        toughness = pt.Item2;
+                        break;
+                    case int p:
+                        power = p;
+                        break;
+                }
+            }
+
+            // 7b→7e：按子层 + 时间戳顺序应用 L7 效果
+            foreach (var effect in GetSortedPTEffects(entity))
+            {
+                if (effect.IsSwitchEffect)
+                {
+                    (power, toughness) = (toughness, power);
+                    continue;
+                }
+
                 if (effect.AffectsCharacteristic(CharacteristicType.Power))
-                    baseValue = effect.ApplyIntModification(CharacteristicType.Power, baseValue);
-            }
-
-            var cda = GetHighestPriorityCDA(entity, CharacteristicType.Power);
-            if (cda != null && cda.DefinedValue is int cdaValue)
-                baseValue = cdaValue;
-
-            return baseValue;
-        }
-
-        private int CalculateToughnessInternal(Entity entity)
-        {
-            int baseValue = GetBaseToughness(entity);
-
-            var allEffects = GetSortedEffectsForEntity(entity);
-            foreach (var effect in allEffects)
-            {
+                    power = effect.ApplyIntModification(CharacteristicType.Power, power);
                 if (effect.AffectsCharacteristic(CharacteristicType.Toughness))
-                    baseValue = effect.ApplyIntModification(CharacteristicType.Toughness, baseValue);
+                    toughness = effect.ApplyIntModification(CharacteristicType.Toughness, toughness);
             }
-
-            var cda = GetHighestPriorityCDA(entity, CharacteristicType.Toughness);
-            if (cda != null && cda.DefinedValue is int cdaValue)
-                baseValue = cdaValue;
-
-            return baseValue;
         }
 
         private Dictionary<int, float> CalculateCostInternal(Entity entity)
         {
             var baseValue = GetBaseCost(entity);
 
-            var allEffects = GetSortedEffectsForEntity(entity);
-            foreach (var effect in allEffects)
+            foreach (var effect in GetSortedEffectsForEntity(entity))
             {
                 if (effect.AffectsCharacteristic(CharacteristicType.Cost))
                     baseValue = effect.ApplyCostModification(baseValue);
@@ -471,8 +494,7 @@ namespace CardCore
         {
             var result = GetBaseColors(entity);
 
-            var allEffects = GetSortedEffectsForEntity(entity);
-            foreach (var effect in allEffects)
+            foreach (var effect in GetSortedEffectsForEntity(entity))
             {
                 if (effect.AffectsCharacteristic(CharacteristicType.Color))
                     result = effect.ApplyColorModification(result);
@@ -487,25 +509,69 @@ namespace CardCore
 
         #endregion
 
+        #region 便捷 API（供原子效果 Handler 注册连续效果）
+
+        /// <summary>
+        /// 注册一个力量/防御增减的连续效果（L7d）。返回句柄以便后续移除。
+        /// 这是连续/静态/持续到回合结束的 P/T 改变的标准入口——
+        /// 不要直接改实体的基础 _power/_life（那只用于永久变更，如指示物）。
+        /// </summary>
+        public LayerContinuousEffect AddPowerToughnessBuff(
+            Entity target, int deltaPower, int deltaToughness,
+            DurationType duration = DurationType.UntilEndOfTurn,
+            Entity source = null,
+            PowerToughnessSublayer sublayer = PowerToughnessSublayer.Modify)
+        {
+            var effect = new LayerContinuousEffect
+            {
+                SourceEntity = source,
+                TargetEntity = target,
+                Layer = LayerType.PowerToughness,
+                PTSublayer = sublayer,
+                Duration = duration,
+                StartTime = DateTime.Now,
+                SequenceNumber = (int)TimestampSystem.NextSequence,
+                IsActive = true
+            };
+
+            if (deltaPower != 0)
+                effect.Modifications[CharacteristicType.Power] =
+                    new IntAddModification(CharacteristicType.Power, deltaPower);
+            if (deltaToughness != 0)
+                effect.Modifications[CharacteristicType.Toughness] =
+                    new IntAddModification(CharacteristicType.Toughness, deltaToughness);
+
+            AddLayerContinuousEffect(effect);
+            return effect;
+        }
+
+        #endregion
+
         /// <summary>
         /// 添加持续效果
         /// </summary>
         public void AddLayerContinuousEffect(LayerContinuousEffect effect)
         {
-            if (effect.TargetEntity == null)
+            if (effect == null) return;
+
+            // 先快照旧值，加入后再发状态变更事件（含正确 old/new）
+            var entity = effect.TargetEntity;
+            var affected = effect.Modifications.Keys.ToList();
+            var olds = SnapshotCharacteristics(entity, affected);
+
+            if (entity == null)
             {
                 _globalEffects.Add(effect);
             }
             else
             {
-                if (!_entityEffects.ContainsKey(effect.TargetEntity))
-                    _entityEffects[effect.TargetEntity] = new List<LayerContinuousEffect>();
-
-                _entityEffects[effect.TargetEntity].Add(effect);
+                if (!_entityEffects.ContainsKey(entity))
+                    _entityEffects[entity] = new List<LayerContinuousEffect>();
+                _entityEffects[entity].Add(effect);
             }
 
-            MarkDirty(effect.TargetEntity);
-            PublishStateChangeEvent(effect.TargetEntity, effect.Layer);
+            MarkDirty(entity);
+            PublishCharacteristicChanges(entity, affected, olds);
         }
 
         /// <summary>
@@ -513,17 +579,23 @@ namespace CardCore
         /// </summary>
         public void RemoveLayerContinuousEffect(LayerContinuousEffect effect)
         {
-            if (effect.TargetEntity == null)
+            if (effect == null) return;
+
+            var entity = effect.TargetEntity;
+            var affected = effect.Modifications.Keys.ToList();
+            var olds = SnapshotCharacteristics(entity, affected);
+
+            if (entity == null)
             {
                 _globalEffects.Remove(effect);
             }
-            else if (_entityEffects.ContainsKey(effect.TargetEntity))
+            else if (_entityEffects.ContainsKey(entity))
             {
-                _entityEffects[effect.TargetEntity].Remove(effect);
+                _entityEffects[entity].Remove(effect);
             }
 
-            MarkDirty(effect.TargetEntity);
-            PublishStateChangeEvent(effect.TargetEntity, effect.Layer);
+            MarkDirty(entity);
+            PublishCharacteristicChanges(entity, affected, olds);
         }
 
         /// <summary>
@@ -531,20 +603,25 @@ namespace CardCore
         /// </summary>
         public void AddCDA(CharacteristicDefiningAbility cda)
         {
-            if (cda.DefinedEntity == null)
+            if (cda == null) return;
+
+            var entity = cda.DefinedEntity;
+            var characteristic = CharacteristicFromCDA(cda.DefinitionType);
+            var olds = SnapshotCharacteristics(entity, new[] { characteristic });
+
+            if (entity == null)
             {
                 _globalCDAs.Add(cda);
             }
             else
             {
-                if (!_entityCDAs.ContainsKey(cda.DefinedEntity))
-                    _entityCDAs[cda.DefinedEntity] = new List<CharacteristicDefiningAbility>();
-
-                _entityCDAs[cda.DefinedEntity].Add(cda);
+                if (!_entityCDAs.ContainsKey(entity))
+                    _entityCDAs[entity] = new List<CharacteristicDefiningAbility>();
+                _entityCDAs[entity].Add(cda);
             }
 
-            MarkDirty(cda.DefinedEntity);
-            PublishStateChangeEvent(cda.DefinedEntity, LayerType.Layer1);
+            MarkDirty(entity);
+            PublishCharacteristicChanges(entity, new[] { characteristic }, olds);
         }
 
         /// <summary>
@@ -552,40 +629,40 @@ namespace CardCore
         /// </summary>
         public void RemoveCDA(CharacteristicDefiningAbility cda)
         {
-            if (cda.DefinedEntity == null)
+            if (cda == null) return;
+
+            var entity = cda.DefinedEntity;
+            var characteristic = CharacteristicFromCDA(cda.DefinitionType);
+            var olds = SnapshotCharacteristics(entity, new[] { characteristic });
+
+            if (entity == null)
             {
                 _globalCDAs.Remove(cda);
             }
-            else if (_entityCDAs.ContainsKey(cda.DefinedEntity))
+            else if (_entityCDAs.ContainsKey(entity))
             {
-                _entityCDAs[cda.DefinedEntity].Remove(cda);
+                _entityCDAs[entity].Remove(cda);
             }
 
-            MarkDirty(cda.DefinedEntity);
-            PublishStateChangeEvent(cda.DefinedEntity, LayerType.Layer1);
+            MarkDirty(entity);
+            PublishCharacteristicChanges(entity, new[] { characteristic }, olds);
         }
 
         /// <summary>
-        /// 获取实体的所有排序效果
+        /// 获取实体的所有排序效果（按层 → 时间戳；L7 用 <see cref="GetSortedPTEffects"/>）
         /// </summary>
         private List<LayerContinuousEffect> GetSortedEffectsForEntity(Entity entity)
         {
             var result = new List<LayerContinuousEffect>();
 
-            // 添加全局效果
             result.AddRange(_globalEffects);
-
-            // 添加目标效果
-            if (_entityEffects.ContainsKey(entity))
+            if (entity != null && _entityEffects.ContainsKey(entity))
                 result.AddRange(_entityEffects[entity]);
 
-            // 按层排序，然后按时间戳排序
             result.Sort((a, b) =>
             {
                 int layerCompare = a.Layer.CompareTo(b.Layer);
                 if (layerCompare != 0) return layerCompare;
-
-                // 同层内按时间戳排序
                 return a.SequenceNumber.CompareTo(b.SequenceNumber);
             });
 
@@ -593,50 +670,64 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 获取最高优先级的CDA
+        /// 获取实体的 L7 力量/防御效果，按子层(7a-7e) → 时间戳排序。
+        /// </summary>
+        private List<LayerContinuousEffect> GetSortedPTEffects(Entity entity)
+        {
+            var result = new List<LayerContinuousEffect>();
+
+            foreach (var e in _globalEffects)
+                if (e.Layer == LayerType.PowerToughness) result.Add(e);
+            if (entity != null && _entityEffects.ContainsKey(entity))
+                foreach (var e in _entityEffects[entity])
+                    if (e.Layer == LayerType.PowerToughness) result.Add(e);
+
+            result.Sort((a, b) =>
+            {
+                int sub = a.PTSublayer.CompareTo(b.PTSublayer);
+                if (sub != 0) return sub;
+                return a.SequenceNumber.CompareTo(b.SequenceNumber);
+            });
+
+            return result;
+        }
+
+        /// <summary>
+        /// 获取最高优先级的CDA（同特征多 CDA 时取最新时间戳，MTG 时间戳规则）
         /// </summary>
         private CharacteristicDefiningAbility GetHighestPriorityCDA(Entity entity, CharacteristicType type)
         {
+            var defType = GetCDAFromCharacteristicType(type);
             List<CharacteristicDefiningAbility> candidates = new List<CharacteristicDefiningAbility>();
 
-            // 添加全局CDA
-            candidates.AddRange(_globalCDAs.Where(cda =>
-                cda.DefinitionType == GetCDAFromCharacteristicType(type)));
+            candidates.AddRange(_globalCDAs.Where(cda => cda.DefinitionType == defType));
 
-            // 添加目标CDA
-            if (_entityCDAs.ContainsKey(entity))
-            {
-                candidates.AddRange(_entityCDAs[entity].Where(cda =>
-                    cda.DefinitionType == GetCDAFromCharacteristicType(type)));
-            }
+            if (entity != null && _entityCDAs.ContainsKey(entity))
+                candidates.AddRange(_entityCDAs[entity].Where(cda => cda.DefinitionType == defType));
 
-            // 如果没有CDA，返回null
             if (candidates.Count == 0)
                 return null;
 
-            // 按时间戳排序（更老的优先）
-            candidates.Sort((a, b) => a.SequenceNumber.CompareTo(b.SequenceNumber));
-
+            // 最新时间戳（最大序列号）的 CDA 生效
+            candidates.Sort((a, b) => b.SequenceNumber.CompareTo(a.SequenceNumber));
             return candidates[0];
         }
 
         /// <summary>
-        /// 获取基础攻击力
+        /// 获取基础力量（印刷值 + 永久变更，连续效果不写入此处）
         /// </summary>
         private int GetBasePower(Entity entity)
         {
-            // TODO: 从实体的基础属性获取
             if (entity is IHasPower hasPower)
                 return hasPower.Power;
             return 0;
         }
 
         /// <summary>
-        /// 获取基础生命值
+        /// 获取基础防御/生命
         /// </summary>
         private int GetBaseToughness(Entity entity)
         {
-            // TODO: 从实体的基础属性获取
             if (entity is IHasLife hasLife)
                 return hasLife.Life;
             return 0;
@@ -647,19 +738,26 @@ namespace CardCore
         /// </summary>
         private Dictionary<int, float> GetBaseCost(Entity entity)
         {
-            // TODO: 从实体的基础属性获取
-            if (entity is IHasCost hasCost)
-                return hasCost.Cost;
+            if (entity is IHasCost hasCost && hasCost.Cost != null)
+                return new Dictionary<int, float>(hasCost.Cost);
             return new Dictionary<int, float>();
         }
 
         /// <summary>
-        /// 获取基础颜色
+        /// 获取基础颜色：由费用中出现的有色法力（灰=无色/通用除外）推导。
         /// </summary>
         private List<ManaType> GetBaseColors(Entity entity)
         {
             var result = new List<ManaType>();
-            // TODO: 从实体的基础属性获取
+            if (entity is IHasCost hasCost && hasCost.Cost != null)
+            {
+                foreach (var key in hasCost.Cost.Keys)
+                {
+                    var mt = (ManaType)key;
+                    if (mt != ManaType.Gray && !result.Contains(mt))
+                        result.Add(mt);
+                }
+            }
             return result;
         }
 
@@ -676,6 +774,7 @@ namespace CardCore
                     return CharacteristicDefiningType.DefinesType;
                 case CharacteristicType.Subtype:
                     return CharacteristicDefiningType.DefinesSubtype;
+                case CharacteristicType.Power:
                 case CharacteristicType.Toughness:
                     return CharacteristicDefiningType.DefinesStats;
                 default:
@@ -683,70 +782,99 @@ namespace CardCore
             }
         }
 
-        /// <summary>
-        /// 触发状态变化事件
-        /// </summary>
-        private void PublishStateChangeEvent(Entity entity, LayerType layer)
+        private CharacteristicType CharacteristicFromCDA(CharacteristicDefiningType type)
         {
-            // 触发所有受影响特征的事件
-            if (layer <= LayerType.Layer2) // CDA和内部效果优先级高
+            switch (type)
             {
-                // 高优先级变化
+                case CharacteristicDefiningType.DefinesColor: return CharacteristicType.Color;
+                case CharacteristicDefiningType.DefinesType: return CharacteristicType.Supertype;
+                case CharacteristicDefiningType.DefinesSubtype: return CharacteristicType.Subtype;
+                default: return CharacteristicType.Power;
             }
-            else
-            {
-                // 低优先级变化
-            }
-
-            // 通过事件总线发布状态变化事件
-            EventManager.Instance.Publish(new StateChangeEvent
-            {
-                Type = StateChangeType.Power, // TODO: 根据实际变化类型设置
-                Target = entity,
-                OldValue = null, // TODO: 获取旧值
-                NewValue = null // TODO: 获取新值
-            });
         }
 
+        #region 状态变更事件
+
         /// <summary>
-        /// 重新计算所有实体状态
+        /// 读取指定特征的当前计算值（用于事件 old/new 快照）
+        /// </summary>
+        private object GetCurrentCharacteristic(Entity entity, CharacteristicType characteristic)
+        {
+            if (entity == null) return null;
+            switch (characteristic)
+            {
+                case CharacteristicType.Power: return CalculatePower(entity);
+                case CharacteristicType.Toughness: return CalculateToughness(entity);
+                case CharacteristicType.Color: return CalculateColors(entity);
+                case CharacteristicType.Cost: return CalculateCost(entity);
+                default: return null;
+            }
+        }
+
+        private Dictionary<CharacteristicType, object> SnapshotCharacteristics(
+            Entity entity, IReadOnlyList<CharacteristicType> characteristics)
+        {
+            var snap = new Dictionary<CharacteristicType, object>();
+            if (entity == null) return snap;
+            foreach (var c in characteristics)
+                snap[c] = GetCurrentCharacteristic(entity, c);
+            return snap;
+        }
+
+        private void PublishCharacteristicChanges(
+            Entity entity, IReadOnlyList<CharacteristicType> characteristics,
+            Dictionary<CharacteristicType, object> oldValues)
+        {
+            if (entity == null) return;
+            foreach (var c in characteristics)
+            {
+                if (!TryMapStateChangeType(c, out var stateType))
+                    continue;
+
+                oldValues.TryGetValue(c, out var oldVal);
+                var newVal = GetCurrentCharacteristic(entity, c);
+
+                EventManager.Instance.Publish(new StateChangeEvent
+                {
+                    Type = stateType,
+                    Target = entity,
+                    OldValue = oldVal,
+                    NewValue = newVal
+                });
+            }
+        }
+
+        private bool TryMapStateChangeType(CharacteristicType c, out StateChangeType type)
+        {
+            switch (c)
+            {
+                case CharacteristicType.Power: type = StateChangeType.Power; return true;
+                case CharacteristicType.Toughness: type = StateChangeType.Toughness; return true;
+                case CharacteristicType.Color: type = StateChangeType.Color; return true;
+                case CharacteristicType.Text: type = StateChangeType.Text; return true;
+                case CharacteristicType.Supertype:
+                case CharacteristicType.Subtype: type = StateChangeType.Type; return true;
+                default: type = StateChangeType.Power; return false; // Cost 等无对应事件类型
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// 重新计算所有实体状态（失效缓存，值按需经 Calculate* 读取）
         /// </summary>
         public void RecalculateAll()
         {
-            // 重新计算所有受影响实体的特征
-            var allEntities = new HashSet<Entity>();
-
-            // 收集所有受影响的实体
-            foreach (var entity in _entityEffects.Keys)
-                allEntities.Add(entity);
-            foreach (var entity in _entityCDAs.Keys)
-                allEntities.Add(entity);
-
-            // 重新计算每个实体
-            foreach (var entity in allEntities)
-            {
-                RecalculateEntity(entity);
-            }
+            InvalidateAllCache();
         }
 
         /// <summary>
-        /// 重新计算指定实体的状态
+        /// 重新计算指定实体状态：仅失效其缓存，绝不把计算结果写回基础字段
+        /// （写回会把连续效果烘焙进基础值，导致每次重算叠加——已修复）。
         /// </summary>
         private void RecalculateEntity(Entity entity)
         {
-            // 重新计算攻击力
-            if (entity is IHasPower hasPower)
-                hasPower.Power = CalculatePower(entity);
-
-            // 重新计算生命值
-            if (entity is IHasLife hasLife)
-                hasLife.Life = CalculateToughness(entity);
-
-            // 重新计算费用
-            if (entity is IHasCost hasCost)
-                hasCost.Cost = CalculateCost(entity);
-
-            // TODO: 重新计算其他特征
+            MarkDirty(entity);
         }
 
         /// <summary>
@@ -775,14 +903,13 @@ namespace CardCore
         /// </summary>
         public void OnEvent<T>(T e) where T : IGameEvent
         {
-            // 根据事件类型重新计算状态
             switch (e)
             {
                 case StateChangeEvent stateChange:
                     RecalculateEntity(stateChange.Target);
                     break;
                 case EffectResolveEvent resolveEvent:
-                    // 效果结算后重新计算
+                    // 效果结算后失效全部缓存，下次读取重算
                     RecalculateAll();
                     break;
             }

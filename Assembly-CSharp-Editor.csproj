@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Editor\FindAttribute\ReferenceFinderWindow.cs" />
+    <Compile Include="Assets\Editor\CardPipelineVerifier.cs" />
     <Compile Include="Assets\Editor\TextureArrayGeneratorEditor.cs" />
     <Compile Include="Assets\Editor\CreateConfig.cs" />
     <Compile Include="Assets\Editor\RefreshMemoryPackOrder.cs" />

@@ -357,13 +357,13 @@ namespace CardCore
         /// <summary>增加额外回合</summary>
         public static void AddExtraTurn(this Player player)
         {
-            // TODO: 实现额外回合逻辑
+            GameCore.Instance?.TurnEngine?.GrantExtraTurn(player);
         }
 
         /// <summary>跳过下一回合</summary>
         public static void SkipNextTurn(this Player player)
         {
-            // TODO: 实现跳过回合逻辑
+            GameCore.Instance?.TurnEngine?.SkipNextTurnFor(player);
         }
 
         #endregion

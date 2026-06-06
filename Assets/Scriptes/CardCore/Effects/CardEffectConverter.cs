@@ -139,6 +139,8 @@ namespace CardCore
                 Type = (ConditionType)data.Type,
                 Value = data.Value,
                 Value2 = data.Value2,
+                Negate = data.Negate,
+                StringValue = data.StringValue,
             };
         }
     }

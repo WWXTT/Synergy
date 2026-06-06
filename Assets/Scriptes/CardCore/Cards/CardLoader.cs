@@ -51,6 +51,13 @@ namespace CardCore
         public List<string> keywords;
         public List<string> tags;
         public List<CardEffectData> effects;
+
+        // 额外卡组 / 子类型字段（缺省 → 旧行为，向后兼容）
+        public string subtype;     // 逗号分隔的 CardSubtype Flags 名，如 "Synchro,Tuner"
+        public int level = -1;     // 等级，-1 = 无
+        public int rank = -1;      // 阶级，-1 = 无
+        public int linkRating = -1;// 链接值，-1 = 无
+        public string arrows;      // 逗号分隔的 HexDirection Flags 名，如 "Up,LowerRight"
     }
 
     /// <summary>
@@ -235,10 +242,28 @@ namespace CardCore
                 Cost = ParseCost(entry.costList),
                 Keywords = entry.keywords ?? new List<string>(),
                 Tags = entry.tags ?? new List<string>(),
-                Effects = entry.effects ?? new List<CardEffectData>()
+                Effects = entry.effects ?? new List<CardEffectData>(),
+                Subtype = ParseFlags<CardSubtype>(entry.subtype),
+                ArrowDirections = ParseFlags<HexDirection>(entry.arrows),
             };
 
+            if (entry.level >= 0) cardData.Level = entry.level;
+            if (entry.rank >= 0) cardData.Rank = entry.rank;
+            if (entry.linkRating >= 0) cardData.LinkRating = entry.linkRating;
+
             return cardData;
+        }
+
+        /// <summary>
+        /// 解析逗号分隔的 Flags 枚举串（缺省 → 默认值 0）
+        /// </summary>
+        private static T ParseFlags<T>(string raw) where T : struct, Enum
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return default;
+            if (Enum.TryParse<T>(raw, out var result))
+                return result;
+            return default;
         }
 
         /// <summary>

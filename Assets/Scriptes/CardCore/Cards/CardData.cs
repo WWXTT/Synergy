@@ -131,6 +131,53 @@ namespace CardCore
         }
 
         /// <summary>
+        /// 卡牌子类型（种族 / 怪兽种类 / 融合-同步-超量-链接等额外卡组标记），Flags 组合。
+        /// </summary>
+        [SerializeField]
+        private CardSubtype _subtype = CardSubtype.None;
+        public CardSubtype Subtype
+        {
+            get => _subtype;
+            set => _subtype = value;
+        }
+
+        /// <summary>等级（生物 / 融合 / 同步），可空。</summary>
+        [SerializeField]
+        private int _level = -1;
+        public int? Level
+        {
+            get => _level < 0 ? (int?)null : _level;
+            set => _level = value ?? -1;
+        }
+
+        /// <summary>阶级（超量），可空。</summary>
+        [SerializeField]
+        private int _rank = -1;
+        public int? Rank
+        {
+            get => _rank < 0 ? (int?)null : _rank;
+            set => _rank = value ?? -1;
+        }
+
+        /// <summary>链接值（链接），可空。</summary>
+        [SerializeField]
+        private int _linkRating = -1;
+        public int? LinkRating
+        {
+            get => _linkRating < 0 ? (int?)null : _linkRating;
+            set => _linkRating = value ?? -1;
+        }
+
+        /// <summary>链接箭头方向（链接），Flags 组合。</summary>
+        [SerializeField]
+        private HexDirection _arrowDirections = HexDirection.None;
+        public HexDirection ArrowDirections
+        {
+            get => _arrowDirections;
+            set => _arrowDirections = value;
+        }
+
+        /// <summary>
         /// 总费用计算
         /// </summary>
         [NonSerialized]
@@ -290,6 +337,13 @@ namespace CardCore
         public int ManaTypeParam;      // ManaType 枚举值
         public int ZoneParam;          // Zone 枚举值
         public int Duration;           // DurationType 枚举值，0 = 使用表默认
+
+        // 每实例目标覆盖 —— 默认哨兵值表示沿用 AtomicEffectConfig 的配置级目标。
+        // 由效果合成界面按需设置；执行引擎接入留 Phase 4。
+        public int TargetTypeOverride = -1;       // EffectTargetType 枚举值，-1 = 用配置
+        public string TargetFilterOverride = "";  // 逗号分隔 filter token，"" = 用配置
+        public int TargetCountOverride = -2;       // -2 = 用配置（注意 -1=任意、0=全部 是合法语义值）
+        public int TargetScopeOverride = -1;       // EffectTargetScope 枚举值，-1 = 用配置
     }
 
     /// <summary>
@@ -318,6 +372,23 @@ namespace CardCore
     }
 
     /// <summary>
+    /// 效果步骤条目 —— 把效果序列扩展为「原子效果」或「条件分支」两种步骤。
+    /// 由效果合成界面（UI）编排，JsonUtility 可序列化（判别字段 + 有界一层 then/else）。
+    ///
+    /// 注：执行引擎当前仍按扁平 AtomicEffects 线性结算，不读 Steps；
+    /// Steps 仅持久化分支结构，待对战阶段接入递归执行后启用。
+    /// </summary>
+    [Serializable]
+    public class EffectStepData
+    {
+        public int kind;                              // 0=原子效果, 1=条件分支
+        public AtomicEffectEntry atomic;              // kind==0 时有效
+        public ActivationConditionData condition;     // kind==1 时有效
+        public List<AtomicEffectEntry> thenSteps;     // kind==1：条件成立时执行
+        public List<AtomicEffectEntry> elseSteps;     // kind==1：否则执行
+    }
+
+    /// <summary>
     /// 卡牌效果数据 —— 描述卡牌的一个完整效果
     /// 包含触发时点、条件、代价、以及有序的原子效果列表
     /// 转换后成为一个 EffectDefinition
@@ -339,6 +410,10 @@ namespace CardCore
         public List<AtomicEffectEntry> AtomicEffects;
         public List<CostEntry> Costs;
         public List<string> Tags;
+
+        // 可选：分支化的效果步骤（含 then/else）。为空时退化为扁平 AtomicEffects（向后兼容）。
+        // 执行引擎暂不读取，详见 EffectStepData 注释。
+        public List<EffectStepData> Steps;
     }
 
     /// <summary>

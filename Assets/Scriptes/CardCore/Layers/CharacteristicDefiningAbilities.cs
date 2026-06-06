@@ -254,7 +254,29 @@ namespace CardCore
             // 只保留最新的CDA
             _activeCDAs[entity][type] = latest;
 
-            // TODO: 触发CDA冲突解决事件
+            // 通知特征因 CDA 冲突解决而被重新决定（最新时间戳的 CDA 生效）
+            PublishEvent(new StateChangeEvent
+            {
+                Type = MapToStateChangeType(type),
+                Target = entity,
+                OldValue = null,
+                NewValue = latest.DefinedValue
+            });
+        }
+
+        /// <summary>
+        /// 将 CDA 定义类型映射到状态变更类型。
+        /// </summary>
+        private static StateChangeType MapToStateChangeType(CharacteristicDefiningType type)
+        {
+            switch (type)
+            {
+                case CharacteristicDefiningType.DefinesColor: return StateChangeType.Color;
+                case CharacteristicDefiningType.DefinesType: return StateChangeType.Type;
+                case CharacteristicDefiningType.DefinesSubtype: return StateChangeType.Type;
+                case CharacteristicDefiningType.DefinesStats: return StateChangeType.Power;
+                default: return StateChangeType.Power;
+            }
         }
 
         /// <summary>
@@ -308,8 +330,11 @@ namespace CardCore
         /// </summary>
         private void PublishEvent<T>(T e) where T : IGameEvent
         {
-            // 通过事件总线发布
-            EventManager.Instance.Publish(e);
+            // 优先经 GameCore 统一路由，使 Trigger/Layer 引擎能观察到 CDA 冲突解决事件
+            if (GameCore.Instance != null)
+                GameCore.Instance.PublishEvent(e);
+            else
+                EventManager.Instance.Publish(e);
         }
     }
 
