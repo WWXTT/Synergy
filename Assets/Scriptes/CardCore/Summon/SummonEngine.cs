@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 
 namespace CardCore
 {
@@ -55,6 +56,7 @@ namespace CardCore
             // TODO: 实现从 CardData 创建 Card 实例的逻辑
             var card = new Card { ID = cardData.ID };
             _gameCore.ZoneManager.MoveCard(card, player, Zone.ExtraDeck, Zone.Battlefield);
+            card.WasFormallySummoned = true; // 从额外组正式召唤
 
             // 发布召唤事件
             EventManager.Instance.Publish(new CardPutToBattlefieldEvent
@@ -473,6 +475,102 @@ namespace CardCore
             if (card is IHasLevel hasLevel)
                 return hasLevel.Level ?? hasLevel.Rank ?? 0;
             return 0;
+        }
+
+        #endregion
+
+        #region 素材选择（交互）
+
+        // 注：以下交互包装仅负责「让玩家选素材」并委托既有召唤方法。
+        // 「触发召唤的 trigger 本身」与各特召规则细节（速度继承/箭头/超量素材叠放等）
+        // 仍为 UI/规则后续补齐项，本批次不在范围内。
+
+        /// <summary>本方战场上可作素材的候选（排除额外卡组怪兽）。</summary>
+        private List<Entity> GetMaterialCandidates(Player player)
+        {
+            var field = _gameCore.ZoneManager.GetCards(player, Zone.Battlefield);
+            if (field == null) return new List<Entity>();
+            return field.Where(ValidateMaterialCard).Cast<Entity>().ToList();
+        }
+
+        private async UniTask<List<Card>> ChooseMaterialsAsync(Player player, string title, int min, int max)
+        {
+            var candidates = GetMaterialCandidates(player);
+            if (candidates.Count == 0) return new List<Card>();
+
+            var chosen = await TargetSelectionService.RequestAsync(new TargetSelectionRequest
+            {
+                Candidates = candidates,
+                MinCount = Math.Min(min, candidates.Count),
+                MaxCount = Math.Min(max, candidates.Count),
+                Chooser = player,
+                Title = title,
+                Hint = "选择召唤素材",
+                AllowCancel = true,
+            });
+            return chosen.OfType<Card>().ToList();
+        }
+
+        /// <summary>融合召唤（交互）：玩家从战场选素材后委托 FusionSummon。失败返回 null。</summary>
+        public async UniTask<Card> FusionSummonInteractiveAsync(Player player, CardData fusionCard)
+        {
+            var materials = await ChooseMaterialsAsync(player, "融合素材", 1, int.MaxValue);
+            if (materials.Count == 0) return null;
+            try { return FusionSummon(player, fusionCard, materials); }
+            catch (GameRuleViolationException) { return null; }
+        }
+
+        /// <summary>超量召唤（交互）。失败返回 null。</summary>
+        public async UniTask<Card> XyzSummonInteractiveAsync(Player player, CardData xyzCard)
+        {
+            var materials = await ChooseMaterialsAsync(player, "超量素材", 1, int.MaxValue);
+            if (materials.Count == 0) return null;
+            try { return XyzSummon(player, xyzCard, materials); }
+            catch (GameRuleViolationException) { return null; }
+        }
+
+        /// <summary>链接召唤（交互）。失败返回 null。</summary>
+        public async UniTask<Card> LinkSummonInteractiveAsync(Player player, CardData linkCard)
+        {
+            var materials = await ChooseMaterialsAsync(player, "链接素材", 1, int.MaxValue);
+            if (materials.Count == 0) return null;
+            try { return LinkSummon(player, linkCard, materials); }
+            catch (GameRuleViolationException) { return null; }
+        }
+
+        /// <summary>
+        /// 同步召唤（交互）：两段选择——先选 1 个调整(Tuner)，再选 N 个非调整。
+        /// 注：缺少可靠的 Tuner 判定，本实现把第一段选中的素材当作 Tuner（UI 后续补判定）。
+        /// </summary>
+        public async UniTask<Card> SynchroSummonInteractiveAsync(Player player, CardData synchroCard)
+        {
+            var tunerPick = await ChooseMaterialsAsync(player, "选择调整(Tuner)", 1, 1);
+            if (tunerPick.Count == 0) return null;
+            var tuner = tunerPick[0];
+
+            // 非调整候选：战场素材去掉已选 tuner
+            var nonTunerCandidates = GetMaterialCandidates(player)
+                .OfType<Card>()
+                .Where(c => c != tuner)
+                .Cast<Entity>()
+                .ToList();
+            if (nonTunerCandidates.Count == 0) return null;
+
+            var picked = await TargetSelectionService.RequestAsync(new TargetSelectionRequest
+            {
+                Candidates = nonTunerCandidates,
+                MinCount = 1,
+                MaxCount = nonTunerCandidates.Count,
+                Chooser = player,
+                Title = "选择非调整素材",
+                Hint = "选择非调整素材",
+                AllowCancel = true,
+            });
+            var nonTuners = picked.OfType<Card>().ToList();
+            if (nonTuners.Count == 0) return null;
+
+            try { return SynchroSummon(player, synchroCard, tuner, nonTuners); }
+            catch (GameRuleViolationException) { return null; }
         }
 
         #endregion

@@ -57,6 +57,18 @@ namespace CardCore
                 }
             }
 
+            // 转换节点化步骤（原子 + per-target 条件分支）。
+            // 非空时执行引擎走步骤遍历；为空时退化为扁平 Effects（向后兼容）。
+            if (data.Steps != null && data.Steps.Count > 0)
+            {
+                foreach (var step in data.Steps)
+                {
+                    var runtimeStep = ConvertStep(step);
+                    if (runtimeStep != null)
+                        def.Steps.Add(runtimeStep);
+                }
+            }
+
             // 转换代价列表
             if (data.Costs != null)
             {
@@ -129,7 +141,57 @@ namespace CardCore
                 ManaTypeParam = (ManaType)entry.ManaTypeParam,
                 ZoneParam = (Zone)entry.ZoneParam,
                 Duration = duration,
+                TargetTypeOverride = entry.TargetTypeOverride,
+                TargetFilterOverride = entry.TargetFilterOverride ?? "",
+                TargetCountOverride = entry.TargetCountOverride,
+                DynamicTargetCount = entry.DynamicTargetCount,
+                Drawbacks = entry.Drawbacks != null ? new List<string>(entry.Drawbacks) : new List<string>(),
             };
+        }
+
+        private static RuntimeEffectStep ConvertStep(EffectStepData step)
+        {
+            if (step == null) return null;
+
+            // kind: 0=原子, 1=条件分支
+            if (step.kind == 0)
+            {
+                var atomic = step.atomic != null ? ConvertAtomicEffect(step.atomic) : null;
+                if (atomic == null) return null;
+                return new RuntimeEffectStep
+                {
+                    Kind = RuntimeStepKind.Atomic,
+                    Atomic = atomic,
+                };
+            }
+
+            // 条件分支（OutcomeGate）：then/else 为扁平原子列表（单层）
+            var branch = new RuntimeEffectStep
+            {
+                Kind = RuntimeStepKind.Branch,
+                ConditionId = step.conditionId,
+                ConditionParam = step.conditionParam,
+                ConditionStringParam = step.conditionStringParam,
+                Negate = false,
+            };
+
+            if (step.thenSteps != null)
+            {
+                foreach (var entry in step.thenSteps)
+                {
+                    var inst = ConvertAtomicEffect(entry);
+                    if (inst != null) branch.Then.Add(inst);
+                }
+            }
+            if (step.elseSteps != null)
+            {
+                foreach (var entry in step.elseSteps)
+                {
+                    var inst = ConvertAtomicEffect(entry);
+                    if (inst != null) branch.Else.Add(inst);
+                }
+            }
+            return branch;
         }
 
         private static ActivationCondition ConvertCondition(ActivationConditionData data)

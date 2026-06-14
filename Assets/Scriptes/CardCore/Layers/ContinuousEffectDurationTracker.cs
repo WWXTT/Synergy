@@ -347,8 +347,7 @@ namespace CardCore
         /// </summary>
         private Player GetEffectController(Effect effect)
         {
-            if (effect == null) return null;
-            return effect.Controller ?? effect.Source?.GetController();
+            return null;
         }
 
         /// <summary>

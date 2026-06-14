@@ -246,6 +246,26 @@ namespace CardCore.Attribute
         public Entity Source { get; set; }
     }
 
+    /// <summary>
+    /// 选择请求事件（ChooseOneEffect 发行）。
+    /// UI 层订阅后向玩家呈现 Options，并写回选择 index；逻辑层当前以暂定 index 直接确定。
+    /// </summary>
+    public class ChoiceRequestEvent : GameEventBase
+    {
+        public Player Chooser { get; set; }
+        public List<string> Options { get; set; }
+        public int SelectedIndex { get; set; }
+        public Entity Source { get; set; }
+    }
+
+    /// <summary>延迟效果登记事件（DelayedEffect 发行，供 UI/日志感知一个延迟效果已挂起）</summary>
+    public class DelayedEffectScheduledEvent : GameEventBase
+    {
+        public Player Controller { get; set; }
+        public string FireTiming { get; set; }
+        public Entity Source { get; set; }
+    }
+
     // ==================== 保护/资源/特殊事件 ====================
 
     /// <summary>净化事件</summary>

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d7343ef0c5771f54380d8e1fb8e6b3c9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Animations/AnimationControllers/Daniel_Bot.controller
+  uploadId: 901582

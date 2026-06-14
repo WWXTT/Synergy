@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 972a32ba8a2534d4ebf8e1bef545d169
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Prefabs/Daniel_ActiveRagdoll.prefab
+  uploadId: 901582

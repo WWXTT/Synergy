@@ -72,6 +72,12 @@ namespace CardCore
         public List<string> Tags = new List<string>();
         public string SourceCardId;
         public EffectTargetType TargetType;
+
+        /// <summary>
+        /// 节点化效果步骤（原子 + 单层 per-target 条件分支）。
+        /// 非空时执行引擎走步骤遍历；为空时退化为扁平 Effects 线性结算（向后兼容）。
+        /// </summary>
+        public List<RuntimeEffectStep> Steps = new List<RuntimeEffectStep>();
         #endregion
 
         #region 方法
@@ -369,6 +375,54 @@ namespace CardCore
 
     #endregion
 
+    #region 节点化效果步骤（运行时）
+
+    /// <summary>步骤种类：原子效果 / 条件分支。</summary>
+    public enum RuntimeStepKind
+    {
+        Atomic = 0,
+        Branch = 1,
+    }
+
+    /// <summary>
+    /// 条件族判别：
+    /// OutcomeGate（伤害/治疗/信息→读产出，达成走 then 免费奖励），
+    /// Drawback（抽牌→可叠加减费缺陷，挂在原子上，不走 then/else），
+    /// FilterPrecision（检索→筛选即条件，按维度计费）。
+    /// 分支步骤（Kind==Branch）当前仅承载 OutcomeGate。
+    /// </summary>
+    public enum BranchConditionKind
+    {
+        OutcomeGate = 0,
+        Drawback = 1,
+        FilterPrecision = 2,
+    }
+
+    /// <summary>
+    /// 运行时效果步骤。Kind==Atomic 时执行 Atomic；
+    /// Kind==Branch 时为 OutcomeGate 分支：评估 ConditionId 对当前目标的产出，
+    /// 真走 Then、假走 Else（单层、扁平原子列表，奖励免费）。
+    /// </summary>
+    [Serializable]
+    public class RuntimeEffectStep
+    {
+        public RuntimeStepKind Kind;
+
+        /// <summary>Kind==Atomic 时的原子效果。</summary>
+        public AtomicEffectInstance Atomic;
+
+        /// <summary>Kind==Branch 时的条件 id（取自 BranchConfig 目录）。</summary>
+        public string ConditionId;
+        public int ConditionParam;
+        public string ConditionStringParam;
+        public bool Negate;
+
+        public List<AtomicEffectInstance> Then = new List<AtomicEffectInstance>();
+        public List<AtomicEffectInstance> Else = new List<AtomicEffectInstance>();
+    }
+
+    #endregion
+
     #region 原子效果实例
 
     [Serializable]
@@ -381,6 +435,17 @@ namespace CardCore
         public ManaType ManaTypeParam;
         public Zone ZoneParam;
         public DurationType Duration;
+
+        // 每实例目标覆盖 —— 哨兵值表示沿用 AtomicEffectTable 的配置级目标。
+        public int TargetTypeOverride = -1;        // EffectTargetType 枚举值，-1 = 用配置
+        public string TargetFilterOverride = "";   // 逗号分隔 filter token，"" = 用配置
+        public int TargetCountOverride = -2;        // -2 = 用配置（-1=任意、0=全部 为合法语义）
+        public bool DynamicTargetCount;             // true = 运行时玩家自选个数（0..候选数），费用计 0 且不可作地牌
+        public List<string> Drawbacks = new List<string>(); // 抽牌减费缺陷 id（UnusableThisTurn 等）
+
+        // メタ効果（RepeatEffect/RandomEffect/ChooseOneEffect/DelayedEffect）の子効果。
+        // TODO(network): MemoryPack DTO 往復は範囲外。ネットワーク同期する場合は専用 DTO へ写像が必要。
+        public List<AtomicEffectInstance> SubEffects = new List<AtomicEffectInstance>();
 
         public string GetDescription()
         {

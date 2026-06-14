@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 9163219ac52526d48822297c66105d13
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Editor/FrostPunchGames.Editor.asmdef
+  uploadId: 901582

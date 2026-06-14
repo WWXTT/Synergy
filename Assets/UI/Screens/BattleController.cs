@@ -24,6 +24,9 @@ namespace SynergyUI
             var catalog = CardCatalog.LoadAll();
             // 同一张卡表给双方各建一副（每种 3 张），P2 由极简 AI 操作。
             GameCore.Instance.InitGame(catalog, catalog, copiesPerCard: 3);
+            // 标记 P2 为 AI：目标选择器对 AI 跳过弹窗、即时自动选择。
+            if (GameCore.Instance.Player2 != null)
+                GameCore.Instance.Player2.IsAI = true;
         }
 
         // ======================================== 战斗结算链（补缺口） ========================================

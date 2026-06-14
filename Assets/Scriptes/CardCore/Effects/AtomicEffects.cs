@@ -15,8 +15,6 @@ namespace CardCore
         DealCombatDamage,
         LifeLoss,
         Heal,
-        AoEDamage,
-        SplitDamage,
         TrampleDamage,
         DamageCannotBePrevented,
         RestoreToFullLife,
@@ -49,8 +47,6 @@ namespace CardCore
         SwapStats,
         AddCounters,
         DoubleCounters,
-        AddCardType,
-        RemoveCardType,
         AddKeyword,
         RemoveKeyword,
         FreezePermanent,
@@ -58,8 +54,6 @@ namespace CardCore
         // ============ 资源相关 ============
         AddMana,
         ConsumeMana,
-        RampMana,
-        SearchLand,
         UntapAll,
 
         // ============ 控制相关 ============
@@ -90,16 +84,12 @@ namespace CardCore
         RemoveDebuffs,
 
         // ============ 破坏效果 ============
-        DestroyArtifact,
         DestroyRandom,
 
         // ============ 特殊效果 ============
         CreateToken,
         CopyCard,
         CopyExact,
-        TransformCard,
-        TransformInto,
-        EvolveCreature,
         FightTarget,
 
         // ============ 反规则效果 ============
@@ -113,6 +103,7 @@ namespace CardCore
 
         // ============ 移动补充 ============
         ReturnFromGraveyard,
+        RecoverToHand,
         LookAtTopCards,
         PutOnBottomOfDeck,
         RevealHand,
@@ -149,9 +140,6 @@ namespace CardCore
         RandomEffect,
 
         // ============ 特殊补充 ============
-        EquipAttachment,
-        DetachAttachment,
-        DestroyAttachment,
         RepeatEffect,
         DelayedEffect,
     }
@@ -218,6 +206,72 @@ namespace CardCore
     }
 
     /// <summary>
+    /// 单步原子效果的产出结果，供 per-target 条件分支（OutcomeGate）评估。
+    /// 以「单个目标」为粒度：每对一个目标执行原子前调用 Reset()，结算时由 handler 写入。
+    /// </summary>
+    public class EffectOutcome
+    {
+        /// <summary>受伤/治疗前的生命快照（供 Overkill / Overheal 计算）</summary>
+        public int TargetLifeBefore;
+
+        /// <summary>本步实际造成的总伤害</summary>
+        public int DamageDealt;
+
+        /// <summary>本步受影响的目标</summary>
+        public List<Entity> AffectedTargets = new List<Entity>();
+
+        /// <summary>本步因伤害/归零而死的目标</summary>
+        public List<Entity> KilledTargets = new List<Entity>();
+
+        /// <summary>本步实际回复量</summary>
+        public int HealApplied;
+
+        /// <summary>治疗溢出量 = 申请治疗 − 实际回复，下限 0</summary>
+        public int OverhealAmount;
+
+        /// <summary>受影响目标中是否存在存活者</summary>
+        public bool AnySurvived;
+
+        /// <summary>本步是否有目标死亡</summary>
+        public bool AnyKilled => KilledTargets.Count > 0;
+
+        public void Reset()
+        {
+            TargetLifeBefore = 0;
+            DamageDealt = 0;
+            HealApplied = 0;
+            OverhealAmount = 0;
+            AnySurvived = false;
+            AffectedTargets.Clear();
+            KilledTargets.Clear();
+        }
+
+        /// <summary>记录一次伤害结算（调用前由 handler 快照 lifeBefore，造成伤害后再调用）。</summary>
+        public void RecordDamage(Entity target, int lifeBefore, int dmg)
+        {
+            if (target == null) return;
+            TargetLifeBefore = lifeBefore;
+            DamageDealt += dmg;
+            AffectedTargets.Add(target);
+            if (!target.IsAlive) KilledTargets.Add(target);
+            else AnySurvived = true;
+        }
+
+        /// <summary>记录一次治疗结算（调用前由 handler 快照 lifeBefore，传入申请治疗量）。</summary>
+        public void RecordHeal(Entity target, int lifeBefore, int requested)
+        {
+            if (target == null) return;
+            TargetLifeBefore = lifeBefore;
+            int applied = target.GetLife() - lifeBefore;
+            if (applied < 0) applied = 0;
+            HealApplied += applied;
+            int overheal = requested - applied;
+            if (overheal > 0) OverhealAmount += overheal;
+            AffectedTargets.Add(target);
+        }
+    }
+
+    /// <summary>
     /// 效果执行上下文
     /// </summary>
     public class EffectExecutionContext
@@ -242,6 +296,9 @@ namespace CardCore
 
         /// <summary>元素池系统</summary>
         public ElementPoolSystem ElementPool { get; set; }
+
+        /// <summary>上一步原子效果的产出结果（per-target，由分支步骤读取）</summary>
+        public EffectOutcome LastOutcome { get; set; } = new EffectOutcome();
 
         /// <summary>
         /// 获取效果数值修正后的值

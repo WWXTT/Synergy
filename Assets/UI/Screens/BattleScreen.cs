@@ -63,8 +63,18 @@ namespace SynergyUI
             Subscribe<StackEmptyEvent>(_ => RefreshAll());
             Subscribe<GameOverEvent>(OnGameOver);
 
+            // 注册通用目标选择器（效果引擎在结算时通过 TargetSelectionService 调用本弹窗）
+            TargetSelectionService.Current = new UiTargetSelector(Root);
+
             CloseOverlay();
             RefreshAll();
+        }
+
+        public override void OnExit()
+        {
+            // 仅在仍是本界面注册时解除，避免覆盖其它界面的注册
+            if (TargetSelectionService.Current is UiTargetSelector)
+                TargetSelectionService.Current = null;
         }
 
         // ======================================== 全量刷新 ========================================
@@ -78,12 +88,14 @@ namespace SynergyUI
             Q<Label>("lbl-opp-hand-count").text = $"手牌 {Count(P2, Zone.Hand)}";
             Q<Label>("lbl-opp-grave").text = $"墓地 {Count(P2, Zone.Graveyard)}";
             Q<Label>("lbl-opp-pool").text = $"元素池：{PoolSummary(P2)}";
+            Q<Label>("lbl-opp-lands").text = $"地牌：{LandSummary(P2)}";
             BuildBattlefield(Q<VisualElement>("opp-battlefield"), P2, mine: false);
 
             // 我方区（下）：手牌正面（可点）、战场生物（可点攻击）、墓地、生命、元素池。
             Q<Label>("lbl-self-life").text = $"生命 {P1.Life}";
             Q<Label>("lbl-self-grave").text = $"墓地 {Count(P1, Zone.Graveyard)}";
             Q<Label>("lbl-self-pool").text = $"元素池：{PoolSummary(P1)}";
+            Q<Label>("lbl-self-lands").text = $"地牌：{LandSummary(P1)}";
             BuildBattlefield(Q<VisualElement>("self-battlefield"), P1, mine: true);
             BuildHand(Q<VisualElement>("self-hand"), P1);
 
@@ -118,6 +130,24 @@ namespace SynergyUI
                 if (n > 0) parts.Add($"{ManaName(type)}{n}");
             }
             return parts.Count > 0 ? string.Join(" ", parts) : "—";
+        }
+
+        /// <summary>地牌行：每张地牌的剩余指示物与横置态。</summary>
+        private string LandSummary(Player p)
+        {
+            var lands = Core.ElementPool.GetPooledCards(p);
+            if (lands == null || lands.Count == 0) return "—";
+            var parts = new List<string>();
+            foreach (var land in lands)
+            {
+                var name = (land.SourceCard as IHasName)?.CardName ?? land.SourceCard.ID;
+                var tokens = string.Join("", land.Tokens
+                    .Where(kv => kv.Value > 0)
+                    .Select(kv => $"{ManaName(kv.Key)}{kv.Value}"));
+                var tap = land.IsTapped ? "·横置" : "";
+                parts.Add($"[{name}{tap} {tokens}]");
+            }
+            return string.Join(" ", parts);
         }
 
         private static string PhaseName(PhaseType p) => PhaseNames.TryGetValue(p, out var s) ? s : p.ToString();

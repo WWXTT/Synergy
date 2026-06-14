@@ -303,6 +303,15 @@ namespace CardCore.Serialization
         [MemoryPackOrder(TagTable.EffectStepData_ElseSteps)]
         public SerializableAtomicEffectEntry[] ElseSteps;
 
+        [MemoryPackOrder(TagTable.EffectStepData_ConditionId)]
+        public string ConditionId;
+
+        [MemoryPackOrder(TagTable.EffectStepData_ConditionParam)]
+        public int ConditionParam;
+
+        [MemoryPackOrder(TagTable.EffectStepData_ConditionStringParam)]
+        public string ConditionStringParam;
+
         public static SerializableEffectStepData FromData(EffectStepData data)
         {
             return new SerializableEffectStepData
@@ -314,6 +323,9 @@ namespace CardCore.Serialization
                             ?? Array.Empty<SerializableAtomicEffectEntry>(),
                 ElseSteps = data.elseSteps?.Select(SerializableAtomicEffectEntry.FromEntry).ToArray()
                             ?? Array.Empty<SerializableAtomicEffectEntry>(),
+                ConditionId = data.conditionId,
+                ConditionParam = data.conditionParam,
+                ConditionStringParam = data.conditionStringParam,
             };
         }
 
@@ -326,6 +338,9 @@ namespace CardCore.Serialization
                 condition = Condition?.ToData(),
                 thenSteps = ThenSteps?.Select(e => e.ToEntry()).ToList() ?? new List<AtomicEffectEntry>(),
                 elseSteps = ElseSteps?.Select(e => e.ToEntry()).ToList() ?? new List<AtomicEffectEntry>(),
+                conditionId = ConditionId,
+                conditionParam = ConditionParam,
+                conditionStringParam = ConditionStringParam,
             };
         }
     }
@@ -354,6 +369,21 @@ namespace CardCore.Serialization
         [MemoryPackOrder(TagTable.AEI_Duration)]
         public int Duration;
 
+        [MemoryPackOrder(TagTable.AEI_TargetTypeOverride)]
+        public int TargetTypeOverride = -1;
+
+        [MemoryPackOrder(TagTable.AEI_TargetFilterOverride)]
+        public string TargetFilterOverride = "";
+
+        [MemoryPackOrder(TagTable.AEI_TargetCountOverride)]
+        public int TargetCountOverride = -2;
+
+        [MemoryPackOrder(TagTable.AEI_DynamicTargetCount)]
+        public bool DynamicTargetCount;
+
+        [MemoryPackOrder(TagTable.AEI_Drawbacks)]
+        public string[] Drawbacks;
+
         public static SerializableAtomicEffectEntry FromEntry(AtomicEffectEntry entry)
         {
             return new SerializableAtomicEffectEntry
@@ -365,6 +395,11 @@ namespace CardCore.Serialization
                 ManaTypeParam = entry.ManaTypeParam,
                 ZoneParam = entry.ZoneParam,
                 Duration = entry.Duration,
+                TargetTypeOverride = entry.TargetTypeOverride,
+                TargetFilterOverride = entry.TargetFilterOverride,
+                TargetCountOverride = entry.TargetCountOverride,
+                DynamicTargetCount = entry.DynamicTargetCount,
+                Drawbacks = entry.Drawbacks?.ToArray() ?? System.Array.Empty<string>(),
             };
         }
 
@@ -379,6 +414,11 @@ namespace CardCore.Serialization
                 ManaTypeParam = ManaTypeParam,
                 ZoneParam = ZoneParam,
                 Duration = Duration,
+                TargetTypeOverride = TargetTypeOverride,
+                TargetFilterOverride = TargetFilterOverride ?? "",
+                TargetCountOverride = TargetCountOverride,
+                DynamicTargetCount = DynamicTargetCount,
+                Drawbacks = Drawbacks != null ? new List<string>(Drawbacks) : new List<string>(),
             };
         }
     }

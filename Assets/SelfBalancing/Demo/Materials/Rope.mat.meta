@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f0ae9ed3a82b4aa4a8f9d3a704174482
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Demo/Materials/Rope.mat
+  uploadId: 901582

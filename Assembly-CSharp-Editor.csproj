@@ -64,7 +64,9 @@
     <Compile Include="Assets\Editor\DanbaidongShaderConverter\ShaderScanEngine.cs" />
     <Compile Include="Assets\Editor\FindAttribute\AllowNullAttribute.cs" />
     <Compile Include="Assets\Editor\MaterialShaderUpgradeTool.cs" />
+    <Compile Include="Assets\SelfBalancing\Integration\MagicBlend\Editor\MagicDragAndDrop.cs" />
     <Compile Include="Assets\Editor\DanbaidongShaderConverter\ShaderConversionEngine.cs" />
+    <Compile Include="Assets\SelfBalancing\Integration\MagicBlend\Editor\MagicBlendContextMenu.cs" />
     <Compile Include="Assets\Editor\MeshCreator.cs" />
     <Compile Include="Assets\Editor\DanbaidongShaderConverter\ShaderConversionReport.cs" />
   </ItemGroup>
@@ -1335,17 +1337,21 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="Assembly-CSharp.csproj" />
+    <ProjectReference Include="FrostPunchGames.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.Editor.csproj" />
+    <ProjectReference Include="FrostPunchGames.Editor.csproj" />
     <ProjectReference Include="UniTask.TextMeshPro.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Universal.Config.Runtime.csproj" />
     <ProjectReference Include="Unity.RenderPipeline.Universal.ShaderLibrary.csproj" />
     <ProjectReference Include="UniTask.DOTween.csproj" />
     <ProjectReference Include="Unity.Rendering.LightTransport.Editor.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.ShaderLibrary.csproj" />
+    <ProjectReference Include="KAnimationCore.Runtime.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
     <ProjectReference Include="UniTask.Addressables.csproj" />
     <ProjectReference Include="Unity.SmoothNormalTool.Editor.csproj" />
     <ProjectReference Include="Unity.UnifiedRayTracing.Runtime.csproj" />
+    <ProjectReference Include="KAnimationCore.Editor.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.Runtime.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Universal.Shaders.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Universal.Runtime.csproj" />

@@ -76,6 +76,8 @@ namespace CardCore.Tools
                 // ---- EffectStepData ----
                 ("EffectStepData", "Kind"), ("EffectStepData", "Atomic"), ("EffectStepData", "Condition"),
                 ("EffectStepData", "ThenSteps"), ("EffectStepData", "ElseSteps"),
+                ("EffectStepData", "ConditionId"), ("EffectStepData", "ConditionParam"),
+                ("EffectStepData", "ConditionStringParam"),
 
                 // ---- CostEntryDTO ----
                 ("CostEntryDTO", "ManaType"), ("CostEntryDTO", "Value"),
@@ -97,6 +99,9 @@ namespace CardCore.Tools
                 ("AtomicEffectInstance", "Value2"), ("AtomicEffectInstance", "StringValue"),
                 ("AtomicEffectInstance", "ManaTypeParam"), ("AtomicEffectInstance", "ZoneParam"),
                 ("AtomicEffectInstance", "Duration"),
+                ("AtomicEffectInstance", "TargetTypeOverride"), ("AtomicEffectInstance", "TargetFilterOverride"),
+                ("AtomicEffectInstance", "TargetCountOverride"), ("AtomicEffectInstance", "DynamicTargetCount"),
+                ("AtomicEffectInstance", "Drawbacks"),
 
                 // ---- CostInstance ----
                 ("CostInstance", "Type"), ("CostInstance", "Value"), ("CostInstance", "ManaType"),

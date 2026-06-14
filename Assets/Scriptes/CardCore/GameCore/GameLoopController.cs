@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 
 namespace CardCore
 {
@@ -45,6 +46,10 @@ namespace CardCore
         /// </summary>
         public void Update()
         {
+            // 0. 结算进行中（异步原子效果可能在 await UI）→ 本帧不再驱动，避免重入
+            if (_stackEngine.IsResolving)
+                return;
+
             // 1. 检查并处理过期的持续效果
             _durationTracker.CheckAndCleanExpired();
 
@@ -66,7 +71,7 @@ namespace CardCore
                 // 7. 如果栈上有对象，处理优先权
                 if (_stackEngine.StackSize > 0)
                 {
-                    ProcessPriority();
+                    ProcessPriority().Forget();
                 }
                 else
                 {
@@ -77,9 +82,10 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 处理优先权
+        /// 处理优先权。
+        /// 自动 Pass 可能触发结算，而结算含异步原子效果（await UI）→ 本方法异步。
         /// </summary>
-        public void ProcessPriority()
+        public async UniTask ProcessPriority()
         {
             if (_stackEngine.IsEmpty)
                 return;
@@ -92,7 +98,7 @@ namespace CardCore
 
             // 没有可用动作，Pass优先权
             if (currentHolder != null)
-                _stackEngine.PassPriority(currentHolder);
+                await _stackEngine.PassPriority(currentHolder);
         }
 
         /// <summary>
@@ -100,12 +106,12 @@ namespace CardCore
         /// 替代效果（Replacement）已在事件发布路径 GameCore.PublishEvent 处统一拦截，
         /// 不在此处重复检查。
         /// </summary>
-        public void ResolveStack()
+        public async UniTask ResolveStack()
         {
             while (_stackEngine.StackSize > 0)
             {
                 var top = _stackEngine.Peek();
-                _stackEngine.ResolveTop();
+                await _stackEngine.ResolveTop();
 
                 if (top == null)
                     break;

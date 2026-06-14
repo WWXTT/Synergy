@@ -17,7 +17,9 @@ namespace CardCore.Attribute.Handlers
             int dmg = context.GetValueAfterModifiers(effect.Value);
             foreach (var target in context.Targets)
             {
+                int lifeBefore = target.GetLife();
                 target.TakeDamage(dmg);
+                context.LastOutcome.RecordDamage(target, lifeBefore, dmg);
                 PublishEvent(new AtomicDamageEvent
                 {
                     Source = context.Source,
@@ -205,7 +207,9 @@ namespace CardCore.Attribute.Handlers
             int amount = context.GetValueAfterModifiers(effect.Value);
             foreach (var target in context.Targets)
             {
+                int lifeBefore = target.GetLife();
                 target.Heal(amount);
+                context.LastOutcome.RecordHeal(target, lifeBefore, amount);
                 PublishEvent(new HealEvent
                 {
                     Target = target,

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4785763dda72d154a8ed1b566c226f89
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Materials/Happy_Idle.mat
+  uploadId: 901582

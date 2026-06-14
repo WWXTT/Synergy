@@ -70,7 +70,7 @@ namespace SynergyUI
             {
                 foreach (var effect in card.Effects)
                 {
-                    if (effect?.AtomicEffects == null)
+                    if (effect == null)
                     {
                         continue;
                     }
@@ -80,7 +80,9 @@ namespace SynergyUI
                     var condLabels = ConditionLabels(effect.ActivationConditions);
                     float condMod = cfg.TimingModifierConfig.GetConditionModifier(condLabels);
 
-                    foreach (var atomic in effect.AtomicEffects)
+                    // 节点化：仅主序列原子（Steps Kind==0）计费；分支 then/else 奖励免费，与运行时一致。
+                    // 退化：未配 Steps 的旧卡按扁平 AtomicEffects（向后兼容）。
+                    foreach (var atomic in MainSequenceAtomics(effect))
                     {
                         if (atomic == null || string.IsNullOrEmpty(atomic.EffectType))
                         {
@@ -93,6 +95,13 @@ namespace SynergyUI
 
                         effectTypes.Add(type);
                         typeCounts[type] = typeCounts.TryGetValue(type, out var c) ? c + 1 : 1;
+
+                        // 动态数量：费用计 0（与运行时一致）。
+                        if (atomic.DynamicTargetCount)
+                        {
+                            result.Breakdown.Add(new BreakdownLine($"效果 {type} (动态数量·计0)", 0f));
+                            continue;
+                        }
 
                         float baseValue = cfg.EffectValueConfig.GetAtomicEffectBaseValue(type, atomic.Value);
 
@@ -111,6 +120,30 @@ namespace SynergyUI
                         }
 
                         float atomicValue = baseValue * targetMod * multiMod * timingMod * condMod * durMod;
+
+                        // 固定数量：费用 ×N（有效目标数 >1 时），与运行时一致。
+                        int n = EffectiveCount(atomic, atomicCfg);
+                        if (n > 1)
+                        {
+                            atomicValue *= n;
+                        }
+
+                        // 抽牌减费缺陷：每挂一个按目录减免累减（下限 0），与运行时一致。
+                        if (type == AtomicEffectType.DrawCard && atomic.Drawbacks != null)
+                        {
+                            float reduce = 0f;
+                            foreach (var dbId in atomic.Drawbacks)
+                            {
+                                if (string.IsNullOrEmpty(dbId)) continue;
+                                var db = BranchConfigTable.GetDrawback(dbId);
+                                if (db != null) reduce += db.CostReduction;
+                            }
+                            if (reduce > 0f)
+                            {
+                                atomicValue = Mathf.Max(0f, atomicValue - reduce);
+                            }
+                        }
+
                         result.Breakdown.Add(new BreakdownLine($"效果 {type} x{atomic.Value}", atomicValue));
                         total += atomicValue;
                     }
@@ -198,6 +231,40 @@ namespace SynergyUI
                 CostType.SummonMaterial => "召唤素材",
                 _ => costType.ToString(),
             };
+        }
+
+        // 主序列原子：Steps 非空时取 Kind==0 原子（分支 then/else 奖励免费，不计）；否则退化为扁平 AtomicEffects。
+        private static List<AtomicEffectEntry> MainSequenceAtomics(CardEffectData effect)
+        {
+            var list = new List<AtomicEffectEntry>();
+            if (effect.Steps != null && effect.Steps.Count > 0)
+            {
+                foreach (var step in effect.Steps)
+                {
+                    if (step == null) continue;
+                    if (step.kind == 0 && step.atomic != null)
+                    {
+                        list.Add(step.atomic);
+                    }
+                    // kind==1：then/else 奖励免费，不计费。
+                }
+            }
+            else if (effect.AtomicEffects != null)
+            {
+                list.AddRange(effect.AtomicEffects);
+            }
+            return list;
+        }
+
+        // 有效目标数：实例覆盖优先（-2=用配置；-1=任意、0=全部 为合法语义，按 1 处理）。
+        private static int EffectiveCount(AtomicEffectEntry atomic, AtomicEffectConfig cfg)
+        {
+            int count = cfg != null ? cfg.TargetCount : 0;
+            if (atomic.TargetCountOverride != -2)
+            {
+                count = atomic.TargetCountOverride;
+            }
+            return count;
         }
 
         // 把发动条件转成字符串列表（GetConditionModifier 只关心数量）。

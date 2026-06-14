@@ -28,19 +28,42 @@ namespace CardCore
     }
 
     /// <summary>
-    /// 分支条件定义
+    /// 分支条件定义。三族条件统一用此结构承载（Kind 判别）：
+    /// OutcomeGate（伤害/治疗/信息→门槛达成走 then 免费奖励），
+    /// Drawback（抽牌→减费缺陷，CostReduction 生效，不走 then/else），
+    /// FilterPrecision（检索→筛选维度，见 BranchFilterTier）。
     /// </summary>
     [Serializable]
     public class BranchCondition
     {
         public string Id;
+        public BranchConditionKind Kind = BranchConditionKind.OutcomeGate;
         public string DisplayName;
         public string Description;
+
+        /// <summary>条件默认数值参数（如门槛）</summary>
+        public int Param;
+        /// <summary>条件默认字符串参数（如预言类型）</summary>
+        public string StringParam;
+        /// <summary>Drawback 专用：挂载此缺陷对原子费用的减免（下限 0）</summary>
+        public int CostReduction;
+
         public List<BranchSubCondition> SubConditions = new List<BranchSubCondition>();
     }
 
     /// <summary>
-    /// 分支配置（每个原子效果类型可定义多个分支场景）
+    /// FilterPrecision 维度档：检索原子按筛选维度计费（确切单卡=3 / 类型+种族=2 / 单一维度=1）。
+    /// </summary>
+    [Serializable]
+    public class BranchFilterTier
+    {
+        public string Id;
+        public string DisplayName;
+        public int Cost;
+    }
+
+    /// <summary>
+    /// 分支配置（每个原子效果类型可定义可用条件集合）
     /// </summary>
     [Serializable]
     public class BranchConfig

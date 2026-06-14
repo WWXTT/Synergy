@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using CardCore.Attribute;
+using Cysharp.Threading.Tasks;
 
 namespace CardCore
 {
@@ -45,6 +48,7 @@ namespace CardCore
         public ContinuousEffectDurationTracker DurationTracker => _subSystems.Get<ContinuousEffectDurationTracker>();
         public CombatSystem CombatSystem => _subSystems.Get<CombatSystem>();
         public SummonEngine SummonEngine => _subSystems.Get<SummonEngine>();
+        public DelayedEffectScheduler DelayedEffectScheduler => _subSystems.Get<DelayedEffectScheduler>();
 
         #endregion
 
@@ -145,6 +149,10 @@ namespace CardCore
             var summonEngine = new SummonEngine(this);
             _subSystems.Register(summonEngine);
 
+            // 初始化延迟效果调度器（DelayedEffect handler が登録、回合/相位终了で解决）
+            var delayedEffectScheduler = new DelayedEffectScheduler();
+            _subSystems.Register(delayedEffectScheduler);
+
             // 初始化状态管理器
             _stateManager = new GameStateManager();
 
@@ -171,6 +179,49 @@ namespace CardCore
         {
             DurationTracker.OnTurnEnd(e.TurnPlayer);
             TextChangeLayer.OnTurnEnd(e.TurnPlayer);
+            // 延迟效果解决含异步原子效果（await UI）→ 事件回调为 void，故 fire-and-forget
+            DelayedEffectScheduler.OnTurnEnd(e.TurnPlayer).Forget();
+            // 手牌上限：超出部分由玩家选弃（AI/超时自动弃先头）
+            EnforceHandLimitAsync(e.TurnPlayer).Forget();
+        }
+
+        /// <summary>手牌上限（7）。回合结束时超出张数由 turnPlayer 选择弃牌。</summary>
+        private const int HandLimit = 7;
+
+        private async UniTask EnforceHandLimitAsync(Player player)
+        {
+            if (player == null) return;
+
+            var hand = ZoneManager.GetCards(player, Zone.Hand);
+            if (hand == null) return;
+
+            int over = hand.Count - HandLimit;
+            if (over <= 0) return;
+
+            var chosen = await TargetSelectionService.RequestAsync(new TargetSelectionRequest
+            {
+                Candidates = hand.Cast<Entity>().ToList(),
+                MinCount = over,
+                MaxCount = over,
+                Chooser = player,
+                Title = "手牌上限",
+                Hint = $"弃掉 {over} 张手牌",
+                AllowCancel = false,
+            });
+
+            foreach (var entity in chosen)
+            {
+                if (entity is Card card)
+                {
+                    ZoneManager.MoveCard(card, player, Zone.Hand, Zone.Graveyard);
+                    EventManager.Instance.Publish(new CardDiscardEvent
+                    {
+                        Player = player,
+                        Card = card,
+                        Source = null,
+                    });
+                }
+            }
         }
 
         /// <summary>
@@ -180,6 +231,7 @@ namespace CardCore
         {
             DurationTracker.OnPhaseEnd(e.Phase);
             TextChangeLayer.OnPhaseEnd(e.Phase);
+            DelayedEffectScheduler.OnPhaseEnd().Forget();
         }
 
         /// <summary>
@@ -225,6 +277,10 @@ namespace CardCore
 
             // 重置游戏状态
             Reset();
+
+            // 重置本局代价抵消计数（单局上限随对局生命周期）
+            _player1.ResetOffsetUsage();
+            _player2.ResetOffsetUsage();
 
             // 将卡牌加入牌库区域，设置控制者
             foreach (var card in deck1)
@@ -319,11 +375,11 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 结算栈
+        /// 结算栈（异步：原子效果可能 await UI）。
         /// </summary>
-        public void ResolveStack()
+        public UniTask ResolveStack()
         {
-            _loopController.ResolveStack();
+            return _loopController.ResolveStack();
         }
 
         #endregion

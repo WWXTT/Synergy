@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e925f9aa519218f4a896731055ffd0b1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Demo/Materials/WallTexture.mat
+  uploadId: 901582

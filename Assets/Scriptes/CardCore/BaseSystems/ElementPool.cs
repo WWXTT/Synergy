@@ -20,6 +20,9 @@ namespace CardCore
         /// <summary>初始指示物数量（用于显示）</summary>
         public Dictionary<ManaType, int> TotalTokens { get; }
 
+        /// <summary>是否已横置（本回合已取过 1 个指示物）。己方回合开始时恢复（解除横置）。</summary>
+        public bool IsTapped { get; set; }
+
         public PooledCard(Card card, Dictionary<ManaType, int> tokens)
         {
             SourceCard = card;
@@ -127,6 +130,10 @@ namespace CardCore
         {
             if (card == null || owner == null) return false;
 
+            // 含动态数量原子的卡不可作地牌产元素（灵活使用的代价：其费用计 0）。
+            if (card is CardWrapper wrapper && CostDerivationService.HasDynamicTargetEffect(wrapper.GetData()))
+                return false;
+
             var pool = GetPool(owner);
 
             // 检查池大小限制
@@ -156,39 +163,46 @@ namespace CardCore
         // ======================================== 从指示物获得元素 ========================================
 
         /// <summary>
-        /// 每回合一次：从指示物获得一个元素
+        /// 从「某张未横置地牌」取该颜色 1 个指示物入可用池，并横置该地牌。
+        /// 自动选择第一张满足条件的地牌（UI 可改用带 land 参数的重载指定地牌）。
+        /// 每地牌每回合可横置一次；无论轮到谁，支付时均可触发（跨回合可取）。
         /// </summary>
         /// <param name="type">要获得的元素颜色</param>
         /// <returns>是否成功</returns>
         public bool GainElementFromToken(ManaType type, Player player)
         {
             var pool = GetPool(player);
-
-            // 每回合一次限制
-            if (pool.HasGainedTokenThisTurn)
-                return false;
-
-            // 找到有该颜色指示物的池卡
-            var pooledCard = pool.PooledCards.FirstOrDefault(pc => pc.HasToken(type));
+            var pooledCard = pool.PooledCards.FirstOrDefault(pc => pc.HasToken(type) && !pc.IsTapped);
             if (pooledCard == null)
                 return false;
+            return GainElementFromToken(pooledCard, type, player);
+        }
 
-            // 移除指示物，增加可用元素
-            bool depleted = pooledCard.RemoveToken(type);
+        /// <summary>
+        /// 从指定地牌取该颜色 1 个指示物入可用池，并横置该地牌。
+        /// </summary>
+        public bool GainElementFromToken(PooledCard land, ManaType type, Player player)
+        {
+            if (land == null) return false;
+            var pool = GetPool(player);
+            if (!pool.PooledCards.Contains(land)) return false;
+            if (land.IsTapped) return false;          // 该地牌本回合已横置
+            if (!land.HasToken(type)) return false;
+
+            bool depleted = land.RemoveToken(type);
             pool.AvailableMana[type]++;
-            pool.HasGainedTokenThisTurn = true;
+            land.IsTapped = true;                      // 横置（次回合恢复）
 
             PublishEvent(new ElementPoolGainEvent
             {
                 Player = player,
                 GainedType = type,
-                FromCard = pooledCard.SourceCard
+                FromCard = land.SourceCard
             });
 
-            // 检查是否耗尽
             if (depleted)
             {
-                MoveDepletedCard(pooledCard, player);
+                MoveDepletedCard(land, player);
             }
 
             return true;
@@ -245,12 +259,14 @@ namespace CardCore
         // ======================================== 回合管理 ========================================
 
         /// <summary>
-        /// 回合开始时重置使用标记
+        /// 己方回合开始时：解除该玩家所有地牌的横置（次回合恢复可取）。
         /// </summary>
         public void ResetTurnUsage(Player player)
         {
             var pool = GetPool(player);
-            pool.HasGainedTokenThisTurn = false;
+            pool.HasGainedTokenThisTurn = false; // 兼容旧标记
+            foreach (var pc in pool.PooledCards)
+                pc.IsTapped = false;
         }
 
         /// <summary>
@@ -319,10 +335,9 @@ namespace CardCore
         public List<ManaType> GetGainedableTypes(Player player)
         {
             var pool = GetPool(player);
-            if (pool.HasGainedTokenThisTurn)
-                return new List<ManaType>();
-
+            // 未横置的地牌上仍有指示物的颜色集合
             return pool.PooledCards
+                .Where(pc => !pc.IsTapped)
                 .SelectMany(pc => pc.GetAvailableColors())
                 .Distinct()
                 .ToList();
@@ -403,7 +418,8 @@ namespace CardCore
             {
                 var name = (pc.SourceCard as IHasName)?.CardName ?? pc.SourceCard.ID;
                 var tokenStr = string.Join(", ", pc.Tokens.Where(kv => kv.Value > 0).Select(kv => $"{kv.Key}:{kv.Value}"));
-                result += $"  [{name}] 指示物: {tokenStr}\n";
+                var tapStr = pc.IsTapped ? "（横置）" : "";
+                result += $"  [{name}]{tapStr} 指示物: {tokenStr}\n";
             }
 
             var manaStr = string.Join(", ", pool.AvailableMana.Where(kv => kv.Value > 0).Select(kv => $"{kv.Key}:{kv.Value}"));

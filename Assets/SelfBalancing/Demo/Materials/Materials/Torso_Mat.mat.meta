@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b1dfdd2d62b9cae4ea39877c6a992869
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Materials/Torso_Mat.mat
+  uploadId: 901582

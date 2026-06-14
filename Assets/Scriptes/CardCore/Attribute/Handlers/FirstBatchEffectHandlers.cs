@@ -11,59 +11,6 @@ namespace CardCore.Attribute.Handlers
 
     // ---------------- 伤害类 ----------------
 
-    /// <summary>范围伤害（对候选目标全体造成等量伤害）</summary>
-    public class AoEDamageHandler : AtomicEffectHandlerBase
-    {
-        protected override AtomicEffectType DefaultEffectType => AtomicEffectType.AoEDamage;
-
-        public override void Execute(AtomicEffectInstance effect, EffectExecutionContext context)
-        {
-            int dmg = context.GetValueAfterModifiers(effect.Value);
-            foreach (var target in context.Targets.ToList())
-            {
-                target.TakeDamage(dmg);
-                PublishEvent(new AtomicDamageEvent
-                {
-                    Source = context.Source,
-                    Target = target,
-                    Damage = dmg,
-                    IsCombatDamage = false
-                });
-            }
-        }
-
-        public override string GetDescription(AtomicEffectInstance effect) => $"对所有目标造成 {effect.Value} 点伤害";
-    }
-
-    /// <summary>分配伤害（把总量随机分摊到候选目标）</summary>
-    public class SplitDamageHandler : AtomicEffectHandlerBase
-    {
-        protected override AtomicEffectType DefaultEffectType => AtomicEffectType.SplitDamage;
-
-        public override void Execute(AtomicEffectInstance effect, EffectExecutionContext context)
-        {
-            int total = context.GetValueAfterModifiers(effect.Value);
-            var targets = context.Targets.ToList();
-            if (targets.Count == 0 || total <= 0) return;
-
-            var rng = new System.Random();
-            for (int i = 0; i < total; i++)
-            {
-                var t = targets[rng.Next(targets.Count)];
-                t.TakeDamage(1);
-                PublishEvent(new AtomicDamageEvent
-                {
-                    Source = context.Source,
-                    Target = t,
-                    Damage = 1,
-                    IsCombatDamage = false
-                });
-            }
-        }
-
-        public override string GetDescription(AtomicEffectInstance effect) => $"随机分配 {effect.Value} 点伤害";
-    }
-
     /// <summary>不可防止伤害（无视护甲/防止，直接扣血）</summary>
     public class DamageCannotBePreventedHandler : AtomicEffectHandlerBase
     {
@@ -74,7 +21,9 @@ namespace CardCore.Attribute.Handlers
             int dmg = context.GetValueAfterModifiers(effect.Value);
             foreach (var target in context.Targets)
             {
+                int lifeBefore = target.GetLife();
                 target.TakeDamage(dmg);
+                context.LastOutcome.RecordDamage(target, lifeBefore, dmg);
                 PublishEvent(new AtomicDamageEvent
                 {
                     Source = context.Source,
@@ -99,7 +48,9 @@ namespace CardCore.Attribute.Handlers
             int dmg = context.GetValueAfterModifiers(effect.Value);
             foreach (var target in context.Targets)
             {
+                int lifeBefore = target.GetLife();
                 target.TakeDamage(dmg);
+                context.LastOutcome.RecordDamage(target, lifeBefore, dmg);
                 PublishEvent(new AtomicDamageEvent
                 {
                     Source = context.Source,
@@ -130,6 +81,7 @@ namespace CardCore.Attribute.Handlers
             int dmg = context.GetValueAfterModifiers(effect.Value);
             foreach (var target in context.Targets)
             {
+                int lifeBefore = target.GetLife();
                 if (dmg > 0)
                 {
                     target.TakeDamage(dmg);
@@ -156,6 +108,8 @@ namespace CardCore.Attribute.Handlers
                         Source = context.Source
                     });
                 }
+                // 死亡检测在强制致死后进行，剧毒目标计入 KilledTargets
+                context.LastOutcome.RecordDamage(target, lifeBefore, dmg);
             }
         }
 
@@ -171,12 +125,15 @@ namespace CardCore.Attribute.Handlers
         {
             foreach (var target in context.Targets)
             {
-                int missing = target.GetMaxLife() - target.GetLife();
+                int lifeBefore = target.GetLife();
+                int missing = target.GetMaxLife() - lifeBefore;
                 if (missing > 0)
                 {
                     target.Heal(missing);
                     PublishEvent(new HealEvent { Target = target, Amount = missing, Source = context.Source });
                 }
+                // 恢复满生命必回满 → 申请量取 missing，溢出恒为 0；仍记录 HealApplied / AffectedTargets
+                context.LastOutcome.RecordHeal(target, lifeBefore, missing > 0 ? missing : 0);
             }
         }
 
@@ -336,17 +293,54 @@ namespace CardCore.Attribute.Handlers
             if (context.ZoneManager == null || context.Controller == null) return;
 
             int count = effect.Value > 0 ? context.GetValueAfterModifiers(effect.Value) : 1;
-            var graveyard = context.ZoneManager.GetCards(context.Controller, Zone.Graveyard);
-            for (int i = 0; i < count && i < graveyard.Count; i++)
+            // 仅「正式召唤过」的随从可被复活；被弃/磨/送墓的不可复活。
+            var revivable = context.ZoneManager.GetCards(context.Controller, Zone.Graveyard)
+                .Where(c => c.WasFormallySummoned)
+                .ToList();
+            for (int i = 0; i < count && i < revivable.Count; i++)
             {
-                var card = graveyard[i];
+                var card = revivable[i];
                 context.ZoneManager.GetZoneContainer(context.Controller).Move(card, Zone.Graveyard, Zone.Battlefield);
                 card.SetController(context.Controller);
                 card.SetZone(Zone.Battlefield);
+                card.WasFormallySummoned = true; // 复活也是一次正式入场
+
+                PublishEvent(new CardPutToBattlefieldEvent
+                {
+                    Card = card,
+                    Controller = context.Controller,
+                    Tapped = false
+                });
             }
         }
 
         public override string GetDescription(AtomicEffectInstance effect) => "从墓地返回到战场";
+    }
+
+    /// <summary>墓地回收到手牌（将控制者墓地前 N 张放回手牌；费用锚点：回收 1 张 = 1 费）。</summary>
+    public class RecoverToHandHandler : AtomicEffectHandlerBase
+    {
+        protected override AtomicEffectType DefaultEffectType => AtomicEffectType.RecoverToHand;
+
+        public override void Execute(AtomicEffectInstance effect, EffectExecutionContext context)
+        {
+            if (context.ZoneManager == null || context.Controller == null) return;
+
+            int count = effect.Value > 0 ? context.GetValueAfterModifiers(effect.Value) : 1;
+            // 优先回收已选目标卡；无目标时取控制者墓地前 N 张（快照避免迭代中移动）
+            var targeted = context.Targets?.OfType<Card>().ToList();
+            List<Card> toRecover = (targeted != null && targeted.Count > 0)
+                ? targeted.Take(count).ToList()
+                : context.ZoneManager.GetCards(context.Controller, Zone.Graveyard).Take(count).ToList();
+
+            foreach (var card in toRecover)
+            {
+                context.ZoneManager.MoveCard(card, context.Controller, Zone.Graveyard, Zone.Hand);
+                PublishEvent(new CardReturnToHandEvent { Card = card, Source = context.Source });
+            }
+        }
+
+        public override string GetDescription(AtomicEffectInstance effect) => "从墓地回收到手牌";
     }
 
     /// <summary>查看牌库顶（不移动，仅展示）</summary>

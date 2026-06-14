@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a19b9cbc74f45454ebee228868988d07
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 13400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Physics/Nofriction.physicMaterial
+  uploadId: 901582

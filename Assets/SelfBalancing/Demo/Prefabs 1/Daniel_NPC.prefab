@@ -1,0 +1,160 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &3695918038464349027
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 689668496185103465, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Name
+      value: Daniel_NPC
+      objectReference: {fileID: 0}
+    - target: {fileID: 2010418007044978688, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 607620c93a789794ba07eecda059c904, type: 2}
+    - target: {fileID: 2590338122581423659, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: b563502b119cc8e49960be8c34a32f15, type: 2}
+    - target: {fileID: 2913256357976428607, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: b563502b119cc8e49960be8c34a32f15, type: 2}
+    - target: {fileID: 3918385965183740570, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: eb133cd0d1c6f6d4d8f74f9a90d6a230, type: 2}
+    - target: {fileID: 4982836734163615685, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: eb133cd0d1c6f6d4d8f74f9a90d6a230, type: 2}
+    - target: {fileID: 5780986036247658027, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 7b06cda91dfed51439eca789fec1fbcf, type: 2}
+    - target: {fileID: 7539678659974172699, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 6daabf9facf825d41b7951ceee4fae73, type: 2}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8258250433367551906, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7601956006856350410, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3895856697980916952}
+  m_SourcePrefab: {fileID: 100100000, guid: 972a32ba8a2534d4ebf8e1bef545d169, type: 3}
+--- !u!4 &4953509342386246581 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8643796777224540374, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+    type: 3}
+  m_PrefabInstance: {fileID: 3695918038464349027}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6500131778512132521 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7601956006856350410, guid: 972a32ba8a2534d4ebf8e1bef545d169,
+    type: 3}
+  m_PrefabInstance: {fileID: 3695918038464349027}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3895856697980916952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6500131778512132521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de0f7db60649d5744bb7af4a0ccc4b04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  waypoints: []
+  waypointTolerance: 1.5
+  loopWaypoints: 1
+  useMazeSolver: 1
+  mazeStrategy: 0
+  moveForce: 8000
+  strafeForce: 4000
+  chestForceHeight: 1.2
+  turnSpeed: 150
+  sharpTurnSlowdown: 90
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  forwardDetectionDistance: 2.5
+  forwardAvoidanceRadius: 0.35
+  openRoomAvoidanceStrength: 2
+  sweepDetectionDistance: 2
+  sweepRadius: 0.1
+  maxSweepAngle: 90
+  sweepResolution: 15
+  inputSmoothing: 10
+  upperBodyBone: {fileID: 4953509342386246581}
+  maxTurnTwist: 20
+  twistSpeed: 8
+  pathColor: {r: 0, g: 1, b: 1, a: 1}
+  sphereColor: {r: 1, g: 0.5, b: 0, a: 0.4}
+  sphereRadius: 0.3

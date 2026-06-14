@@ -272,14 +272,25 @@ namespace CardCore
         /// </summary>
         public List<Entity> GetCandidates(AtomicEffectConfig config, EffectExecutionContext context)
         {
+            return GetCandidates(config.TargetType, config.TargetFilter, context);
+        }
+
+        /// <summary>
+        /// 按显式目标类型 + 筛选串获取候选目标列表（供每实例目标覆盖使用）。
+        /// </summary>
+        public List<Entity> GetCandidates(EffectTargetType targetType, string targetFilter, EffectExecutionContext context)
+        {
             var candidates = new List<Entity>();
 
             if (context.Controller == null || _zoneManager == null)
                 return candidates;
 
             var opponent = context.Controller.Opponent;
+            // 候选取自筛选串指定的分区（默认战场）。墓地/手牌/牌库类效果据此正确取候选。
+            Zone zone = ExtractZone(targetFilter);
+            bool isBattlefield = zone == Zone.Battlefield;
 
-            switch (config.TargetType)
+            switch (targetType)
             {
                 case EffectTargetType.Self:
                     candidates.Add(context.Source);
@@ -287,31 +298,34 @@ namespace CardCore
 
                 case EffectTargetType.Target:
                     // 需要玩家选择，先返回所有可能的目标
-                    candidates.AddRange(GetAllBattlefieldCreatures(context.Controller, opponent));
-                    candidates.Add(opponent);
-                    candidates.Add(context.Controller);
+                    candidates.AddRange(GetZoneCards(context.Controller, zone));
+                    candidates.AddRange(GetZoneCards(opponent, zone));
+                    if (isBattlefield)
+                    {
+                        candidates.Add(opponent);
+                        candidates.Add(context.Controller);
+                    }
                     break;
 
                 case EffectTargetType.AllEnemies:
-                    candidates.AddRange(GetBattlefieldCreatures(opponent));
-                    candidates.Add(opponent);
+                    candidates.AddRange(GetZoneCards(opponent, zone));
+                    if (isBattlefield) candidates.Add(opponent);
                     break;
 
                 case EffectTargetType.AllAllies:
-                    candidates.AddRange(GetBattlefieldCreatures(context.Controller));
-                    candidates.Add(context.Controller);
+                    candidates.AddRange(GetZoneCards(context.Controller, zone));
+                    if (isBattlefield) candidates.Add(context.Controller);
                     break;
 
                 case EffectTargetType.All:
-                    candidates.AddRange(GetAllBattlefieldCreatures(context.Controller, opponent));
-                    candidates.Add(opponent);
-                    candidates.Add(context.Controller);
-                    break;
-
                 case EffectTargetType.Random:
-                    candidates.AddRange(GetAllBattlefieldCreatures(context.Controller, opponent));
-                    candidates.Add(opponent);
-                    candidates.Add(context.Controller);
+                    candidates.AddRange(GetZoneCards(context.Controller, zone));
+                    candidates.AddRange(GetZoneCards(opponent, zone));
+                    if (isBattlefield)
+                    {
+                        candidates.Add(opponent);
+                        candidates.Add(context.Controller);
+                    }
                     break;
 
                 case EffectTargetType.Opponent:
@@ -328,6 +342,24 @@ namespace CardCore
             }
 
             return candidates;
+        }
+
+        /// <summary>从筛选串中解析候选分区 token（Battlefield/Hand/Graveyard/Deck/Exile），缺省战场。</summary>
+        private static Zone ExtractZone(string filterString)
+        {
+            if (string.IsNullOrEmpty(filterString)) return Zone.Battlefield;
+            foreach (var token in filterString.Split(','))
+            {
+                switch (token.Trim())
+                {
+                    case "Hand": return Zone.Hand;
+                    case "Graveyard": return Zone.Graveyard;
+                    case "Deck": return Zone.Deck;
+                    case "Exile": return Zone.Exile;
+                    case "Battlefield": return Zone.Battlefield;
+                }
+            }
+            return Zone.Battlefield;
         }
 
         /// <summary>
@@ -360,6 +392,13 @@ namespace CardCore
                         break;
                     case "Player":
                         // Player本身不是筛选条件，候选池已包含Player
+                        break;
+                    case "Hand":
+                    case "Graveyard":
+                    case "Deck":
+                    case "Exile":
+                    case "Battlefield":
+                        // 分区 token：候选池已按分区取（见 GetCandidates.ExtractZone），此处不再过滤
                         break;
                     case "Untapped":
                         filters.Add(new UntappedFilter());
@@ -416,20 +455,12 @@ namespace CardCore
             return null;
         }
 
-        private List<Entity> GetAllBattlefieldCreatures(Player p1, Player p2)
-        {
-            var result = new List<Entity>();
-            result.AddRange(GetBattlefieldCreatures(p1));
-            result.AddRange(GetBattlefieldCreatures(p2));
-            return result;
-        }
-
-        private List<Entity> GetBattlefieldCreatures(Player player)
+        private List<Entity> GetZoneCards(Player player, Zone zone)
         {
             if (player == null || _zoneManager == null) return new List<Entity>();
             var container = _zoneManager.GetZoneContainer(player);
             if (container == null) return new List<Entity>();
-            return container.GetCards(Zone.Battlefield).Cast<Entity>().ToList();
+            return container.GetCards(zone).Cast<Entity>().ToList();
         }
     }
 }

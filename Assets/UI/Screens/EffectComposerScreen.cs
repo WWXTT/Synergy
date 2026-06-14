@@ -130,16 +130,49 @@ namespace SynergyUI
 
         private void AddBranchStep()
         {
+            // 分支门控在紧邻其前的原子之上：仅当该原子效果类型在目录中有可用 OutcomeGate 条件时才允许追加。
+            var effectType = PrecedingAtomicEffectType(_graph.steps.Count);
+            var config = string.IsNullOrEmpty(effectType) ? null : BranchConfigTable.GetByEffectType(effectType);
+            string defaultCondId = FirstOutcomeGateCondition(config);
+            if (defaultCondId == null)
+            {
+                ShowToast("该原子效果无可串联条件，无法添加分支");
+                return;
+            }
+
             _graph.steps.Add(new EffectStepData
             {
                 kind = 1,
-                condition = new ActivationConditionData(),
+                conditionId = defaultCondId,
                 thenSteps = new List<AtomicEffectEntry>(),
                 elseSteps = new List<AtomicEffectEntry>(),
             });
             _selectedStepIndex = _graph.steps.Count - 1;
             RefreshSteps();
             RefreshContext();
+        }
+
+        // 向前找紧邻 branchIndex 的原子步骤的效果类型名（用于分支条件门控）。
+        private string PrecedingAtomicEffectType(int branchIndex)
+        {
+            for (int i = branchIndex - 1; i >= 0; i--)
+            {
+                var s = _graph.steps[i];
+                if (s.kind == 0)
+                    return s.atomic?.EffectType;
+                // 跳过其他分支，继续向前找最近的原子
+            }
+            return null;
+        }
+
+        // 取该效果配置中首个 OutcomeGate 条件 id（无则 null）。
+        private static string FirstOutcomeGateCondition(BranchConfig config)
+        {
+            if (config?.Conditions == null) return null;
+            foreach (var c in config.Conditions)
+                if (c.Kind == BranchConditionKind.OutcomeGate)
+                    return c.Id;
+            return null;
         }
 
         private void RemoveStepAt(int index)
@@ -209,7 +242,7 @@ namespace SynergyUI
                 card.AddToClassList("list-row--selected");
             }
 
-            var label = new Label($"#{index + 1}  {StepSummaryText(step)}");
+            var label = new Label($"#{index + 1}  {StepSummaryText(step, index)}");
             label.AddToClassList("list-row__name");
             card.Add(label);
 
@@ -233,13 +266,19 @@ namespace SynergyUI
             return card;
         }
 
-        private static string StepSummaryText(EffectStepData step)
+        private string StepSummaryText(EffectStepData step, int index)
         {
             if (step.kind == 1)
             {
-                var c = step.condition;
-                var ct = c != null ? (ConditionType)c.Type : ConditionType.MinCardsInHand;
-                return $"条件分支（{ct}）";
+                string condName = step.conditionId;
+                var effectType = PrecedingAtomicEffectType(index);
+                var cfg = string.IsNullOrEmpty(effectType) ? null : BranchConfigTable.GetByEffectType(effectType);
+                if (cfg?.Conditions != null)
+                {
+                    foreach (var bc in cfg.Conditions)
+                        if (bc.Id == step.conditionId) { condName = bc.DisplayName; break; }
+                }
+                return $"条件分支（{condName}）";
             }
             var a = step.atomic;
             if (a == null || string.IsNullOrEmpty(a.EffectType))
@@ -394,6 +433,9 @@ namespace SynergyUI
             _contextPane.Add(targetHeader);
             _contextPane.Add(MakeTargetEditor(atomic));
 
+            // 按效果类型的专属编辑器：抽牌减费缺陷 / 检索筛选维度（影响费用）。
+            _contextPane.Add(MakeEffectSpecificEditor(atomic));
+
             var costHeader = new Label("代价");
             costHeader.AddToClassList("panel__header");
             _contextPane.Add(costHeader);
@@ -425,6 +467,8 @@ namespace SynergyUI
                 if (refreshSummaryOnTypeChange)
                 {
                     RefreshSteps();
+                    // 重建上下文面板：使抽牌/检索的专属编辑器随类型变化出现或消失。
+                    RefreshContext();
                 }
             });
             rowA.Add(typeDropdown);
@@ -454,6 +498,87 @@ namespace SynergyUI
             var wrap = new VisualElement();
             wrap.Add(rowA);
             wrap.Add(rowB);
+            return wrap;
+        }
+
+        // 按效果类型的专属编辑器：
+        //   DrawCard  → 抽牌减费缺陷勾选（写 atomic.Drawbacks，每个按目录减费，可叠加）。
+        //   SearchDeck→ 检索筛选维度档（写 atomic.StringValue=tierId，决定费用 + 随机抽 1）。
+        // 其余类型返回空容器。
+        private VisualElement MakeEffectSpecificEditor(AtomicEffectEntry atomic)
+        {
+            var wrap = new VisualElement();
+            if (!Enum.TryParse<AtomicEffectType>(atomic.EffectType, out var type))
+            {
+                return wrap;
+            }
+
+            if (type == AtomicEffectType.DrawCard)
+            {
+                atomic.Drawbacks ??= new List<string>();
+                var header = new Label("抽牌减费缺陷（可叠加，挂越多越便宜）");
+                header.AddToClassList("panel__header");
+                wrap.Add(header);
+
+                foreach (var db in BranchConfigTable.GetAllDrawbacks())
+                {
+                    var captured = db;
+                    var toggle = new Toggle($"{db.DisplayName}（-{db.CostReduction}）");
+                    toggle.SetValueWithoutNotify(atomic.Drawbacks.Contains(db.Id));
+                    toggle.RegisterValueChangedCallback(evt =>
+                    {
+                        if (evt.newValue)
+                        {
+                            if (!atomic.Drawbacks.Contains(captured.Id))
+                            {
+                                atomic.Drawbacks.Add(captured.Id);
+                            }
+                        }
+                        else
+                        {
+                            atomic.Drawbacks.Remove(captured.Id);
+                        }
+                    });
+                    wrap.Add(toggle);
+                }
+            }
+            else if (type == AtomicEffectType.SearchDeck)
+            {
+                var header = new Label("检索筛选维度（决定费用）");
+                header.AddToClassList("panel__header");
+                wrap.Add(header);
+
+                var tiers = BranchConfigTable.GetFilterTiers();
+                var ids = tiers.Select(t => t.Id).ToList();
+                var labels = tiers.Select(t => $"{t.DisplayName}（{t.Cost}）").ToList();
+
+                var dropdown = new DropdownField("维度档");
+                dropdown.choices = labels;
+                dropdown.AddToClassList("text-input");
+
+                int cur = ids.IndexOf(atomic.StringValue ?? "");
+                if (cur < 0)
+                {
+                    cur = ids.IndexOf("SingleDimension");
+                    if (cur < 0) cur = 0;
+                    atomic.StringValue = ids.Count > 0 ? ids[cur] : "";
+                }
+                dropdown.index = cur;
+                dropdown.RegisterValueChangedCallback(_ =>
+                {
+                    int i = dropdown.index;
+                    if (i >= 0 && i < ids.Count)
+                    {
+                        atomic.StringValue = ids[i];
+                    }
+                });
+                wrap.Add(dropdown);
+
+                var note = new Label("检索：按筛选维度计费，并从筛选范围随机抽 1（维度档存于「字符串」字段）");
+                note.AddToClassList("hint");
+                wrap.Add(note);
+            }
+
             return wrap;
         }
 
@@ -496,8 +621,18 @@ namespace SynergyUI
             {
                 atomic.TargetCountOverride = 1;
             }
-            rowB.Add(MakeIntField("数量(-1任意/0全部)", atomic.TargetCountOverride,
-                v => atomic.TargetCountOverride = v));
+
+            // 数量两态：固定 N / 动态（运行时玩家自选 0..候选数）。动态时数量框禁用 + 注「本卡不可作地牌」。
+            var dynToggle = new Toggle("动态数量");
+            dynToggle.SetValueWithoutNotify(atomic.DynamicTargetCount);
+            rowB.Add(dynToggle);
+
+            var countField = new IntegerField("数量(-1任意/0全部)");
+            countField.AddToClassList("int-input");
+            countField.SetValueWithoutNotify(atomic.TargetCountOverride);
+            countField.SetEnabled(!atomic.DynamicTargetCount);
+            countField.RegisterValueChangedCallback(evt => atomic.TargetCountOverride = evt.newValue);
+            rowB.Add(countField);
 
             var filterField = new TextField("过滤");
             filterField.AddToClassList("text-input");
@@ -506,7 +641,19 @@ namespace SynergyUI
             rowB.Add(filterField);
             wrap.Add(rowB);
 
-            var hint = new Label("filter token：Creature/Player/Untapped/Tapped/Damaged/Friendly/Enemy/Power>N/Life<=N（逗号分隔）");
+            var dynNote = new Label("动态数量：本卡费用计 0，且不可作地牌产元素");
+            dynNote.AddToClassList("hint");
+            dynNote.style.display = atomic.DynamicTargetCount ? DisplayStyle.Flex : DisplayStyle.None;
+            wrap.Add(dynNote);
+
+            dynToggle.RegisterValueChangedCallback(evt =>
+            {
+                atomic.DynamicTargetCount = evt.newValue;
+                countField.SetEnabled(!evt.newValue);
+                dynNote.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+            });
+
+            var hint = new Label("filter token：Creature/Player/Untapped/Tapped/Damaged/Friendly/Enemy/Power>N/Life<=N + 分区 Hand/Graveyard/Deck/Exile/Battlefield（逗号分隔）");
             hint.AddToClassList("hint");
             wrap.Add(hint);
 
@@ -605,60 +752,86 @@ namespace SynergyUI
             return wrap;
         }
 
-        // ----- 选中分支步：条件 + then/else 原子子序列 -----
+        // ----- 选中分支步：条件（取自前序原子的目录） + then/else 原子子序列 -----
         private void BuildBranchEditor(EffectStepData step)
         {
-            step.condition ??= new ActivationConditionData();
             step.thenSteps ??= new List<AtomicEffectEntry>();
             step.elseSteps ??= new List<AtomicEffectEntry>();
 
             var condHeader = new Label("条件");
             condHeader.AddToClassList("panel__header");
             _contextPane.Add(condHeader);
-            _contextPane.Add(MakeConditionEditor(step.condition));
+            _contextPane.Add(MakeBranchConditionEditor(step));
 
-            var thenHeader = new Label("成立（then）");
+            var thenHeader = new Label("成立（then）—— 奖励免费");
             thenHeader.AddToClassList("panel__header");
             _contextPane.Add(thenHeader);
             _contextPane.Add(MakeSubList(step.thenSteps));
 
-            var elseHeader = new Label("否则（else）");
+            var elseHeader = new Label("否则（else）—— 奖励免费");
             elseHeader.AddToClassList("panel__header");
             _contextPane.Add(elseHeader);
             _contextPane.Add(MakeSubList(step.elseSteps));
         }
 
-        private VisualElement MakeConditionEditor(ActivationConditionData cond)
+        // 分支条件编辑：下拉项 = 前序原子效果类型在目录中的 OutcomeGate 条件。
+        private VisualElement MakeBranchConditionEditor(EffectStepData step)
         {
             var wrap = new VisualElement();
+
+            var effectType = PrecedingAtomicEffectType(_selectedStepIndex);
+            var config = string.IsNullOrEmpty(effectType) ? null : BranchConfigTable.GetByEffectType(effectType);
+            var gateConds = new List<BranchCondition>();
+            if (config?.Conditions != null)
+                foreach (var c in config.Conditions)
+                    if (c.Kind == BranchConditionKind.OutcomeGate)
+                        gateConds.Add(c);
+
+            if (gateConds.Count == 0)
+            {
+                wrap.Add(new Label("前序原子无可用条件"));
+                return wrap;
+            }
 
             var row = new VisualElement();
             row.AddToClassList("toolbar");
 
-            var typeDropdown = new DropdownField("条件");
-            var condNames = Enum.GetValues(typeof(ConditionType)).Cast<ConditionType>()
-                .Select(c => c.ToString()).ToList();
-            typeDropdown.choices = condNames;
-            typeDropdown.AddToClassList("text-input");
-            typeDropdown.index = cond.Type >= 0 && cond.Type < condNames.Count ? cond.Type : 0;
-            typeDropdown.RegisterValueChangedCallback(_ =>
+            var dropdown = new DropdownField("条件");
+            dropdown.choices = gateConds.Select(c => c.DisplayName).ToList();
+            dropdown.AddToClassList("text-input");
+            int curIdx = gateConds.FindIndex(c => c.Id == step.conditionId);
+            if (curIdx < 0) { curIdx = 0; step.conditionId = gateConds[0].Id; }
+            dropdown.index = curIdx;
+            dropdown.RegisterValueChangedCallback(_ =>
             {
-                cond.Type = typeDropdown.index;
-                RefreshSteps();
+                int idx = dropdown.index;
+                if (idx >= 0 && idx < gateConds.Count)
+                {
+                    step.conditionId = gateConds[idx].Id;
+                    RefreshSteps();
+                    RefreshContext();
+                }
             });
-            row.Add(typeDropdown);
+            row.Add(dropdown);
             wrap.Add(row);
 
-            var row2 = new VisualElement();
-            row2.AddToClassList("toolbar");
-            row2.Add(MakeIntField("值", cond.Value, v => cond.Value = v));
-            row2.Add(MakeIntField("值2", cond.Value2, v => cond.Value2 = v));
+            var selected = gateConds[curIdx];
+            if (!string.IsNullOrEmpty(selected.Description))
+            {
+                var desc = new Label(selected.Description);
+                desc.AddToClassList("hint");
+                wrap.Add(desc);
+            }
 
-            var negate = new Toggle("取反");
-            negate.SetValueWithoutNotify(cond.Negate);
-            negate.RegisterValueChangedCallback(evt => cond.Negate = evt.newValue);
-            row2.Add(negate);
-            wrap.Add(row2);
+            // 预言类型（TypeProphecyHit）需要字符串参数
+            if (selected.Id == "TypeProphecyHit")
+            {
+                var typeField = new TextField("预言类型");
+                typeField.AddToClassList("text-input");
+                typeField.SetValueWithoutNotify(step.conditionStringParam ?? "");
+                typeField.RegisterValueChangedCallback(evt => step.conditionStringParam = evt.newValue);
+                wrap.Add(typeField);
+            }
 
             return wrap;
         }

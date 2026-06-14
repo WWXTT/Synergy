@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b95f7c555fe53814cafa121719437f36
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Demo/Materials/CubeTexture.mat
+  uploadId: 901582

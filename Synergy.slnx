@@ -12,12 +12,16 @@
   <Project Path="Unity.UnifiedRayTracing.Runtime.csproj" />
   <Project Path="Unity.RenderPipeline.Universal.ShaderLibrary.csproj" />
   <Project Path="UniTask.Addressables.csproj" />
+  <Project Path="KAnimationCore.Editor.csproj" />
+  <Project Path="FrostPunchGames.csproj" />
+  <Project Path="KAnimationCore.Runtime.csproj" />
   <Project Path="PPv2URPConverters.csproj" />
   <Project Path="Unity.SmoothNormalTool.Editor.csproj" />
   <Project Path="UniTask.TextMeshPro.csproj" />
   <Project Path="Unity.SmoothNormalTool.Runtime.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Config.Runtime.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
+  <Project Path="FrostPunchGames.Editor.csproj" />
   <Project Path="UniTask.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
   <Project Path="UniTask.DOTween.csproj" />

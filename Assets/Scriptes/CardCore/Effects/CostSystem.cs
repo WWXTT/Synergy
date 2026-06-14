@@ -23,6 +23,10 @@ namespace CardCore
         Sleep,
         /// <summary>召唤素材（额外卡组条件）</summary>
         SummonMaterial,
+        /// <summary>磨本组：将牌库顶 N 张送墓（代价抵消用）</summary>
+        MillDeck,
+        /// <summary>送额外组：将额外卡组 N 张送墓（代价抵消用）</summary>
+        SendExtraDeck,
     }
 
     /// <summary>
@@ -358,9 +362,97 @@ namespace CardCore
         }
     }
 
+    /// <summary>
+    /// 磨本组代价处理器：将牌库顶 N 张送入墓地（代价抵消机制之一）。
+    /// </summary>
+    public class MillDeckCostHandler : ICostHandler
+    {
+        public CostType CostType => CostType.MillDeck;
+
+        public bool CanPay(CostInstance cost, CostContext context)
+        {
+            if (context.ZoneManager == null || context.Payer == null) return false;
+            var deck = context.ZoneManager.GetCards(context.Payer, Zone.Deck);
+            return deck.Count >= cost.Value;
+        }
+
+        public void Pay(CostInstance cost, CostContext context)
+        {
+            var deck = context.ZoneManager.GetCards(context.Payer, Zone.Deck);
+            var milled = new List<Card>();
+            for (int i = 0; i < cost.Value && i < deck.Count; i++)
+            {
+                var card = deck[deck.Count - 1 - i]; // 牌库顶（列表末端）开始磨
+                context.ZoneManager.MoveCard(card, context.Payer, Zone.Deck, Zone.Graveyard);
+                milled.Add(card);
+            }
+
+            EventManager.Instance.Publish(new MillDeckCostEvent
+            {
+                Player = context.Payer,
+                Cards = milled,
+                Source = context.Source
+            });
+        }
+
+        public string GetDescription(CostInstance cost) => $"磨 {cost.Value} 张本组卡";
+    }
+
+    /// <summary>
+    /// 送额外组代价处理器：将额外卡组 N 张送入墓地（代价抵消机制之一）。
+    /// </summary>
+    public class SendExtraDeckCostHandler : ICostHandler
+    {
+        public CostType CostType => CostType.SendExtraDeck;
+
+        public bool CanPay(CostInstance cost, CostContext context)
+        {
+            if (context.ZoneManager == null || context.Payer == null) return false;
+            var extra = context.ZoneManager.GetCards(context.Payer, Zone.ExtraDeck);
+            return extra.Count >= cost.Value;
+        }
+
+        public void Pay(CostInstance cost, CostContext context)
+        {
+            var extra = context.ZoneManager.GetCards(context.Payer, Zone.ExtraDeck);
+            var sent = new List<Card>();
+            for (int i = 0; i < cost.Value && i < extra.Count; i++)
+            {
+                var card = extra[extra.Count - 1 - i];
+                context.ZoneManager.MoveCard(card, context.Payer, Zone.ExtraDeck, Zone.Graveyard);
+                sent.Add(card);
+            }
+
+            EventManager.Instance.Publish(new SendExtraDeckCostEvent
+            {
+                Player = context.Payer,
+                Cards = sent,
+                Source = context.Source
+            });
+        }
+
+        public string GetDescription(CostInstance cost) => $"送 {cost.Value} 张额外组卡入墓";
+    }
+
     // ================================================================
     // 代价相关事件
     // ================================================================
+
+    /// <summary>磨本组代价事件</summary>
+    public class MillDeckCostEvent : GameEventBase
+    {
+        public Player Player { get; set; }
+        public List<Card> Cards { get; set; }
+        public Entity Source { get; set; }
+    }
+
+    /// <summary>送额外组代价事件</summary>
+    public class SendExtraDeckCostEvent : GameEventBase
+    {
+        public Player Player { get; set; }
+        public List<Card> Cards { get; set; }
+        public Entity Source { get; set; }
+    }
 
     /// <summary>弃牌代价事件</summary>
     public class CardDiscardCostEvent : GameEventBase
@@ -407,6 +499,8 @@ namespace CardCore
             CostHandlerRegistry.Register(new LifePaymentCostHandler());
             CostHandlerRegistry.Register(new SleepCostHandler());
             CostHandlerRegistry.Register(new SummonMaterialCostHandler());
+            CostHandlerRegistry.Register(new MillDeckCostHandler());
+            CostHandlerRegistry.Register(new SendExtraDeckCostHandler());
         }
     }
 }

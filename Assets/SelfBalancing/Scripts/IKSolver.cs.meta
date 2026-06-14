@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 516961b2fa4a45b4f8c9a67a658f50fa
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: e82a15ec4c771a84b9a4a3c2087cd710, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Scripts/IKSolver.cs
+  uploadId: 901582

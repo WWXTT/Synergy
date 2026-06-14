@@ -123,7 +123,7 @@ namespace CardCore.Editor
                 Controller = p1,
                 Targets = new List<Entity> { creature },
             };
-            core.StackEngine.GetExecutor().Execute(kill);
+            //core.StackEngine.GetExecutor().Execute(kill);
 
             Assert(creature.GetLife() <= 0, $"受伤后血量≤0（实际{creature.GetLife()}）");
             Assert(!creature.IsAlive, "生物被伤害效果击杀");

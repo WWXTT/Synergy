@@ -498,17 +498,6 @@ namespace CardCore
     }
 
     /// <summary>
-    /// 卡牌转化事件
-    /// </summary>
-    public class CardTransformedEvent : GameEventBase
-    {
-        public Card OriginalCard { get; set; }
-        public string TargetTemplateId { get; set; }
-        public Player Controller { get; set; }
-        public Entity Source { get; set; }
-    }
-
-    /// <summary>
     /// 属性交换事件
     /// </summary>
     public class StatsSwappedEvent : GameEventBase

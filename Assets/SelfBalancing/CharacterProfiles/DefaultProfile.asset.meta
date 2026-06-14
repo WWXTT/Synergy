@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3a3598912a5b09d45acfce49a1844723
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/CharacterProfiles/DefaultProfile.asset
+  uploadId: 901582

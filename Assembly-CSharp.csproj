@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scriptes\CardCore\Enums\Zones.cs" />
+    <Compile Include="Assets\SelfBalancing\Integration\MagicBlend\Runtime\MagicBlendJobs.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexDirection.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Layers\ContinuousEffectDurationTracker.cs" />
     <Compile Include="Assets\Synty\AnimationGoblinLocomotion\Samples\Scripts\InputSystem\GBL_InputReader.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="Assets\Synty\Epic Toon FX\Scripts\ETFXLightFade.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexCoordinates.cs" />
     <Compile Include="Assets\Scriptes\CardCore\BaseSystems\StateBasedActions\StateBasedActions.cs" />
+    <Compile Include="Assets\SelfBalancing\Integration\MagicBlend\Runtime\MagicBlendLibrary.cs" />
     <Compile Include="Assets\UI\Screens\PlaceholderScreens.cs" />
     <Compile Include="Assets\Scriptes\CardCore\GameCore\GameCore.cs" />
     <Compile Include="Assets\UI\Screens\DeckBuilderScreen.cs" />
@@ -86,6 +88,7 @@
     <Compile Include="Assets\Synty\Epic Toon FX\Demo\Scripts\VFX Library\ParticleEffectsLibrary.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Cards\CardExtensions.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Attribute\IAtomicEffectHandler.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Effects\CostDerivation.cs" />
     <Compile Include="Assets\UI\Data\ColorFilter.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Cards\CardLoader.cs" />
     <Compile Include="Assets\UI\Screens\CardComposerScreen.cs" />
@@ -97,7 +100,9 @@
     <Compile Include="Assets\Synty\Epic Toon FX\Demo\Scripts\ETFXFireProjectile.cs" />
     <Compile Include="Assets\Scriptes\CardCore\GameCore\GameLoopController.cs" />
     <Compile Include="Assets\Synty\Epic Toon FX\Demo\Scripts\VFX Library\UICanvasManager.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Attribute\Handlers\AdvancedEffectHandlers.cs" />
     <Compile Include="Assets\Scriptes\CardCore\BaseSystems\ElementPool.cs" />
+    <Compile Include="Assets\SelfBalancing\Integration\MagicBlend\Runtime\MagicBlending.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Enums\CardEnums.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Serialization\TagRegistry.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\Effect.cs" />
@@ -107,8 +112,10 @@
     <Compile Include="Assets\Scriptes\CardCore\Serialization\TagTable.cs" />
     <Compile Include="Assets\Scriptes\CardCore\GameCore\SubSystemRegistry.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Network\GameMessages.cs" />
+    <Compile Include="Assets\UI\Screens\UiTargetSelector.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Layers\TextChangeLayer.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexCell.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Attribute\Handlers\SecondBatchEffectHandlers.cs" />
     <Compile Include="Assets\UI\Data\CardCatalog.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\CardEffectConverter.cs" />
     <Compile Include="Assets\UI\Framework\UIBinder.cs" />
@@ -126,6 +133,7 @@
     <Compile Include="Assets\Scriptes\CardCore\Effects\ElementAffinity.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Layers\CopyEffects.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Attribute\AtomicEffectConfig.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Attribute\Handlers\MetaEffectHandlers.cs" />
     <Compile Include="Assets\UI\Framework\UIBootstrap.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\SpeedSystem.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\BranchConfigTable.cs" />
@@ -134,15 +142,20 @@
     <Compile Include="Assets\Scriptes\HexMap\HexEdgeType.cs" />
     <Compile Include="Assets\UI\Framework\UIManager.cs" />
     <Compile Include="Assets\Scriptes\CardCore\BaseSystems\ElementUnlockManager.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Attribute\Handlers\ThirdBatchEffectHandlers.cs" />
+    <Compile Include="Assets\SelfBalancing\Integration\MagicBlend\Runtime\MagicBlendState.cs" />
+    <Compile Include="Assets\SelfBalancing\Demo\Scripts\ObjectRotator.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\ReplacementEngine.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\EffectExecutionEngine.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexGrid.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Effects\TargetSelection.cs" />
     <Compile Include="Assets\Synty\AnimationGoblinLocomotion\Samples\Scripts\GBL_SamplePlayerAnimationController.cs" />
     <Compile Include="Assets\Scriptes\CardCore\ValueSystem\SynergyConfig.cs" />
     <Compile Include="Assets\UI\Framework\UIScreen.cs" />
     <Compile Include="Assets\Synty\AnimationGoblinLocomotion\Samples\Scripts\GBL_SampleObjectLockOn.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\AtomicEffects.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Serialization\RuntimeCardStateDTO.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Effects\CostOffset.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Events\EventManager.cs" />
     <Compile Include="Assets\Synty\Epic Toon FX\Demo\Scripts\ETFXEffectController.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexMetrics.cs" />
@@ -151,6 +164,7 @@
     <Compile Include="Assets\Scriptes\CardCore\Effects\TriggerTiming.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Cards\CardData.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexGridChunk.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Effects\DelayedEffectScheduler.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexMapCamera.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\EffectDefinition.cs" />
     <Compile Include="Assets\Synty\Epic Toon FX\Demo\Scripts\ETFXSceneManager.cs" />
@@ -159,12 +173,15 @@
     <Compile Include="Assets\Synty\Epic Toon FX\Demo\Scripts\ETFXTarget.cs" />
     <Compile Include="Assets\UI\Screens\SimpleAI.cs" />
     <Compile Include="Assets\Synty\Epic Toon FX\Demo\Scripts\VFX Library\PEButtonScript.cs" />
+    <Compile Include="Assets\SelfBalancing\Integration\MagicBlend\Runtime\MagicBlendAsset.cs" />
     <Compile Include="Assets\UI\Screens\BattleScreen.cs" />
+    <Compile Include="Assets\SelfBalancing\Demo\Scripts\InfinitSwing.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Serialization\CardDataSerializer.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Cards\Card.cs" />
     <Compile Include="Assets\UI\Data\KeywordCatalog.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Effects\EffectResolutionContext.cs" />
     <Compile Include="Assets\UI\Screens\BattleController.cs" />
+    <Compile Include="Assets\Scriptes\CardCore\Effects\BranchConditionEvaluator.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexMapEditor.cs" />
     <Compile Include="Assets\Scriptes\CardCore\GameCore\GameExceptions.cs" />
     <Compile Include="Assets\Synty\Epic Toon FX\Scripts\ETFXPitchRandomizer.cs" />
@@ -176,7 +193,6 @@
     <Compile Include="Assets\Scriptes\CardCore\Enums\ColorIdentity.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Attribute\Handlers\BuiltinEffectHandlers.cs" />
     <Compile Include="Assets\Scriptes\HexMap\HexMesh.cs" />
-    <Compile Include="Assets\Scriptes\CardCore\BaseSystems\AttributeSystem.cs" />
     <Compile Include="Assets\UI\Data\EffectGraphData.cs" />
     <Compile Include="Assets\Scriptes\CardCore\GameCore\GameState.cs" />
     <Compile Include="Assets\Scriptes\CardCore\Attribute\EffectHandlerRegistry.cs" />
@@ -1403,17 +1419,21 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="FrostPunchGames.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.Editor.csproj" />
+    <ProjectReference Include="FrostPunchGames.Editor.csproj" />
     <ProjectReference Include="UniTask.TextMeshPro.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Universal.Config.Runtime.csproj" />
     <ProjectReference Include="Unity.RenderPipeline.Universal.ShaderLibrary.csproj" />
     <ProjectReference Include="UniTask.DOTween.csproj" />
     <ProjectReference Include="Unity.Rendering.LightTransport.Editor.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.ShaderLibrary.csproj" />
+    <ProjectReference Include="KAnimationCore.Runtime.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
     <ProjectReference Include="UniTask.Addressables.csproj" />
     <ProjectReference Include="Unity.SmoothNormalTool.Editor.csproj" />
     <ProjectReference Include="Unity.UnifiedRayTracing.Runtime.csproj" />
+    <ProjectReference Include="KAnimationCore.Editor.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Core.Runtime.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Universal.Shaders.csproj" />
     <ProjectReference Include="Unity.RenderPipelines.Universal.Runtime.csproj" />

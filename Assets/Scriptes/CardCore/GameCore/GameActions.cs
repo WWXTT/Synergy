@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 
 namespace CardCore
 {
@@ -50,12 +51,12 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 从指示物获得一个元素（每回合一次）
+        /// 从某张未横置地牌取 1 个指示物入可用池（每地牌每回合一次）。
+        /// 跨回合可取：无论当前轮到谁，支付时均可横置己方地牌取元素。
         /// </summary>
         public static bool GainElementFromToken(GameCore core, Player player, ManaType type)
         {
             if (core == null || player == null) return false;
-            if (core.TurnEngine.TurnPlayer != player) return false;
 
             var elementPool = core.ElementPool;
             if (!elementPool.GainElementFromToken(type, player))
@@ -117,6 +118,7 @@ namespace CardCore
             {
                 // 永久物（生物等）：进战场，注册触发式效果到本核心的触发引擎
                 core.ZoneManager.MoveCard(card, player, Zone.Hand, Zone.Battlefield);
+                card.WasFormallySummoned = true; // 普通召唤正式入场
 
                 var cardEffects = new List<EffectDefinition>();
                 var cardDataEffects = GetCardEffectDefinitions(card);
@@ -175,7 +177,7 @@ namespace CardCore
                     Targets = targets != null ? new List<Entity>(targets) : new List<Entity>(),
                 };
 
-                executor.Execute(instance);
+                //executor.Execute(instance);
             }
         }
 
@@ -247,7 +249,9 @@ namespace CardCore
             if (core == null || player == null) return false;
             if (core.StackEngine.CurrentPriorityHolder != player) return false;
 
-            core.StackEngine.PassPriority(player);
+            // Pass 可能触发结算，结算含异步原子效果（await UI）。
+            // 本入口返回校验结果，结算在后台推进（StackEngine.IsResolving 阻止主循环重入）。
+            core.StackEngine.PassPriority(player).Forget();
             return true;
         }
 

@@ -301,10 +301,10 @@ namespace CardCore
 
                     if (ownerFilter != null)
                     {
-                        var controller = mod.SourceEffect?.Controller
-                            ?? mod.SourceEffect?.Source?.GetController();
-                        if (controller != null && controller != ownerFilter)
-                            continue;
+                        //var controller = mod.SourceEffect?.Controller
+                        //    ?? mod.SourceEffect?.Source?.GetController();
+                        //if (controller != null && controller != ownerFilter)
+                        //    continue;
                     }
 
                     mod.IsActive = false;

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7e27cf7965f97334dbd3b9449aa8dd7b
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Demo/Prefabs/Obstacle.prefab
+  uploadId: 901582

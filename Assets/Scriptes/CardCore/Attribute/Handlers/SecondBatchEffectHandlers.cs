@@ -599,29 +599,6 @@ namespace CardCore.Attribute.Handlers
         public override string GetDescription(AtomicEffectInstance effect) => "复制目标卡牌";
     }
 
-    /// <summary>转化卡牌（StringValue 指定目标模板）</summary>
-    public class TransformCardHandler : AtomicEffectHandlerBase
-    {
-        protected override AtomicEffectType DefaultEffectType => AtomicEffectType.TransformCard;
-
-        public override void Execute(AtomicEffectInstance effect, EffectExecutionContext context)
-        {
-            string tpl = effect.StringValue;
-            foreach (var target in context.Targets)
-            {
-                if (!(target is Card card)) continue;
-                PublishEvent(new CardTransformedEvent
-                {
-                    OriginalCard = card, TargetTemplateId = tpl,
-                    Controller = card.GetController(), Source = context.Source
-                });
-                if (!string.IsNullOrEmpty(tpl)) card.ID = tpl;
-            }
-        }
-
-        public override string GetDescription(AtomicEffectInstance effect) => "转化目标卡牌";
-    }
-
     /// <summary>额外回合</summary>
     public class TakeExtraTurnHandler : AtomicEffectHandlerBase
     {
@@ -696,7 +673,6 @@ namespace CardCore.Attribute.Handlers
 
                 // 特殊
                 new CopyCardHandler(),
-                new TransformCardHandler(),
                 new TakeExtraTurnHandler(),
                 new SkipTurnHandler(),
             };

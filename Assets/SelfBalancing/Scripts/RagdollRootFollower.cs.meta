@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 9ced65b7060e34b48baf88077b511e6d
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Scripts/RagdollRootFollower.cs
+  uploadId: 901582

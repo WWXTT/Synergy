@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cdaee31835444544ad719870d6762ba, type: 3}
+  m_Name: DefaultProfile
+  m_EditorClassIdentifier: FrostPunchGames::FrostPunchGames.RagdollTuningProfile
+  TotalWeight: 90
+  MuscleSpring: 10000
+  MuscleDamper: 1000
+  MuscleAnchorWeight: 1
+  MuscleDriveWeight: 1
+  PoseTrackingSpeed: 5
+  ServoMaxForce: 150
+  MasterIKBlend: 1
+  StepHeight: 0.2
+  StepPrediction: 1
+  RunSpeedThreshold: 6
+  ZMPWeightShiftWalking: 0.5
+  ZMPWeightShiftIdle: 0.1
+  CounterBalanceTilt: 20
+  ForwardLeanMultiplier: 10
+  StrafeLeanMultiplier: 10
+  ContrappostoStrength: 1
+  HipsSpringStiffness: 25
+  HipsSpringDamping: 6
+  UseBalanceFeedback: 1
+  CPFullAuthorityMargin: 0.15
+  CPStepTriggerMargin: 0.04
+  CPFootBiasStrength: 1
+  CPHipLeanGain: 30
+  CPHipShiftGain: 0.15
+  CPStepUrgencyGain: 0.6
+  ShowBalanceDebug: 1
+  LODEnable: 1
+  LOD1Distance: 15
+  LOD2Distance: 40
+  LOD3Distance: 80
+  MaxExpectedAccel: 4.9
+  UrgencyLongFilter: 0.05
+  UrgencyShortFilter: 0.01
+  UrgencyDivergenceWeight: 0.15
+  CPArmBalanceGain: 0.4
+  ArmBalanceUrgencyLo: 0.3
+  ArmBalanceUrgencyHi: 0.8
+  ArmBalanceMaxHandOffset: 0.05
+  ArmBalanceOffsetSmoothTime: 0.08

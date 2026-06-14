@@ -72,6 +72,8 @@ namespace CardCore
         private List<Card> _hand = new List<Card>();
 
         public Player Opponent { get; set; }
+        /// <summary>AI 玩家标志。true 时目标选择器跳过弹窗，直接自动选择。</summary>
+        public bool IsAI { get; set; } = false;
         public string Name => _name;
         public int MaxHealth => _maxHealth;
         public int Life
@@ -81,6 +83,25 @@ namespace CardCore
         }
         public List<Card> Deck => _deck;
         public List<Card> Hand => _hand;
+
+        // ===== 单局代价抵消已用「费」计数（按机制；受 CostOffsetConfig 单局上限约束，InitGame 时归零）=====
+        /// <summary>流失（无源失命）已抵消的费数。</summary>
+        public int OffsetDrainUsed { get; set; }
+        /// <summary>弃手牌已抵消的费数。</summary>
+        public int OffsetDiscardUsed { get; set; }
+        /// <summary>磨本组已抵消的费数。</summary>
+        public int OffsetMillUsed { get; set; }
+        /// <summary>送额外组已抵消的费数。</summary>
+        public int OffsetSendExtraUsed { get; set; }
+
+        /// <summary>重置本局抵消计数（新对局开始时调用）。</summary>
+        public void ResetOffsetUsage()
+        {
+            OffsetDrainUsed = 0;
+            OffsetDiscardUsed = 0;
+            OffsetMillUsed = 0;
+            OffsetSendExtraUsed = 0;
+        }
 
 
         public Player(string name, int maxHealth)

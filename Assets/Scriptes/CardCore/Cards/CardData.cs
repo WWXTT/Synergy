@@ -344,6 +344,11 @@ namespace CardCore
         public string TargetFilterOverride = "";  // 逗号分隔 filter token，"" = 用配置
         public int TargetCountOverride = -2;       // -2 = 用配置（注意 -1=任意、0=全部 是合法语义值）
         public int TargetScopeOverride = -1;       // EffectTargetScope 枚举值，-1 = 用配置
+
+        // 动态数量：true = 运行时玩家自选个数（0..候选数）；费用计 0 且该卡不可作地牌产元素。
+        public bool DynamicTargetCount;
+        // 抽牌减费缺陷 id 列表（UnusableThisTurn / DiscardAtEndOfTurnIfInHand），可叠加，每个按目录减费。
+        public List<string> Drawbacks = new List<string>();
     }
 
     /// <summary>
@@ -383,9 +388,15 @@ namespace CardCore
     {
         public int kind;                              // 0=原子效果, 1=条件分支
         public AtomicEffectEntry atomic;              // kind==0 时有效
-        public ActivationConditionData condition;     // kind==1 时有效
+        public ActivationConditionData condition;     // kind==1 时有效（保留：发动前条件，旧字段）
         public List<AtomicEffectEntry> thenSteps;     // kind==1：条件成立时执行
         public List<AtomicEffectEntry> elseSteps;     // kind==1：否则执行
+
+        // kind==1 的产出条件（OutcomeGate），取自 BranchConfig 目录。
+        // 替代借用 condition/ConditionType（后者保留给发动前条件）。
+        public string conditionId;                    // 条件 id，如 "DmgKillsTarget"
+        public int conditionParam;                    // 数值参数（如门槛）
+        public string conditionStringParam;           // 字符串参数（如预言类型）
     }
 
     /// <summary>

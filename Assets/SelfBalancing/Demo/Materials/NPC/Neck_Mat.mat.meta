@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 562f93f31b2566446a8eefb380695287
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Demo/Materials/NPC/Neck_Mat.mat
+  uploadId: 901582

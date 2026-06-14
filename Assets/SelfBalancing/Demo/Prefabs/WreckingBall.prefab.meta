@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 1e2b82f779424444fb4839ced7055905
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Demo/Prefabs/WreckingBall.prefab
+  uploadId: 901582

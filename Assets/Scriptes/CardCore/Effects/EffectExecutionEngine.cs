@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using CardCore.Attribute;
 using CardCore.Attribute.Handlers;
 
@@ -62,19 +63,39 @@ namespace CardCore
             if (!_conditionChecker.CheckAll(effect.ActivationConditions, context))
                 return false;
 
-            // 4. 费用检查
-    
+            // 4. 费用检查：元素代价自动推导（含抵消可达性），特殊代价走原子预检
+            var elementCosts = CostDerivationService.DeriveElementCosts(effect);
+            var specialCosts = effect.Costs != null
+                ? effect.Costs.Where(c => c.Type != CostType.ElementConsume).ToList()
+                : new List<CostInstance>();
+            if (elementCosts.Count > 0 || specialCosts.Count > 0)
+            {
+                var costContext = new CostContext
+                {
+                    Payer = activator,
+                    ZoneManager = _zoneManager,
+                    ElementPool = _elementPool,
+                    Source = source
+                };
+                // 特殊代价：必须可原子支付
+                if (specialCosts.Count > 0 && !CostHandlerRegistry.CanPayAll(specialCosts, costContext))
+                    return false;
+                // 元素代价：考虑「最大可能抵消」后仍需可支付
+                if (elementCosts.Count > 0 && !CostOffsetService.CanAfford(elementCosts, costContext))
+                    return false;
+            }
 
-            // 5. 目标有效性检查
-   
+            // 5. 目标有效性检查（由各原子效果在结算期独立解析）
 
             return true;
         }
 
         /// <summary>
-        /// 执行效果
+        /// 异步执行效果。
+        /// 原子效果通过 EffectHandlerRegistry.ExecuteEffectAsync 解析，交互 handler 可 await UI；
+        /// 非交互 handler 即时完成，整体行为与原同步路径一致。
         /// </summary>
-        public void Execute(EffectInstance instance)
+        public async UniTask ExecuteAsync(EffectInstance instance)
         {
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
@@ -99,8 +120,14 @@ namespace CardCore
                 ElementPool = _elementPool
             };
 
-            // 代价支付
-            if (effect.Costs != null && effect.Costs.Count > 0)
+            // 代价支付：元素代价由配置表自动推导（费用唯一权威），经「抵消+元素」异步路径支付；
+            // 卡牌的 effect.Costs 仅保留非元素的特殊代价（Sleep/SummonMaterial/弃牌 等），走原子同步支付。
+            var elementCosts = CostDerivationService.DeriveElementCosts(effect);
+            var specialCosts = effect.Costs != null
+                ? effect.Costs.Where(c => c.Type != CostType.ElementConsume).ToList()
+                : new List<CostInstance>();
+
+            if (elementCosts.Count > 0 || specialCosts.Count > 0)
             {
                 var costContext = new CostContext
                 {
@@ -109,57 +136,30 @@ namespace CardCore
                     ElementPool = _elementPool,
                     Source = instance.Source
                 };
-                if (!CostHandlerRegistry.PayAll(effect.Costs, costContext))
+
+                if (specialCosts.Count > 0 && !CostHandlerRegistry.PayAll(specialCosts, costContext))
                 {
                     throw new EffectResolutionException(instance.SourceEffect, $"Cost payment failed for effect {effect.Id}.");
+                }
+
+                if (elementCosts.Count > 0 &&
+                    !await CostOffsetService.PayElementWithOffsetAsync(elementCosts, costContext))
+                {
+                    throw new EffectResolutionException(instance.SourceEffect, $"Element cost payment failed for effect {effect.Id}.");
                 }
             }
 
             // 目标解析由每个原子效果在 EffectHandlerRegistry.ExecuteEffect 中独立完成
 
-            // 三阶段事件：发动
-            foreach (var atomicEffect in effect.Effects)
+            // 节点化步骤非空 → per-target 步骤遍历（含 OutcomeGate 分支）；
+            // 为空 → 退化为扁平 Effects 线性结算（向后兼容）。
+            if (effect.Steps != null && effect.Steps.Count > 0)
             {
-                EventManager.Instance.Publish(new AtomicEffectPhaseEvent
-                {
-                    EffectType = atomicEffect.Type,
-                    Phase = AtomicEffectPhase.Activation,
-                    Source = context.Source,
-                    Targets = context.Targets,
-                    EffectInstance = atomicEffect,
-                    Context = context
-                });
+                await ExecuteStepsAsync(effect, context);
             }
-
-            // 三阶段事件：开始作用
-            EventManager.Instance.Publish(new AtomicEffectPhaseEvent
+            else
             {
-                EffectType = effect.Effects[0].Type,
-                Phase = AtomicEffectPhase.StartApplying,
-                Source = context.Source,
-                Targets = context.Targets,
-                EffectInstance = effect.Effects[0],
-                Context = context
-            });
-
-            // 执行效果
-            foreach (var atomicEffect in effect.Effects)
-            {
-                EffectHandlerRegistry.ExecuteEffect(atomicEffect, context);
-            }
-
-            // 三阶段事件：结算完成
-            foreach (var atomicEffect in effect.Effects)
-            {
-                EventManager.Instance.Publish(new AtomicEffectPhaseEvent
-                {
-                    EffectType = atomicEffect.Type,
-                    Phase = AtomicEffectPhase.ResolutionComplete,
-                    Source = context.Source,
-                    Targets = context.Targets,
-                    EffectInstance = atomicEffect,
-                    Context = context
-                });
+                await ExecuteFlatAsync(effect, context);
             }
 
             // 标记已结算
@@ -173,6 +173,125 @@ namespace CardCore
             {
                 ResolvedEffect = instance.SourceEffect,
                 Context = resolution
+            });
+        }
+
+        /// <summary>
+        /// 扁平线性结算（旧路径，无分支）：保持原三阶段事件语义与逐原子执行。
+        /// </summary>
+        private async UniTask ExecuteFlatAsync(EffectDefinition effect, EffectExecutionContext context)
+        {
+            if (effect.Effects == null || effect.Effects.Count == 0)
+                return;
+
+            // 三阶段事件：发动
+            foreach (var atomicEffect in effect.Effects)
+            {
+                PublishPhase(atomicEffect, AtomicEffectPhase.Activation, context);
+            }
+
+            // 三阶段事件：开始作用
+            PublishPhase(effect.Effects[0], AtomicEffectPhase.StartApplying, context);
+
+            // 执行效果
+            foreach (var atomicEffect in effect.Effects)
+            {
+                await EffectHandlerRegistry.ExecuteEffectAsync(atomicEffect, context);
+            }
+
+            // 三阶段事件：结算完成
+            foreach (var atomicEffect in effect.Effects)
+            {
+                PublishPhase(atomicEffect, AtomicEffectPhase.ResolutionComplete, context);
+            }
+        }
+
+        /// <summary>
+        /// 节点化 per-target 步骤遍历（单层）。
+        /// 原子步骤先解析候选目标，对每个目标单独执行原子并写 LastOutcome；
+        /// 若紧随其后是 OutcomeGate 分支步骤，则在同一目标循环体内立即评估并执行 then/else（奖励免费）。
+        /// </summary>
+        private async UniTask ExecuteStepsAsync(EffectDefinition effect, EffectExecutionContext context)
+        {
+            var steps = effect.Steps;
+            for (int i = 0; i < steps.Count; i++)
+            {
+                var step = steps[i];
+                if (step.Kind != RuntimeStepKind.Atomic || step.Atomic == null)
+                    continue; // 落单分支步骤无前置原子，跳过（正常由原子步骤前瞻消费）
+
+                var atomic = step.Atomic;
+
+                // 前瞻：下一步是否为 OutcomeGate 分支
+                RuntimeEffectStep gate =
+                    (i + 1 < steps.Count && steps[i + 1].Kind == RuntimeStepKind.Branch)
+                        ? steps[i + 1]
+                        : null;
+
+                // 解析主序列原子的目标（候选>需求时弹交互选择；动态数量允许 0..候选数）
+                context.Targets = new List<Entity>();
+                var targets = await EffectHandlerRegistry.ResolveTargetsInteractiveAsync(atomic, context);
+                // 无目标原子（抽牌/创建衍生物等）也执行一次
+                var iterTargets = targets.Count > 0
+                    ? targets
+                    : new List<Entity> { null };
+
+                foreach (var target in iterTargets)
+                {
+                    context.Targets = target != null ? new List<Entity> { target } : new List<Entity>();
+                    context.LastOutcome.Reset();
+
+                    PublishPhase(atomic, AtomicEffectPhase.Activation, context);
+                    PublishPhase(atomic, AtomicEffectPhase.StartApplying, context);
+                    await EffectHandlerRegistry.ExecuteEffectAsync(atomic, context);
+                    PublishPhase(atomic, AtomicEffectPhase.ResolutionComplete, context);
+
+                    if (gate != null)
+                        await ApplyGateRewardsAsync(gate, context);
+                }
+
+                if (gate != null)
+                    i++; // 消费已配对的分支步骤
+            }
+        }
+
+        /// <summary>
+        /// 评估 OutcomeGate 条件并执行对应的 then/else 奖励（免费、各自解析目标）。
+        /// 评估读取的是「当前目标」刚写入的 LastOutcome。
+        /// </summary>
+        private async UniTask ApplyGateRewardsAsync(RuntimeEffectStep gate, EffectExecutionContext context)
+        {
+            bool pass = BranchConditionEvaluator.Evaluate(
+                gate.ConditionId, context.LastOutcome, gate.ConditionParam, gate.ConditionStringParam, context);
+            if (gate.Negate) pass = !pass;
+
+            var rewards = pass ? gate.Then : gate.Else;
+            if (rewards == null || rewards.Count == 0)
+                return;
+
+            foreach (var reward in rewards)
+            {
+                context.Targets = new List<Entity>();
+                var rTargets = EffectHandlerRegistry.ResolveTargets(reward, context);
+                var rIter = rTargets.Count > 0 ? rTargets : new List<Entity> { null };
+                foreach (var rt in rIter)
+                {
+                    context.Targets = rt != null ? new List<Entity> { rt } : new List<Entity>();
+                    await EffectHandlerRegistry.ExecuteEffectAsync(reward, context);
+                }
+            }
+        }
+
+        private static void PublishPhase(AtomicEffectInstance atomic, AtomicEffectPhase phase, EffectExecutionContext context)
+        {
+            EventManager.Instance.Publish(new AtomicEffectPhaseEvent
+            {
+                EffectType = atomic.Type,
+                Phase = phase,
+                Source = context.Source,
+                Targets = context.Targets,
+                EffectInstance = atomic,
+                Context = context
             });
         }
 
@@ -249,6 +368,7 @@ namespace CardCore
         private bool _waitingForPlayer = false;
         private int _consecutivePassCount = 0;
         private PhaseType _currentPhase;
+        private bool _isResolving = false;
 
         public SpeedCounter SpeedCounter => _speedCounter;
         public PendingEffectQueue PendingQueue => _pendingQueue;
@@ -258,6 +378,8 @@ namespace CardCore
         public Player ActivePlayer => _activePlayer;
         public bool WaitingForPlayer => _waitingForPlayer;
         public PhaseType CurrentPhase => _currentPhase;
+        /// <summary>结算进行中（含等待 UI 的异步原子效果）。主循环据此避免重入。</summary>
+        public bool IsResolving => _isResolving;
 
         public StackEngine(EffectExecutor executor)
         {
@@ -354,9 +476,10 @@ namespace CardCore
         }
 
         /// <summary>
-        /// 玩家 Pass（让出优先权）
+        /// 玩家 Pass（让出优先权）。
+        /// 双方连续 Pass 触发结算，结算可能 await UI（目标选择弹窗）。
         /// </summary>
-        public void PlayerPass(Player player)
+        public async UniTask PlayerPass(Player player)
         {
             if (player != _priorityHolder) return;
 
@@ -370,7 +493,7 @@ namespace CardCore
 
             if (_consecutivePassCount >= 2)
             {
-                BeginResolution();
+                await BeginResolution();
                 return;
             }
 
@@ -412,7 +535,7 @@ namespace CardCore
         /// <summary>
         /// 开始结算
         /// </summary>
-        private void BeginResolution()
+        private async UniTask BeginResolution()
         {
             _speedCounter.BeginResolution();
             _waitingForPlayer = false;
@@ -422,29 +545,38 @@ namespace CardCore
                 StackSize = _stack.Count
             });
 
-            ResolveStack();
+            await ResolveStack();
         }
 
         /// <summary>
         /// 结算栈（LIFO）
         /// 结算中不轮询，不插入任何效果
-        /// 结算期间产生的新条件触发效果存入延迟队列
+        /// 结算期间产生的新条件触发效果存入延迟队列。
+        /// 原子效果异步执行：交互效果可 await UI，期间 IsResolving=true 阻止主循环重入。
         /// </summary>
-        private void ResolveStack()
+        private async UniTask ResolveStack()
         {
-            while (_stack.Count > 0)
+            _isResolving = true;
+            try
             {
-                var top = _stack.Pop();
-                _executor.Execute(top);
-                _speedCounter.Decrement();
-
-                EventManager.Instance.Publish(new StackResolutionEndEvent
+                while (_stack.Count > 0)
                 {
-                    StackSize = _stack.Count
-                });
-            }
+                    var top = _stack.Pop();
+                    await _executor.ExecuteAsync(top);
+                    _speedCounter.Decrement();
 
-            FinishResolution();
+                    EventManager.Instance.Publish(new StackResolutionEndEvent
+                    {
+                        StackSize = _stack.Count
+                    });
+                }
+
+                FinishResolution();
+            }
+            finally
+            {
+                _isResolving = false;
+            }
         }
 
         /// <summary>
@@ -495,24 +627,43 @@ namespace CardCore
             return _stack.Reverse().ToList();
         }
 
-        public void PassPriority(Player player)
+        public UniTask PassPriority(Player player)
         {
-            PlayerPass(player);
+            return PlayerPass(player);
         }
 
-        public void ResolveTop()
+        public async UniTask ResolveTop()
         {
             if (_stack.Count > 0)
             {
-                var top = _stack.Pop();
-                _executor.Execute(top);
-                _speedCounter.Decrement();
+                _isResolving = true;
+                try
+                {
+                    var top = _stack.Pop();
+                    await _executor.ExecuteAsync(top);
+                    _speedCounter.Decrement();
+                }
+                finally
+                {
+                    _isResolving = false;
+                }
             }
         }
 
         public EffectInstance Peek()
         {
             return _stack.Count > 0 ? _stack.Peek() : null;
+        }
+
+        /// <summary>
+        /// 重定向栈顶效果的目标（RedirectTarget 原子效果が使用）。
+        /// 栈顶效果が無ければ false。
+        /// </summary>
+        public bool RetargetTopStackObject(List<Entity> newTargets)
+        {
+            if (_stack.Count == 0 || newTargets == null) return false;
+            _stack.Peek().Targets = new List<Entity>(newTargets);
+            return true;
         }
 
         public EffectExecutor GetExecutor() => _executor;
@@ -720,8 +871,6 @@ namespace CardCore
                 new CreateTokenHandler(),
 
                 // 第一批补齐 — 伤害类
-                new AoEDamageHandler(),
-                new SplitDamageHandler(),
                 new DamageCannotBePreventedHandler(),
                 new DrainLifeHandler(),
                 new PoisonousDamageHandler(),
@@ -735,6 +884,7 @@ namespace CardCore
                 new BounceToTopHandler(),
                 new BounceToBottomHandler(),
                 new ReturnFromGraveyardHandler(),
+                new RecoverToHandHandler(),
                 new LookAtTopCardsHandler(),
                 new RevealHandHandler(),
 
@@ -755,8 +905,52 @@ namespace CardCore
             foreach (var handler in SecondBatchHandlerFactory.CreateAll())
                 EffectHandlerRegistry.Register(handler);
 
+            // 注册第三批长尾处理器（牌库/移动/资源/无效化/复制等）
+            foreach (var handler in ThirdBatchHandlerFactory.CreateAll())
+                EffectHandlerRegistry.Register(handler);
+
+            // 注册元/合成效果处理器（重复/随机/选其一/延迟）
+            foreach (var handler in MetaEffectHandlerFactory.CreateAll())
+                EffectHandlerRegistry.Register(handler);
+
+            // 注册高级处理器（栈重定向/能力复制）
+            foreach (var handler in AdvancedEffectHandlerFactory.CreateAll())
+                EffectHandlerRegistry.Register(handler);
+
             // 注册内置代价处理器
             BuiltinCostHandlers.RegisterAll();
+
+            // 注册网罗自检：除「暂不实现」2 种外，所有原子效果类型都应有处理器
+            VerifyHandlerCoverage();
+        }
+
+        /// <summary>
+        /// 注册完整性自检。
+        /// 当前设计中「暂不实现」的 ModifyGameRule / OverrideRestriction 以外的所有
+        /// AtomicEffectType 都应已注册；缺失则 LogError，便于尽早暴露长尾静默失败。
+        /// </summary>
+        private static readonly HashSet<AtomicEffectType> _intentionallyUnimplemented = new HashSet<AtomicEffectType>
+        {
+            AtomicEffectType.ModifyGameRule,
+            AtomicEffectType.OverrideRestriction,
+        };
+
+        private static void VerifyHandlerCoverage()
+        {
+            var missing = new List<AtomicEffectType>();
+            foreach (AtomicEffectType type in Enum.GetValues(typeof(AtomicEffectType)))
+            {
+                if (_intentionallyUnimplemented.Contains(type)) continue;
+                if (!EffectHandlerRegistry.IsRegistered(type))
+                    missing.Add(type);
+            }
+
+            if (missing.Count > 0)
+            {
+                UnityEngine.Debug.LogError(
+                    $"[BuiltinHandlerBootstrap] 缺失原子效果处理器 {missing.Count} 种：" +
+                    string.Join(", ", missing));
+            }
         }
     }
 

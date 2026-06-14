@@ -1,4 +1,5 @@
 ﻿using System;
+using Cysharp.Threading.Tasks;
 
 namespace CardCore.Attribute
 {
@@ -19,6 +20,14 @@ namespace CardCore.Attribute
         /// <param name="effect">原子效果实例</param>
         /// <param name="context">执行上下文</param>
         void Execute(AtomicEffectInstance effect, EffectExecutionContext context);
+
+        /// <summary>
+        /// 异步执行效果（支持 UI 等待，如目标选择弹窗）。
+        /// 非交互 handler 由基类默认实现桥接到同步 Execute；交互 handler 需 override。
+        /// </summary>
+        /// <param name="effect">原子效果实例</param>
+        /// <param name="context">执行上下文</param>
+        UniTask ExecuteAsync(AtomicEffectInstance effect, EffectExecutionContext context);
 
         /// <summary>
         /// 检查效果是否可以执行
@@ -95,6 +104,16 @@ namespace CardCore.Attribute
         public AtomicEffectType EffectType => OverrideEffectType ?? DefaultEffectType;
 
         public abstract void Execute(AtomicEffectInstance effect, EffectExecutionContext context);
+
+        /// <summary>
+        /// 默认实现：桥接到同步 Execute 并立即完成。
+        /// 需要等待 UI（如目标选择）的 handler 应 override 本方法。
+        /// </summary>
+        public virtual UniTask ExecuteAsync(AtomicEffectInstance effect, EffectExecutionContext context)
+        {
+            Execute(effect, context);
+            return UniTask.CompletedTask;
+        }
 
         public virtual bool CanExecute(AtomicEffectInstance effect, EffectExecutionContext context)
         {

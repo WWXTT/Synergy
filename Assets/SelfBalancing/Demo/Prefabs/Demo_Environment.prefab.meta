@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3972df4a7deef314fadc7a0ae17b0d68
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 370608
+  packageName: Self-Balancing Active Ragdoll
+  packageVersion: 1.0
+  assetPath: Assets/FrostPunchGames/Self-Balancing Active Ragdoll/Demo/Prefabs/Demo_Environment.prefab
+  uploadId: 901582

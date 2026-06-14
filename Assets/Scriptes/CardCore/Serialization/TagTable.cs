@@ -55,6 +55,9 @@ namespace CardCore.Serialization
         public const int EffectStepData_Condition = 912000955;
         public const int EffectStepData_ThenSteps = 1582440487;
         public const int EffectStepData_ElseSteps = 885670630;
+        public const int EffectStepData_ConditionId = 1271963687;
+        public const int EffectStepData_ConditionParam = 1620806380;
+        public const int EffectStepData_ConditionStringParam = 914519353;
 
         // ---- CostEntryDTO ----
         public const int CostEntryDTO_ManaType = 724021260;
@@ -90,6 +93,11 @@ namespace CardCore.Serialization
         public const int AEI_ManaTypeParam = 1791664335;
         public const int AEI_ZoneParam = 1641778537;
         public const int AEI_Duration = 1966912189;
+        public const int AEI_TargetTypeOverride = 1454135056;
+        public const int AEI_TargetFilterOverride = 1665166535;
+        public const int AEI_TargetCountOverride = 1101957053;
+        public const int AEI_DynamicTargetCount = 1960296747;
+        public const int AEI_Drawbacks = 1476602083;
 
         // ---- CostInstance ----
         public const int CI_Type = 57119624;
@@ -151,6 +159,6 @@ namespace CardCore.Serialization
         public const int PS_DeckCount = 1940827978;
         public const int PS_HandCount = 38995153;
 
-        // 共 111 个标签
+        // 共 119 个标签
     }
 }

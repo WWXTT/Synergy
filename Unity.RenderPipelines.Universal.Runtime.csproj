@@ -103,8 +103,8 @@
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\SceneViewDrawMode.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\Sky\HDRISky\HDRISkyRenderer.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\Passes\ColorPyramidPass.cs" />
-    <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\Settings\URPDefaultVolumeProfileSetting.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\Utility\TimeOfDaySystem.cs" />
+    <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\Settings\URPDefaultVolumeProfileSetting.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\IBLFilter\IBLFilterGGX.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\Sky\SkySystem.cs" />
     <Compile Include="Packages\Dbdrp\DanbaidongRP-urp17\Runtime\RayTracing\RayTracingFallbackHierarchy.cs" />
@@ -1363,12 +1363,12 @@
       <HintPath>Library\ScriptAssemblies\Unity.Burst.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEditor.UI">
-      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEditor.UI">
+      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

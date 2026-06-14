@@ -226,14 +226,11 @@ namespace CardCore
                 // 伤害相关
                 AtomicEffectType.DealDamage => EffectTargetFlags.ImmuneToDamage,
                 AtomicEffectType.DealCombatDamage => EffectTargetFlags.ImmuneToDamage,
-                AtomicEffectType.AoEDamage => EffectTargetFlags.ImmuneToDamage,
-                AtomicEffectType.SplitDamage => EffectTargetFlags.ImmuneToDamage,
                 AtomicEffectType.TrampleDamage => EffectTargetFlags.ImmuneToDamage,
                 AtomicEffectType.DamageCannotBePrevented => EffectTargetFlags.ImmuneToDamage,
 
                 // 破坏相关
                 AtomicEffectType.Destroy => EffectTargetFlags.ImmuneToDestruction,
-                AtomicEffectType.DestroyArtifact => EffectTargetFlags.ImmuneToDestruction,
                 AtomicEffectType.DestroyRandom => EffectTargetFlags.ImmuneToDestruction,
 
                 // 横置相关
